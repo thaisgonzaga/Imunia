@@ -1,0 +1,1 @@
+Imunia: SaaS Laravel/Vue de calendário vacinal e prontuário veterinário (cães/gatos). Multi-tenant; tutor/animal globais; só vet registra clínico; tutor autoriza acesso. Docs em /docs.
