@@ -1,0 +1,54 @@
+:root {
+  /* Neutros e superfícies */
+  --surface-page: #F6F8F6;
+  --surface-card: #FFFFFF;
+  --surface-sunken: #EDF1EE;
+  --border-hairline: #E1E7E3;
+  --border-strong: #C3CDC7;
+  --ink: #14231F;
+  --ink-muted: #56675F;
+  --ink-faint: #7C8B84;
+
+  /* Primária e ação */
+  --brand: #0F5F4E;
+  --brand-hover: #0B4C3E;
+  --brand-bright: #12866D;
+  --brand-wash: #E6F1ED;
+
+  /* Semântica de situação e de sistema */
+  --status-ok: #0F5F4E;
+  --status-due: #C98A12;
+  --status-due-text: #7A5407;
+  --status-late: #B4372E;
+  --status-late-wash: #FBEDEB;
+  --unverified: #6B7A74;
+  --consent: #3B4E8C;
+  --consent-wash: #EAEDF7;
+
+  /* Tipografia */
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Espaçamento (escala de 4) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Raios */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Elevação */
+  --shadow-overlay: 0 4px 16px rgba(20, 35, 31, .10);
+  --shadow-modal: 0 16px 48px rgba(20, 35, 31, .18);
+}

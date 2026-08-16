@@ -96,8 +96,12 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
+            // Trinta minutos, prazo anunciado ao usuário na tela de ligação
+            // expirada (P06). O controle de repetição de pedidos não fica aqui,
+            // e sim no RateLimiter da rota, para que a tela possa exibir
+            // quanto tempo falta (P05).
+            'expire' => 30,
+            'throttle' => 0,
         ],
     ],
 

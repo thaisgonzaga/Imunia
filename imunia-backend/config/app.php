@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Endereço do SPA. Toda ligação enviada por e-mail (redefinição de senha,
+    | confirmação de endereço, convite de ativação) aponta para cá, e não para
+    | a API: quem abre a mensagem precisa cair numa tela.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

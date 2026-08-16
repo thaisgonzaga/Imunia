@@ -1,0 +1,295 @@
+/*
+ * Vocabulário visual comum das telas públicas de acesso — a "família de
+ * cartões" de P02, P05, P06, P07 e P08. Fica em folha compartilhada, e não em
+ * cada componente, justamente porque a família só se sustenta se as cinco
+ * telas usarem exatamente a mesma medida.
+ */
+
+.auth-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-6) 0 0;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.auth-eyebrow--atencao {
+  color: var(--status-due-text);
+}
+
+.auth-eyebrow--marca {
+  color: var(--brand);
+}
+
+.auth-eyebrow svg {
+  flex: none;
+}
+
+.auth-mark {
+  margin: var(--space-6) 0 0;
+}
+
+.auth-mark--marca {
+  color: var(--brand);
+}
+
+.auth-mark--atencao {
+  color: var(--status-due-text);
+}
+
+.auth-title {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Depois da sobrelinha o título encosta, porque os dois formam um bloco só. */
+.auth-eyebrow + .auth-title {
+  margin-top: var(--space-2);
+}
+
+.auth-title--solto {
+  margin-top: var(--space-6);
+}
+
+.auth-text {
+  margin: var(--space-2) 0 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink);
+}
+
+.auth-text--muted {
+  color: var(--ink-muted);
+}
+
+.auth-note {
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-faint);
+}
+
+.auth-field {
+  margin: var(--space-4) 0 0;
+}
+
+.auth-submit {
+  width: 100%;
+  margin: var(--space-6) 0 0;
+}
+
+.auth-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  margin: var(--space-2) 0 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.auth-link-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  margin: var(--space-6) 0 0;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.auth-link-button--primary {
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  color: #FFFFFF;
+}
+
+.auth-link-button--primary:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  color: #FFFFFF;
+}
+
+.auth-link-button--secondary {
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+}
+
+.auth-link-button--secondary:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+
+.auth-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  text-align: center;
+}
+
+.auth-footer__text {
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink-muted);
+}
+
+.auth-footer__text a {
+  display: inline-flex;
+  align-items: center;
+  /* O rodapé é uma frase corrida, mas a ligação dentro dela continua sendo um
+     alvo de toque: 44 px de altura mesmo em linha. */
+  min-height: 44px;
+  font-weight: 600;
+}
+
+/* Blocos de aviso: ícone à esquerda, texto à direita, sem depender da cor. */
+.auth-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.auth-notice svg {
+  flex: none;
+}
+
+.auth-notice__title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.auth-notice__text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--ink);
+}
+
+.auth-notice__detail {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.auth-notice--erro {
+  background: var(--status-late-wash);
+  border: 1px solid var(--status-late);
+  color: var(--status-late);
+}
+
+.auth-notice--consentimento {
+  background: var(--consent-wash);
+  border: 1px solid var(--consent);
+  color: var(--consent);
+}
+
+.auth-notice--neutro {
+  background: var(--surface-sunken);
+  color: var(--status-due-text);
+}
+
+/* Contagem regressiva em monoespaçada com numerais tabulares, para que os
+   dígitos não dancem a cada segundo. */
+.auth-counter {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.auth-counter__label {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.auth-counter__value {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-mono);
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-readonly {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 48px;
+  padding: 0 var(--space-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.auth-readonly__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+.auth-readonly__icon {
+  color: var(--ink-muted);
+}
+
+.auth-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.auth-hint {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-faint);
+}
+
+/* Esqueleto exibido enquanto a tela decide em que estado entrar. */
+.auth-skeleton {
+  height: 48px;
+  margin: var(--space-4) 0 0;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  animation: auth-skeleton-brilho 1.2s ease-in-out infinite;
+}
+
+.auth-skeleton--titulo {
+  width: 60%;
+  height: 34px;
+}
+
+@keyframes auth-skeleton-brilho {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
