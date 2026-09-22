@@ -40,9 +40,15 @@ COPY deploy/Caddyfile /etc/frankenphp/Caddyfile
 COPY deploy/php.ini "$PHP_INI_DIR/conf.d/zz-imunia.ini"
 COPY --chmod=755 deploy/iniciar.sh /usr/local/bin/iniciar
 
+# O `setcap -r` tira do binário do FrankenPHP a marca cap_net_bind_service, que
+# a imagem oficial põe para poder abrir portas abaixo de 1024. O Render roda o
+# contêiner sem essa permissão no conjunto permitido, e aí o Linux recusa
+# executar um binário que a peça: "exec: frankenphp: Operation not permitted".
+# A porta daqui vem em $PORT e é alta, então a marca só atrapalha.
 RUN mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
         storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
- && chown -R www-data:www-data storage bootstrap/cache /data/caddy /config/caddy
+ && chown -R www-data:www-data storage bootstrap/cache /data/caddy /config/caddy \
+ && setcap -r /usr/local/bin/frankenphp
 
 USER www-data
 
