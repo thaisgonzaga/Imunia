@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Tutor;
 use App\Models\User;
+use App\Support\DocumentosLegais;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -48,6 +49,34 @@ class TutorRegistrationTest extends TestCase
         $this->assertTrue($tutor->termos_aceitos_em->isSameMinute(now()));
     }
 
+    /**
+     * A data diz quando; a versão diz o quê. Sem as duas, publicar um texto
+     * novo reescreveria retroativamente o que todo mundo aceitou.
+     */
+    public function test_aceite_registra_a_versao_vigente_do_documento(): void
+    {
+        $this->postJson('/api/tutores', $this->payload())->assertCreated();
+
+        $tutor = Tutor::firstWhere('cpf', '52998224725');
+
+        $this->assertSame(DocumentosLegais::VERSAO, $tutor->termos_versao);
+    }
+
+    /**
+     * Qual documento estava no ar é fato do sistema, não afirmação de quem se
+     * cadastra: um cliente que informe outra versão não muda o que fica gravado.
+     */
+    public function test_versao_informada_pelo_cliente_e_ignorada(): void
+    {
+        $this->postJson('/api/tutores', $this->payload([
+            'termos_versao' => '0.1',
+        ]))->assertCreated();
+
+        $tutor = Tutor::firstWhere('cpf', '52998224725');
+
+        $this->assertSame(DocumentosLegais::VERSAO, $tutor->termos_versao);
+    }
+
     public function test_sem_aceite_dos_termos_a_conta_nao_e_criada(): void
     {
         $response = $this->postJson('/api/tutores', $this->payload([
@@ -89,8 +118,11 @@ class TutorRegistrationTest extends TestCase
         ]));
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors('cpf');
-        $response->assertJsonPath('errors.cpf.0', 'Já existe uma conta com este CPF.');
+        $response->assertJsonValidationErrors('conta');
+        $response->assertJsonPath('errors.conta.0', 'Já existe uma conta com estes dados.');
+        // A chave contaria o que a mensagem cala: erro em `cpf` confirmaria que
+        // aquele CPF tem cadastro, e o CPF vem de quem está do outro lado.
+        $response->assertJsonMissingPath('errors.cpf');
         $response->assertJsonMissingPath('errors.email');
     }
 
@@ -103,7 +135,45 @@ class TutorRegistrationTest extends TestCase
         ]));
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors('email');
+        $response->assertJsonValidationErrors('conta');
+        $response->assertJsonMissingPath('errors.email');
+        $response->assertJsonMissingPath('errors.cpf');
+    }
+
+    /**
+     * O que RF12b promete só vale se as três recusas forem a mesma recusa: CPF
+     * em uso, e-mail em uso e ambos em uso precisam devolver corpo idêntico, ou
+     * a diferença entre eles vira o oráculo que a mensagem única evita.
+     */
+    public function test_cpf_email_e_ambos_duplicados_devolvem_a_mesma_resposta(): void
+    {
+        $this->postJson('/api/tutores', $this->payload())->assertCreated();
+
+        $soCpf = $this->postJson('/api/tutores', $this->payload(['email' => 'outro@example.com']));
+        $soEmail = $this->postJson('/api/tutores', $this->payload(['cpf' => '11144477735']));
+        $ambos = $this->postJson('/api/tutores', $this->payload());
+
+        $soCpf->assertStatus(422);
+        $this->assertSame($soCpf->json(), $soEmail->json());
+        $this->assertSame($soCpf->json(), $ambos->json());
+    }
+
+    /**
+     * A mensagem única vale para dado repetido, não para dado malformado: quem
+     * digitou o CPF errado precisa saber qual campo corrigir, e essa recusa não
+     * afirma nada sobre a existência de cadastro alheio.
+     */
+    public function test_cpf_invalido_com_email_ja_em_uso_responde_no_campo_cpf(): void
+    {
+        $this->postJson('/api/tutores', $this->payload())->assertCreated();
+
+        $response = $this->postJson('/api/tutores', $this->payload([
+            'cpf' => '52998224720',
+        ]));
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('cpf');
+        $response->assertJsonMissingPath('errors.conta');
     }
 
     public function test_cpf_com_digito_verificador_invalido_e_rejeitado(): void
@@ -132,6 +202,12 @@ class TutorRegistrationTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['nome', 'cpf', 'email', 'password', 'aceite_termos']);
+        // A interface exibe a mensagem tal como vem: se a tradução sumir, o
+        // tutor lê a frase padrão do framework, em inglês.
+        $response->assertJsonValidationErrors([
+            'email' => 'Informe o e-mail.',
+            'password' => 'Crie uma senha.',
+        ]);
     }
 
     public function test_senha_curta_e_rejeitada(): void

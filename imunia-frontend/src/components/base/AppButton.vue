@@ -5,7 +5,11 @@ defineProps({
     default: 'primary',
     // "consentimento" é a ação que fala de autorização e de verificação
     // pública — cor própria, distinta da primária, conforme §4.2.
-    validator: (v) => ['primary', 'secondary', 'consentimento'].includes(v),
+    //
+    // "destrutiva" é a que encerra alguma coisa — revogar uma autorização
+    // (T12, T14). O vermelho não é alarme: é o mesmo tom que o sistema reserva
+    // ao atraso, e aqui ele marca a ação de que o tutor não sai por engano.
+    validator: (v) => ['primary', 'secondary', 'consentimento', 'destrutiva'].includes(v),
   },
   type: { type: String, default: 'button' },
   loading: { type: Boolean, default: false },
@@ -71,6 +75,17 @@ defineProps({
 .app-button--consentimento:hover:not(:disabled) {
   background: #2E3E73;
   border-color: #2E3E73;
+}
+
+.app-button--destrutiva {
+  background: var(--status-late);
+  border: 1px solid var(--status-late);
+  color: #FFFFFF;
+}
+
+.app-button--destrutiva:hover:not(:disabled) {
+  background: #962E26;
+  border-color: #962E26;
 }
 
 .app-button:disabled {

@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { CircleCheck, CircleHelp } from '@lucide/vue'
+import { CircleCheck, CircleHelp, CircleX } from '@lucide/vue'
 import { criteriosDeSenha } from '@/lib/senha.js'
 
 /**
@@ -13,6 +13,17 @@ const props = defineProps({
 })
 
 const criterios = computed(() => criteriosDeSenha(props.senha))
+
+// Com o campo vazio os critérios ainda são só orientação; a partir do primeiro
+// caractere, o que faltar passa a ser apontado em vermelho.
+const digitando = computed(() => props.senha.length > 0)
+
+function situacao(criterio) {
+  if (criterio.atendido) return 'atendido'
+  return digitando.value ? 'pendente' : 'neutro'
+}
+
+const icones = { atendido: CircleCheck, pendente: CircleX, neutro: CircleHelp }
 </script>
 
 <template>
@@ -20,10 +31,13 @@ const criterios = computed(() => criteriosDeSenha(props.senha))
     <li
       v-for="criterio in criterios"
       :key="criterio.rotulo"
-      :class="{ 'password-checklist__item--met': criterio.atendido }"
+      :class="`password-checklist__item--${situacao(criterio)}`"
     >
-      <component :is="criterio.atendido ? CircleCheck : CircleHelp" :size="16" />
+      <component :is="icones[situacao(criterio)]" :size="16" aria-hidden="true" />
       {{ criterio.rotulo }}
+      <span v-if="digitando" class="visually-hidden">
+        {{ criterio.atendido ? '(atendido)' : '(pendente)' }}
+      </span>
     </li>
   </ul>
 </template>
@@ -52,11 +66,26 @@ const criterios = computed(() => criteriosDeSenha(props.senha))
   color: var(--unverified);
 }
 
-.password-checklist__item--met {
+/* Os modificadores repetem o bloco para superar `.password-checklist li`, que
+   sozinho já é mais específico que uma classe de item. */
+.password-checklist .password-checklist__item--atendido {
   color: var(--ink);
 }
 
-.password-checklist__item--met svg {
+.password-checklist .password-checklist__item--atendido svg {
   color: var(--brand);
+}
+
+.password-checklist .password-checklist__item--pendente,
+.password-checklist .password-checklist__item--pendente svg {
+  color: var(--status-late);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
 }
 </style>

@@ -15,7 +15,7 @@ const router = useRouter()
 
 const submitting = ref(false)
 const submitError = ref('')
-const cpfJaCadastrado = ref(false)
+const contaJaExiste = ref(false)
 const resultado = ref(null)
 const cpfTocado = ref(false)
 
@@ -73,12 +73,28 @@ function validarConfirmacaoSenha() {
   }
 }
 
-const formularioValido = computed(() => (
+/**
+ * Campo vazio só é cobrado no envio: quem sai de um campo intocado ainda está
+ * percorrendo o formulário, e não errando nele. O "deixei em branco" tem
+ * mensagem própria porque é falha diferente do "escrevi errado" — e é a única
+ * que explica por que a conta não foi criada.
+ */
+function validarObrigatorios() {
+  if (!form.nome.trim()) errors.nome = 'Informe o nome completo.'
+  if (!form.cpf.trim()) errors.cpf = 'Informe o CPF.'
+  if (!form.email.trim()) errors.email = 'Informe o e-mail.'
+  if (!form.password) errors.password = 'Crie uma senha.'
+  if (!form.password_confirmation) errors.password_confirmation = 'Repita a senha para confirmar.'
+}
+
+// O botão espera apenas pelo preenchimento; campo preenchido e ainda inválido
+// não o desabilita, porque o erro se diz na mensagem do campo (§P03).
+const camposObrigatoriosPreenchidos = computed(() => (
   form.nome.trim() !== ''
-  && cpfEhValido.value
-  && /^\S+@\S+\.\S+$/.test(form.email)
-  && senhaForte(form.password)
-  && form.password === form.password_confirmation
+  && form.cpf.trim() !== ''
+  && form.email.trim() !== ''
+  && form.password !== ''
+  && form.password_confirmation !== ''
   && form.aceite_termos
 ))
 
@@ -92,16 +108,18 @@ function irParaConfirmacao() {
 }
 
 async function enviar() {
+  validarObrigatorios()
   validarCpf()
   validarEmail()
   validarConfirmacaoSenha()
-  if (!form.nome.trim()) errors.nome = 'Informe o nome completo.'
-  if (!senhaForte(form.password)) errors.password = 'A senha ainda não atende aos critérios abaixo.'
+  if (form.password && !senhaForte(form.password)) {
+    errors.password = 'A senha ainda não atende aos critérios abaixo.'
+  }
   if (Object.keys(errors).length > 0) return
 
   submitting.value = true
   submitError.value = ''
-  cpfJaCadastrado.value = false
+  contaJaExiste.value = false
 
   try {
     const resposta = await apiPost('/api/tutores', {
@@ -116,8 +134,10 @@ async function enviar() {
     resultado.value = { ...resposta.tutor, email: form.email }
   } catch (erro) {
     if (erro instanceof ApiError && erro.status === 422) {
-      if (erro.errors.cpf?.[0] === 'Já existe uma conta com este CPF.') {
-        cpfJaCadastrado.value = true
+      // A recusa por cadastro existente vem numa chave própria, e não em `cpf`
+      // ou `email`: qual dos dois coincidiu é justamente o que não se conta.
+      if (erro.errors.conta) {
+        contaJaExiste.value = true
       } else {
         Object.entries(erro.errors).forEach(([campo, mensagens]) => {
           errors[campo] = mensagens[0]
@@ -132,9 +152,10 @@ async function enviar() {
   }
 }
 
-function corrigirCpf() {
-  cpfJaCadastrado.value = false
-  cpfTocado.value = false
+// Volta ao formulário preenchido: sem saber qual dado coincidiu, limpar campo
+// algum seria adivinhação — e refazer tudo, castigo por um erro de digitação.
+function revisarDados() {
+  contaJaExiste.value = false
 }
 </script>
 
@@ -166,25 +187,25 @@ function corrigirCpf() {
       </div>
     </template>
 
-    <!-- CPF já cadastrado: informa a existência e nada além dela (RF12b). -->
-    <template v-else-if="cpfJaCadastrado">
+    <!-- Conta existente: informa a existência e nada além dela (RF12b). -->
+    <template v-else-if="contaJaExiste">
       <h1 class="auth-title">Criar conta de tutor</h1>
 
       <div class="auth-notice auth-notice--consentimento" role="alert">
         <KeyRound :size="20" />
         <div>
-          <p class="auth-notice__title">Já existe uma conta com este CPF.</p>
-          <p class="auth-notice__detail">{{ form.cpf }}</p>
+          <p class="auth-notice__title">Já existe uma conta com estes dados.</p>
+          <p class="auth-notice__detail">Se a conta for sua, recupere o acesso para entrar.</p>
         </div>
       </div>
 
       <RouterLink to="/recuperar-senha" class="auth-link-button auth-link-button--primary">
         Recuperar o acesso
       </RouterLink>
-      <AppButton class="auth-submit" variant="secondary" @click="corrigirCpf">Corrigir CPF</AppButton>
+      <AppButton class="auth-submit" variant="secondary" @click="revisarDados">Revisar meus dados</AppButton>
 
       <p class="auth-note">
-        É tudo o que mostramos: nem nome, nem e-mail mascarado, nem data de cadastro.
+        É tudo o que mostramos: nem qual dado já está em uso, nem nome, nem data de cadastro.
       </p>
     </template>
 
@@ -252,8 +273,8 @@ function corrigirCpf() {
           <AppCheckbox id="aceite" v-model="form.aceite_termos">
             Li e aceito os
             <a href="/termos" target="_blank" rel="noopener" @click.stop>termos de uso</a>
-            e o
-            <a href="/privacidade" target="_blank" rel="noopener" @click.stop>aviso de privacidade</a>.
+            e a
+            <a href="/privacidade" target="_blank" rel="noopener" @click.stop>política de privacidade</a>.
           </AppCheckbox>
           <p v-if="errors.aceite_termos" class="consent-error" role="alert">
             <TriangleAlert :size="16" />
@@ -268,10 +289,16 @@ function corrigirCpf() {
 
         <AppButton
           class="auth-submit" type="submit"
-          :disabled="submitting || !form.aceite_termos" :loading="submitting"
+          :disabled="submitting || !camposObrigatoriosPreenchidos" :loading="submitting"
         >
           {{ submitting ? 'Criando sua conta…' : 'Criar minha conta' }}
         </AppButton>
+
+        <!-- Botão desabilitado sem explicação é armadilha: quem não vê o que
+             falta desiste da conta (§6.1). -->
+        <p v-if="!camposObrigatoriosPreenchidos" class="auth-note">
+          Todos os campos são obrigatórios, e o aceite dos termos também.
+        </p>
       </form>
 
       <p class="auth-reassurance">

@@ -1,6 +1,4 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   Building2,
   CalendarClock,
@@ -14,15 +12,6 @@ import {
 } from '@lucide/vue'
 import PublicHeader from '@/components/public/PublicHeader.vue'
 import PublicFooter from '@/components/public/PublicFooter.vue'
-import AppButton from '@/components/base/AppButton.vue'
-import AppInput from '@/components/base/AppInput.vue'
-import {
-  codigoDocumentoValido,
-  formatarCodigoDocumento,
-  normalizarCodigoDocumento,
-} from '@/lib/documento.js'
-
-const router = useRouter()
 
 /**
  * O trilho do herói é o produto em funcionamento, não ilustração: mesmas
@@ -87,28 +76,6 @@ const diferenciais = [
       'Nenhuma clínica vê o histórico sem autorização, e toda consulta fica registrada para o tutor. A autorização é revogável a qualquer momento, sem justificativa.',
   },
 ]
-
-const codigo = ref('')
-const erroCodigo = ref('')
-
-const codigoFormatado = computed({
-  get: () => codigo.value,
-  set: (valor) => {
-    codigo.value = formatarCodigoDocumento(valor)
-    if (erroCodigo.value) erroCodigo.value = ''
-  },
-})
-
-function verificar() {
-  if (!codigoDocumentoValido(codigo.value)) {
-    erroCodigo.value = 'O código tem 16 caracteres, como no rodapé do PDF.'
-    return
-  }
-
-  // A consulta em si é de P09: aqui só se confere o formato, para não gastar
-  // uma tentativa da rota pública com erro de digitação (RF47c).
-  router.push(`/verificar/${normalizarCodigoDocumento(codigo.value)}`)
-}
 </script>
 
 <template>
@@ -195,37 +162,6 @@ function verificar() {
           </article>
         </div>
       </section>
-
-      <section class="home-verify">
-        <div class="home-verify__inner">
-          <div>
-            <p class="home-verify__eyebrow">
-              <FileCheck :size="16" />
-              Verificação pública
-            </p>
-            <h2 class="home-verify__title">Recebeu um documento do Imunia? Verifique aqui</h2>
-            <p class="home-verify__text">
-              Digite o código impresso no rodapé do PDF. Você não precisa de conta, e a
-              verificação não expõe dado clínico nem dado do tutor.
-            </p>
-          </div>
-
-          <form class="home-verify__form" @submit.prevent="verificar">
-            <AppInput
-              id="codigo-documento"
-              label="Código do documento"
-              placeholder="9F2C 4A81 D7E0 5B33"
-              autocomplete="off"
-              mono
-              v-model="codigoFormatado"
-              :error="erroCodigo"
-            />
-            <AppButton class="home-verify__submit" type="submit" variant="consentimento">
-              Verificar
-            </AppButton>
-          </form>
-        </div>
-      </section>
     </main>
 
     <PublicFooter />
@@ -238,6 +174,12 @@ function verificar() {
   flex-direction: column;
   min-height: 100vh;
   background: var(--surface-page);
+}
+
+/* O conteúdo estica até o fim da viewport para que o rodapé encoste embaixo
+   mesmo em tela alta, em vez de flutuar com fundo vazio sob ele. */
+.home > main {
+  flex: 1;
 }
 
 /* Herói */
@@ -525,71 +467,6 @@ function verificar() {
   text-wrap: pretty;
 }
 
-/* Faixa de verificação pública */
-
-.home-verify {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-6) var(--space-4);
-  background: var(--consent-wash);
-  border-top: 1px solid var(--consent);
-}
-
-.home-verify__inner {
-  display: grid;
-  gap: var(--space-6);
-  width: 100%;
-  max-width: 1280px;
-  align-items: center;
-}
-
-.home-verify__eyebrow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 600;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--consent);
-}
-
-.home-verify__eyebrow svg {
-  flex: none;
-}
-
-.home-verify__title {
-  margin: var(--space-2) 0 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.home-verify__text {
-  margin: var(--space-2) 0 0;
-  max-width: 60ch;
-  color: var(--ink-muted);
-}
-
-.home-verify__form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* Na faixa de consentimento o campo veste a cor do bloco, e não a do sistema. */
-.home-verify__form :deep(.app-field__label) {
-  color: var(--consent);
-}
-
-.home-verify__form :deep(.app-field__input:not(.app-field__input--error)) {
-  border-color: var(--consent);
-}
-
 @media (min-width: 768px) {
   .home-hero {
     padding: var(--space-16) var(--space-12);
@@ -635,23 +512,9 @@ function verificar() {
     margin-top: var(--space-4);
   }
 
-  .home-verify {
-    padding: var(--space-12);
-  }
 
-  .home-verify__form {
-    flex-direction: row;
-    align-items: flex-end;
-  }
 
-  .home-verify__form :deep(.app-field) {
-    flex: 1;
-    min-width: 0;
-  }
 
-  .home-verify__submit {
-    flex: none;
-  }
 }
 
 @media (min-width: 1024px) {
@@ -686,14 +549,6 @@ function verificar() {
     border: 1px solid var(--border-hairline);
   }
 
-  .home-verify__inner {
-    grid-template-columns: 1fr 480px;
-    gap: var(--space-12);
-  }
 
-  .home-verify__title {
-    font-size: 28px;
-    line-height: 34px;
-  }
 }
 </style>

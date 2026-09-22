@@ -9,7 +9,7 @@ import AppSelect from '@/components/base/AppSelect.vue'
 import StepIndicator from '@/components/base/StepIndicator.vue'
 import PasswordChecklist from '@/components/auth/PasswordChecklist.vue'
 import { ESTADOS } from '@/lib/estados.js'
-import { formatarDocumento, formatarTelefone, somenteDigitos } from '@/lib/masks.js'
+import { cnpjValido, formatarCnpj, formatarTelefone, somenteDigitos } from '@/lib/masks.js'
 import { apiPost, ApiError } from '@/lib/api.js'
 import { senhaForte } from '@/lib/senha.js'
 
@@ -27,13 +27,13 @@ const ARGUMENTOS = [
 const step = ref(1)
 const submitting = ref(false)
 const submitError = ref('')
-const documentoJaCadastrado = ref(false)
+const cnpjJaCadastrado = ref(false)
 const resultado = ref(null)
 
 const form = reactive({
   tipo: 'clinica',
   nome: '',
-  documento: '',
+  cnpj: '',
   telefone: '',
   endereco: '',
   municipio: '',
@@ -69,17 +69,14 @@ function validarCampo(validarPasso, campo) {
   else delete errors[campo]
 }
 
-const CAMPOS_PASSO_1 = ['nome', 'documento', 'telefone', 'endereco', 'municipio', 'uf']
+const CAMPOS_PASSO_1 = ['nome', 'cnpj', 'telefone', 'endereco', 'municipio', 'uf']
 const CAMPOS_PASSO_2 = ['responsavel_tecnico_nome', 'responsavel_tecnico_crmv', 'responsavel_tecnico_crmv_uf']
 const CAMPOS_PASSO_3 = ['email', 'password', 'password_confirmation']
 
 function validarPasso1() {
   const novosErros = {}
   if (!form.nome.trim()) novosErros.nome = 'Informe a razão social ou o nome.'
-  const digitosDocumento = somenteDigitos(form.documento)
-  if (digitosDocumento.length !== 11 && digitosDocumento.length !== 14) {
-    novosErros.documento = 'Informe um CPF ou CNPJ válido.'
-  }
+  if (!cnpjValido(form.cnpj)) novosErros.cnpj = 'Informe um CNPJ válido.'
   if (!form.telefone.trim()) novosErros.telefone = 'Informe um telefone de contato.'
   if (!form.endereco.trim()) novosErros.endereco = 'Informe o endereço.'
   if (!form.municipio.trim()) novosErros.municipio = 'Informe o município.'
@@ -115,9 +112,9 @@ const tituloPasso2 = computed(() => (ehAutonomo.value ? 'Seus dados profissionai
 const rotuloNomePasso2 = computed(() => (ehAutonomo.value ? 'Seu nome' : 'Nome do responsável técnico'))
 const rotuloCrmvPasso2 = computed(() => (ehAutonomo.value ? 'Seu CRMV' : 'CRMV'))
 
-function onDocumentoInput(valor) {
-  form.documento = formatarDocumento(valor)
-  limparErro('documento')
+function onCnpjInput(valor) {
+  form.cnpj = formatarCnpj(valor)
+  limparErro('cnpj')
 }
 
 function onTelefoneInput(valor) {
@@ -129,7 +126,7 @@ function avancarPasso1() {
   const novosErros = validarPasso1()
   substituirErros(CAMPOS_PASSO_1, novosErros)
   if (Object.keys(novosErros).length === 0) {
-    documentoJaCadastrado.value = false
+    cnpjJaCadastrado.value = false
     step.value = 2
   }
 }
@@ -164,13 +161,13 @@ async function enviar() {
 
   submitting.value = true
   submitError.value = ''
-  documentoJaCadastrado.value = false
+  cnpjJaCadastrado.value = false
 
   try {
     const resposta = await apiPost('/api/prestadores', {
       tipo: form.tipo,
       nome: form.nome,
-      documento: form.documento,
+      cnpj: form.cnpj,
       telefone: form.telefone,
       endereco: form.endereco,
       municipio: form.municipio,
@@ -186,8 +183,11 @@ async function enviar() {
     resultado.value = { ...resposta.prestador, email: form.email }
   } catch (erro) {
     if (erro instanceof ApiError && erro.status === 422) {
-      if (erro.errors.documento) {
-        documentoJaCadastrado.value = true
+      // O passo 1 não deixa passar CNPJ malformado nem com dígito verificador
+      // errado, então o que sobra para o servidor recusar aqui é a unicidade —
+      // e é por isso que este ramo pode afirmar que o estabelecimento existe.
+      if (erro.errors.cnpj) {
+        cnpjJaCadastrado.value = true
       } else {
         Object.entries(erro.errors).forEach(([campo, mensagens]) => {
           errors[campo] = mensagens[0]
@@ -202,8 +202,8 @@ async function enviar() {
   }
 }
 
-function corrigirDocumento() {
-  documentoJaCadastrado.value = false
+function corrigirCnpj() {
+  cnpjJaCadastrado.value = false
 }
 </script>
 
@@ -241,8 +241,8 @@ function corrigirDocumento() {
       </section>
     </template>
 
-    <!-- Documento já cadastrado: informa a existência e nada além dela, mesmo padrão de P03 (RF07). -->
-    <template v-else-if="documentoJaCadastrado">
+    <!-- CNPJ já cadastrado: informa a existência e nada além dela, mesmo padrão de P03 (RF07). -->
+    <template v-else-if="cnpjJaCadastrado">
       <section class="wizard-card">
         <div class="wizard-card__body">
           <h1 class="auth-title">Cadastrar meu estabelecimento</h1>
@@ -250,16 +250,16 @@ function corrigirDocumento() {
           <div class="auth-notice auth-notice--consentimento" role="alert">
             <KeyRound :size="20" />
             <div>
-              <p class="auth-notice__title">Já existe um estabelecimento cadastrado com este documento.</p>
-              <p class="auth-notice__detail">{{ form.documento }}</p>
+              <p class="auth-notice__title">Já existe um estabelecimento cadastrado com este CNPJ.</p>
+              <p class="auth-notice__detail">{{ form.cnpj }}</p>
             </div>
           </div>
 
           <RouterLink to="/entrar" class="auth-link-button auth-link-button--primary">
             Entrar na conta existente
           </RouterLink>
-          <AppButton class="auth-submit" variant="secondary" @click="corrigirDocumento">
-            Corrigir documento
+          <AppButton class="auth-submit" variant="secondary" @click="corrigirCnpj">
+            Corrigir CNPJ
           </AppButton>
 
           <p class="auth-note">
@@ -302,10 +302,10 @@ function corrigirDocumento() {
                 />
               </div>
               <AppInput
-                id="documento" label="Documento de inscrição" mono inputmode="numeric"
-                :model-value="form.documento" @update:model-value="onDocumentoInput"
-                @blur="validarCampo(validarPasso1, 'documento')"
-                :error="errors.documento"
+                id="cnpj" label="CNPJ" mono inputmode="numeric"
+                :model-value="form.cnpj" @update:model-value="onCnpjInput"
+                @blur="validarCampo(validarPasso1, 'cnpj')"
+                :error="errors.cnpj"
               />
               <AppInput
                 id="telefone" label="Telefone público" mono inputmode="numeric"
@@ -338,7 +338,7 @@ function corrigirDocumento() {
               <Building2 :size="20" />
               <p class="auth-notice__text">
                 Nome, tipo, município e contato aparecem no diretório público, onde os tutores encontram
-                a clínica para autorizar. Endereço completo e documento de inscrição não são publicados.
+                a clínica para autorizar. Endereço completo e CNPJ não são publicados.
               </p>
             </div>
 
@@ -378,7 +378,8 @@ function corrigirDocumento() {
               </div>
               <AppInput
                 id="rt-crmv" :label="rotuloCrmvPasso2" mono inputmode="numeric"
-                :model-value="form.responsavel_tecnico_crmv" @update:model-value="setCampo('responsavel_tecnico_crmv', $event)"
+                hint="Apenas o número da inscrição, sem “CRMV” e sem a UF."
+                :model-value="form.responsavel_tecnico_crmv" @update:model-value="setCampo('responsavel_tecnico_crmv', somenteDigitos($event))"
                 @blur="validarCampo(validarPasso2, 'responsavel_tecnico_crmv')"
                 :error="errors.responsavel_tecnico_crmv"
               />
@@ -441,8 +442,8 @@ function corrigirDocumento() {
                   <div class="review-box__value">{{ form.municipio }}, {{ form.uf }}</div>
                 </div>
                 <div>
-                  <div class="review-box__label">Documento de inscrição</div>
-                  <div class="review-box__value review-box__value--mono">{{ form.documento }}</div>
+                  <div class="review-box__label">CNPJ</div>
+                  <div class="review-box__value review-box__value--mono">{{ form.cnpj }}</div>
                 </div>
                 <div>
                   <div class="review-box__label">Responsável técnico</div>

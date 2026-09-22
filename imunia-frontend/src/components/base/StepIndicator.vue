@@ -3,12 +3,25 @@ defineProps({
   current: { type: Number, required: true },
   total: { type: Number, required: true },
   label: { type: String, required: true },
+
+  /**
+   * O índigo de consentimento é o eixo visual do bloco de autorizações e não
+   * aparece em nenhuma outra parte do sistema (§3 do briefing). O passo a passo
+   * de T11 o carrega; o de P03, que é cadastro comum, continua na cor da marca.
+   */
+  tom: {
+    type: String,
+    default: 'marca',
+    validator: (valor) => ['marca', 'consentimento'].includes(valor),
+  },
 })
 </script>
 
 <template>
-  <div class="step-indicator">
-    <span class="step-indicator__label">Passo {{ current }} de {{ total }} · {{ label }}</span>
+  <div class="step-indicator" :class="`step-indicator--${tom}`">
+    <span class="step-indicator__label">
+      Passo {{ current }} de {{ total }}<span class="step-indicator__nome"> · {{ label }}</span>
+    </span>
     <span class="step-indicator__track">
       <span
         v-for="n in total"
@@ -57,11 +70,30 @@ defineProps({
   background: var(--brand);
 }
 
+.step-indicator--consentimento {
+  background: var(--consent-wash);
+  border-bottom-color: var(--consent);
+}
+
+.step-indicator--consentimento .step-indicator__label {
+  color: var(--consent);
+}
+
+.step-indicator--consentimento .step-indicator__segment--filled {
+  background: var(--consent);
+}
+
 @media (max-width: 767px) {
   .step-indicator {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2);
+  }
+
+  /* §6.1 — no celular o passo a passo vira "Passo 2 de 3": o nome da etapa já
+     está no título logo abaixo, e repeti-lo aqui rouba a linha inteira. */
+  .step-indicator__nome {
+    display: none;
   }
 }
 </style>

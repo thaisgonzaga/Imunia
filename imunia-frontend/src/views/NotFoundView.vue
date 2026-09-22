@@ -1,78 +1,56 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { CircleHelp } from '@lucide/vue'
+import ExceptionState from '@/components/base/ExceptionState.vue'
+import RoleShell from '@/components/base/RoleShell.vue'
+import { molduraDe, painelDe } from '@/lib/areas.js'
+import { useSessaoStore } from '@/stores/sessao.js'
 
 /**
- * E02 — não encontrado. Comunica o impedimento sem expor detalhe de
- * implementação (RNF17) e sempre oferece uma saída.
+ * E02 — não encontrado. Responde ao endereço que não existe e ao item que
+ * deixou de existir, sem distinguir os dois: a diferença interessa ao sistema,
+ * não a quem digitou o endereço (RNF17).
+ *
+ * É também a resposta às telas que ainda não foram construídas. As molduras dos
+ * três ambientes exibem a navegação inteira do desenho aprovado, inclusive os
+ * destinos de fatias futuras; até que cheguem, quem os clica cai aqui, com a
+ * barra lateral intacta e um caminho de volta.
  */
+const route = useRoute()
+const sessao = useSessaoStore()
+
+/**
+ * A segunda saída depende de onde a pessoa se perdeu. Na clínica, a busca é o
+ * ponto de partida de todo trabalho sobre um animal; no ambiente do tutor, a
+ * relação de animais faz o mesmo papel. Onde não há um segundo destino que
+ * signifique alguma coisa, a tela fica com uma ação só — inventar um botão para
+ * preencher a linha do desenho seria pior do que a assimetria.
+ */
+const SEGUNDA_SAIDA = {
+  clinica: { rotulo: 'Buscar', destino: '/clinica/buscar' },
+  tutor: { rotulo: 'Meus animais', destino: '/animais' },
+}
+
+const area = computed(() => molduraDe(sessao.usuario?.papeis ?? [], route.path))
+const segundaSaida = computed(() => (area.value ? SEGUNDA_SAIDA[area.value.nome] ?? null : null))
+
+const painel = computed(() => painelDe(sessao.usuario))
+const rotuloDoPainel = computed(() => (sessao.autenticado ? 'Voltar ao painel' : 'Ir para a entrada'))
 </script>
 
 <template>
-  <div class="not-found">
-    <section class="not-found__card">
-      <CircleHelp :size="40" class="not-found__icon" />
-      <h1 class="not-found__title">Esta página não existe</h1>
-      <p class="not-found__text">
-        O endereço pode ter sido digitado com algum engano, ou a página ainda não faz parte
-        desta versão do Imunia.
-      </p>
-      <RouterLink to="/entrar" class="not-found__action">Voltar para entrar</RouterLink>
-    </section>
-  </div>
+  <RoleShell titulo="Página não encontrada">
+    <ExceptionState
+      :icone="CircleHelp"
+      tom="discreto"
+      titulo="Não encontramos esta página."
+      descricao="O endereço pode ter mudado, ou o item que você procurava não existe mais."
+    >
+      <RouterLink v-if="painel" :to="painel" class="acao">{{ rotuloDoPainel }}</RouterLink>
+      <RouterLink v-if="segundaSaida" :to="segundaSaida.destino" class="acao acao--secundaria">
+        {{ segundaSaida.rotulo }}
+      </RouterLink>
+    </ExceptionState>
+  </RoleShell>
 </template>
-
-<style scoped>
-.not-found {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: var(--space-4);
-  background: var(--surface-page);
-}
-
-.not-found__card {
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.not-found__icon {
-  color: var(--ink-faint);
-}
-
-.not-found__title {
-  margin: var(--space-4) 0 0;
-  font-family: var(--font-display);
-  font-size: 28px;
-  line-height: 34px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.not-found__text {
-  margin: var(--space-2) 0 0;
-  font-size: 16px;
-  line-height: 24px;
-  color: var(--ink-muted);
-}
-
-.not-found__action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 48px;
-  padding: 0 var(--space-6);
-  margin: var(--space-6) 0 0;
-  background: var(--brand);
-  border-radius: var(--radius-sm);
-  font-size: 16px;
-  font-weight: 600;
-  color: #FFFFFF;
-}
-
-.not-found__action:hover {
-  background: var(--brand-hover);
-  color: #FFFFFF;
-}
-</style>

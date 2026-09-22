@@ -9,24 +9,35 @@
 
 <template>
   <header class="public-header">
-    <RouterLink to="/" class="public-header__brand">Imunia</RouterLink>
-    <nav class="public-header__actions">
-      <RouterLink to="/entrar" class="public-header__link">Entrar</RouterLink>
-      <RouterLink to="/criar-conta" class="public-header__cta">Criar conta</RouterLink>
-    </nav>
+    <div class="public-header__inner">
+      <RouterLink to="/" class="public-header__brand">Imunia</RouterLink>
+      <nav class="public-header__actions">
+        <RouterLink to="/entrar" class="public-header__link">Entrar</RouterLink>
+        <RouterLink to="/criar-conta" class="public-header__cta">Criar conta</RouterLink>
+      </nav>
+    </div>
   </header>
 </template>
 
 <style scoped>
 .public-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  justify-content: center;
   height: 56px;
   padding: 0 var(--space-4);
   background: var(--surface-card);
   border-bottom: 1px solid var(--border-hairline);
+}
+
+/* Mesma faixa do herói e do rodapé, para que a marca comece na coluna do
+   título e o "Criar conta" termine na borda do trilho. */
+.public-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 1280px;
 }
 
 .public-header__brand {
@@ -62,14 +73,11 @@
 
 @media (min-width: 768px) {
   .public-header {
-    justify-content: center;
-    gap: var(--space-6);
     padding: 0 var(--space-12);
   }
 
-  .public-header__brand {
-    flex: 1;
-    max-width: 1280px;
+  .public-header__inner {
+    gap: var(--space-6);
   }
 
   /* Acima de 768 px os dois alvos cabem lado a lado com folga. */

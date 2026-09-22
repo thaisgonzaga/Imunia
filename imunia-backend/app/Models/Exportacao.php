@@ -9,11 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Emissão de histórico em PDF (RF46). Esta fatia usa o registro apenas do lado
- * da leitura, na verificação pública (RF47); a geração do documento é a fatia
- * de T15.
+ * Emissão de histórico em PDF (RF46). A verificação pública (RF47) lê daqui a
+ * autenticidade, a data e o retrato do animal; a emissão (T15) escreve a linha
+ * e guarda o arquivo sob o mesmo código.
  */
-#[Fillable(['codigo', 'resumo', 'animal_nome', 'animal_especie', 'emitido_por', 'emitido_em'])]
+#[Fillable(['codigo', 'resumo', 'animal_id', 'animal_nome', 'animal_especie', 'emitido_por', 'emitido_em'])]
 class Exportacao extends Model
 {
     use HasFactory;
@@ -45,6 +45,33 @@ class Exportacao extends Model
     public function autor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'emitido_por');
+    }
+
+    /**
+     * @return BelongsTo<Animal, Exportacao>
+     */
+    public function animal(): BelongsTo
+    {
+        return $this->belongsTo(Animal::class);
+    }
+
+    /**
+     * O código como o rodapé o imprime e a tela o exibe: quatro grupos de
+     * quatro, a mesma forma que `normalizarCodigo()` desfaz na volta.
+     */
+    public function codigoFormatado(): string
+    {
+        return trim(chunk_split($this->codigo, 4, ' '));
+    }
+
+    /**
+     * Onde o arquivo emitido fica guardado. O caminho deriva do código porque o
+     * documento é a emissão: não há segunda versão de um PDF cujo resumo está
+     * gravado na linha.
+     */
+    public function caminhoDoArquivo(): string
+    {
+        return 'exportacoes/'.$this->codigo.'.pdf';
     }
 
     /**

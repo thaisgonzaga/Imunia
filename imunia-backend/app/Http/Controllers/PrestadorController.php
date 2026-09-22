@@ -28,7 +28,7 @@ class PrestadorController extends Controller
             $prestador = Prestador::create([
                 'tipo' => $dados['tipo'],
                 'nome' => $dados['nome'],
-                'documento' => $dados['documento'],
+                'cnpj' => $dados['cnpj'],
                 'telefone' => $dados['telefone'],
                 'endereco' => $dados['endereco'],
                 'municipio' => $dados['municipio'],

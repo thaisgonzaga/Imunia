@@ -8,9 +8,11 @@ import AppCheckbox from '@/components/base/AppCheckbox.vue'
 import AppInput from '@/components/base/AppInput.vue'
 import { apiPost, ApiError } from '@/lib/api.js'
 import { useContagemRegressiva } from '@/lib/contagem.js'
+import { useSessaoStore } from '@/stores/sessao.js'
 
 const route = useRoute()
 const router = useRouter()
+const sessao = useSessaoStore()
 
 /**
  * Quem entra aqui já conhece o produto: em vez de argumentar pela adesão, como
@@ -56,6 +58,10 @@ async function entrar() {
       password: form.password,
       lembrar: form.lembrar,
     })
+
+    // A sessão recém-aberta já vem descrita na resposta: guardá-la aqui evita
+    // que a tela de destino tenha de perguntar de novo quem entrou.
+    sessao.registrar(resposta.usuario)
 
     router.push(resposta.usuario.rota_inicial)
   } catch (erro) {

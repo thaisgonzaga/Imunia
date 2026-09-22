@@ -220,15 +220,18 @@ Cada célula responde a uma única pergunta: *este papel pode executar esta oper
 | Consultar painel de pendências vacinais | Animais sob autorização vigente do prestador | Não | Sim | Não | Não |
 | Consultar o registro de acessos ao histórico | Exclusivamente sobre os seus animais | Sim | Não | Não | Não |
 | Gerenciar usuários e dados do prestador | O próprio prestador | Não | Não | Sim | Não |
+| Cadastrar vacina no acervo próprio da clínica e definir o agendamento dela | O próprio prestador | Não | Não | Sim | Não |
+| Editar ou inativar item do catálogo mantido pela plataforma | Nenhum | Não | Não | Não | Não |
 | Exportar histórico em PDF verificável | Conforme o âmbito de visualização | Sim | Sim | Não | Não |
 | Verificar autenticidade de documento exportado | Rota pública, sem exposição de conteúdo | Sim | Sim | Sim | Sim |
 
-Quatro leituras dessa matriz merecem registro no texto da monografia, por constituírem o diferencial do sistema em relação aos concorrentes analisados:
+Cinco leituras dessa matriz merecem registro no texto da monografia, por constituírem o diferencial do sistema em relação aos concorrentes analisados:
 
 1. **A coluna do tutor não contém nenhuma permissão de escrita clínica.** Ele cadastra o animal e o identifica; quem o caracteriza e quem registra o ato é o profissional. É a inversão de responsabilidade sobre o dado, enunciada na Etapa 1 (§2.3).
 2. **A linha de edição de registro alheio é negativa para todos os papéis, sem exceção.** Não existe usuário privilegiado capaz de alterar o registro de outro profissional — nem mesmo quem administra a conta do prestador.
 3. **A concessão de autorização é exclusiva do tutor.** Prestadores podem solicitar; apenas o titular concede.
-4. **A coluna administrativa é negativa em toda operação que envolva tutor, animal ou registro clínico.** À primeira vista, uma coluna quase vazia sugere papel supérfluo; é o contrário. O papel existe para que a administração da conta seja possível **sem** que ela abra qualquer porta para o dado do animal. Do desenho decorre a garantia enunciada em §3.1: toda informação clínica da plataforma provém de médico-veterinário identificado, e toda informação de identificação provém do veterinário ou do próprio tutor.
+4. **O catálogo mantido pela plataforma é negativo para todos os papéis.** Quem administra uma clínica cadastra as vacinas que ela usa e define o prazo do lembrete de cada uma, mas não altera nem inativa o que veio das diretrizes da WSAVA: aquele cálculo responde por todas as clínicas, e não por uma. É a mesma forma da linha de edição de registro alheio — a permissão não existe para ninguém, e não apenas está ausente de um papel. Quando a conduta do profissional diverge do protocolo, o caminho é a ordem da dose escolhida no ato do registro (RN36), que o sistema sugere e não impõe.
+5. **A coluna administrativa é negativa em toda operação que envolva tutor, animal ou registro clínico.** À primeira vista, uma coluna quase vazia sugere papel supérfluo; é o contrário. O papel existe para que a administração da conta seja possível **sem** que ela abra qualquer porta para o dado do animal. Do desenho decorre a garantia enunciada em §3.1: toda informação clínica da plataforma provém de médico-veterinário identificado, e toda informação de identificação provém do veterinário ou do próprio tutor.
 
 ---
 
@@ -285,9 +288,9 @@ O sistema deve permitir que o usuário consulte e atualize seus dados pessoais d
 **RF07 — Cadastrar prestador**
 *Ator:* administrador do prestador · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN07, RN08
 
-O sistema deve permitir o cadastro de prestador com razão social ou nome, tipo (clínica, hospital veterinário ou profissional autônomo), documento de inscrição, endereço com município e unidade federativa, contato e responsável técnico com número de CRMV. O cadastro cria simultaneamente o primeiro usuário administrador.
+O sistema deve permitir o cadastro de prestador com razão social ou nome, tipo (clínica, hospital veterinário ou profissional autônomo), CNPJ, endereço com município e unidade federativa, contato e responsável técnico com número de CRMV. O cadastro cria simultaneamente o primeiro usuário administrador.
 
-*Critérios de aceitação:* a) o tipo determina os rótulos exibidos na interface, sem alterar o modelo de dados; b) o município informado alimenta o diretório de RF11; c) prestador sem responsável técnico identificado não pode registrar informação clínica.
+*Critérios de aceitação:* a) o tipo determina os rótulos exibidos na interface, sem alterar o modelo de dados; b) o município informado alimenta o diretório de RF11; c) prestador sem responsável técnico identificado não pode registrar informação clínica; d) o CNPJ é exigido dos três tipos, o profissional autônomo inclusive, e o cadastro não aceita CPF em seu lugar.
 
 **RF08 — Manter os dados do prestador**
 *Ator:* administrador do prestador · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN07

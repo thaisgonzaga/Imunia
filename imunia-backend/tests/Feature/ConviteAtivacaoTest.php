@@ -7,6 +7,7 @@ use App\Models\Prestador;
 use App\Models\Tutor;
 use App\Models\User;
 use App\Notifications\ConviteDeAtivacao;
+use App\Support\DocumentosLegais;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -121,6 +122,7 @@ class ConviteAtivacaoTest extends TestCase
 
         $response = $this->postJson("/api/convites/{$token}", [
             'password' => 'Segredo123',
+            'aceite_termos' => true,
         ]);
 
         $response->assertOk();
@@ -133,13 +135,80 @@ class ConviteAtivacaoTest extends TestCase
     }
 
     /**
+     * O cadastro em RF12 é feito pela clínica, e ninguém aceita termos em nome
+     * de outro: a ativação é a primeira vez que o titular está diante do
+     * documento, e é aqui que o aceite passa a existir — com a versão.
+     */
+    public function test_ativacao_de_tutor_registra_o_aceite_com_a_versao(): void
+    {
+        [, $token, $usuario] = $this->conviteDeTutor();
+
+        $tutor = $usuario->tutor;
+        $this->assertNull($tutor->termos_aceitos_em);
+
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'Segredo123',
+            'aceite_termos' => true,
+        ])->assertOk();
+
+        $tutor->refresh();
+        $this->assertNotNull($tutor->termos_aceitos_em);
+        $this->assertSame(DocumentosLegais::VERSAO, $tutor->termos_versao);
+    }
+
+    public function test_tutor_nao_ativa_a_conta_sem_aceitar_os_termos(): void
+    {
+        [, $token, $usuario] = $this->conviteDeTutor();
+
+        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('aceite_termos');
+
+        $usuario->refresh();
+        $this->assertNull($usuario->ativado_em);
+        $this->assertNull($usuario->tutor->termos_aceitos_em);
+    }
+
+    /**
+     * Quem respondeu pelos termos do estabelecimento foi quem o cadastrou, em
+     * P03. Pedir de novo ao profissional convidado seria pedir aceite de um
+     * contrato que não é o dele.
+     */
+    public function test_convite_de_veterinario_nao_pede_aceite(): void
+    {
+        [, $token] = $this->conviteDeVeterinario();
+
+        $this->getJson("/api/convites/{$token}")
+            ->assertOk()
+            ->assertJsonPath('convite.aceita_termos', false);
+
+        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])->assertOk();
+    }
+
+    /**
+     * A tela precisa saber se desenha a caixa: sem isso, ou ela some para quem
+     * deve aceitar, ou aparece para quem já aceitou.
+     */
+    public function test_convite_de_tutor_anuncia_que_pede_aceite(): void
+    {
+        [, $token] = $this->conviteDeTutor();
+
+        $this->getJson("/api/convites/{$token}")
+            ->assertOk()
+            ->assertJsonPath('convite.aceita_termos', true);
+    }
+
+    /**
      * RF14c — a ativação verifica o endereço e dispensa RF05.
      */
     public function test_aceite_confirma_o_endereco_automaticamente(): void
     {
         [, $token, $usuario] = $this->conviteDeTutor();
 
-        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])->assertOk();
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'Segredo123',
+            'aceite_termos' => true,
+        ])->assertOk();
 
         $this->assertNotNull($usuario->fresh()->email_verified_at);
     }
@@ -148,7 +217,10 @@ class ConviteAtivacaoTest extends TestCase
     {
         [, $token, $usuario] = $this->conviteDeTutor();
 
-        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])->assertOk();
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'Segredo123',
+            'aceite_termos' => true,
+        ])->assertOk();
 
         $this->assertAuthenticatedAs($usuario);
     }
@@ -183,7 +255,10 @@ class ConviteAtivacaoTest extends TestCase
     {
         [, $token] = $this->conviteDeTutor();
 
-        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])->assertOk();
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'Segredo123',
+            'aceite_termos' => true,
+        ])->assertOk();
 
         $this->getJson("/api/convites/{$token}")
             ->assertStatus(409)
@@ -218,7 +293,10 @@ class ConviteAtivacaoTest extends TestCase
         Notification::fake();
         [, $token] = $this->conviteDeTutor();
 
-        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])->assertOk();
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'Segredo123',
+            'aceite_termos' => true,
+        ])->assertOk();
 
         $this->postJson("/api/convites/{$token}/reenviar")->assertStatus(410);
 
@@ -240,10 +318,157 @@ class ConviteAtivacaoTest extends TestCase
     {
         [, $token, $usuario] = $this->conviteDeTutor();
 
-        $this->postJson("/api/convites/{$token}", ['password' => 'curta'])
+        $this->postJson("/api/convites/{$token}", [
+            'password' => 'curta',
+            'aceite_termos' => true,
+        ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('password');
 
         $this->assertNull($usuario->fresh()->ativado_em);
+    }
+
+    /**
+     * O convite emitido por A03 para uma conta que ainda não existe: sem nome e
+     * sem senha, os dois definidos aqui pelo titular (RF09).
+     *
+     * @return array{0: string, 1: User}
+     */
+    private function conviteParaContaNova(): array
+    {
+        $prestador = Prestador::factory()->create();
+
+        $convidado = User::factory()->unverified()->create([
+            'name' => '',
+            'email' => 'beatriz@example.com',
+            'ativado_em' => null,
+        ]);
+        $prestador->usuarios()->attach($convidado->id, [
+            'papel' => 'veterinario',
+            'crmv' => '18220',
+            'crmv_uf' => 'MG',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        [, $token] = Convite::emitir($convidado, $prestador, 'veterinario');
+
+        return [$token, $convidado];
+    }
+
+    /**
+     * RF09 — o mesmo profissional mantém vínculo com mais de um prestador. O
+     * segundo convite não é um cadastro: é uma confirmação de vínculo, e não
+     * pode redefinir a senha com que ele entra no primeiro.
+     *
+     * @return array{0: string, 1: User}
+     */
+    private function conviteParaQuemJaTemConta(): array
+    {
+        $petCenter = Prestador::factory()->create(['nome' => 'Pet Center', 'cnpj' => '11444777000161']);
+        $vetAmigo = Prestador::factory()->create();
+
+        $beatriz = User::factory()->create([
+            'name' => 'Beatriz Salles',
+            'email' => 'beatriz@petcenter.example.com',
+            'password' => Hash::make('SenhaAntiga123'),
+            'ativado_em' => Carbon::parse('2026-01-10'),
+        ]);
+        $petCenter->usuarios()->attach($beatriz->id, [
+            'papel' => 'veterinario', 'crmv' => '18220', 'crmv_uf' => 'MG',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $vetAmigo->usuarios()->attach($beatriz->id, [
+            'papel' => 'veterinario', 'crmv' => '18220', 'crmv_uf' => 'MG',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        [, $token] = Convite::emitir($beatriz, $vetAmigo, 'veterinario');
+
+        return [$token, $beatriz];
+    }
+
+    public function test_convite_para_conta_nova_pede_nome_e_senha(): void
+    {
+        [$token] = $this->conviteParaContaNova();
+
+        $this->getJson("/api/convites/{$token}")
+            ->assertOk()
+            ->assertJsonPath('convite.define_senha', true)
+            ->assertJsonPath('convite.define_nome', true)
+            ->assertJsonPath('convite.nome', null)
+            ->assertJsonPath('convite.crmv', '18220');
+
+        $this->postJson("/api/convites/{$token}", ['password' => 'Segredo123'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('nome');
+    }
+
+    public function test_conta_nova_define_o_proprio_nome_ao_aceitar(): void
+    {
+        [$token, $convidado] = $this->conviteParaContaNova();
+
+        $this->postJson("/api/convites/{$token}", [
+            'nome' => 'Beatriz Salles',
+            'password' => 'Segredo123',
+        ])->assertOk();
+
+        $this->assertSame('Beatriz Salles', $convidado->fresh()->name);
+        $this->assertNotNull($convidado->fresh()->ativado_em);
+    }
+
+    /** RF09 — quem já tem conta não redefine coisa alguma; só confirma o vínculo. */
+    public function test_convite_para_quem_ja_tem_conta_nao_pede_senha(): void
+    {
+        [$token] = $this->conviteParaQuemJaTemConta();
+
+        $this->getJson("/api/convites/{$token}")
+            ->assertOk()
+            ->assertJsonPath('convite.define_senha', false)
+            ->assertJsonPath('convite.define_nome', false)
+            ->assertJsonPath('convite.nome', 'Beatriz Salles');
+
+        $this->postJson("/api/convites/{$token}", [])->assertOk();
+    }
+
+    public function test_aceite_de_quem_ja_tem_conta_preserva_a_senha_e_a_data_de_ativacao(): void
+    {
+        [$token, $beatriz] = $this->conviteParaQuemJaTemConta();
+        $senhaAntiga = $beatriz->password;
+
+        $this->postJson("/api/convites/{$token}", [])->assertOk();
+
+        $atualizada = $beatriz->fresh();
+
+        $this->assertSame($senhaAntiga, $atualizada->password);
+        $this->assertTrue(Hash::check('SenhaAntiga123', $atualizada->password));
+        // RF14b — a data de ativação marca a primeira vez, e só ela.
+        $this->assertStringStartsWith('2026-01-10', (string) $atualizada->ativado_em);
+    }
+
+    /**
+     * O CRMV exibido em P07 é o do vínculo de veterinário. Quem acumula os dois
+     * papéis no mesmo prestador tem duas linhas no pivô, e a de administrador
+     * não carrega inscrição alguma.
+     */
+    public function test_o_crmv_exibido_vem_do_vinculo_de_veterinario(): void
+    {
+        $prestador = Prestador::factory()->create();
+
+        $convidado = User::factory()->unverified()->create(['name' => '', 'ativado_em' => null]);
+        $prestador->usuarios()->attach($convidado->id, [
+            'papel' => 'admin_prestador', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $prestador->usuarios()->attach($convidado->id, [
+            'papel' => 'veterinario', 'crmv' => '31447', 'crmv_uf' => 'MG',
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        [, $token] = Convite::emitir($convidado, $prestador, 'veterinario');
+
+        $this->getJson("/api/convites/{$token}")
+            ->assertOk()
+            ->assertJsonPath('convite.crmv', '31447')
+            ->assertJsonPath('convite.crmv_uf', 'MG');
     }
 }

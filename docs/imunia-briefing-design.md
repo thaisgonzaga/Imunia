@@ -463,7 +463,7 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 **Objetivo.** Criar o inquilino e, simultaneamente, o primeiro usuário administrador.
 
-**Componentes.** Assistente de três passos com `Stepper`: (1) o estabelecimento — tipo (clínica, hospital veterinário, profissional autônomo), razão social ou nome, documento de inscrição, endereço com município e UF, contato; (2) responsável técnico — nome, CRMV e UF de registro; (3) acesso — e-mail e senha do administrador.
+**Componentes.** Assistente de três passos com `Stepper`: (1) o estabelecimento — tipo (clínica, hospital veterinário, profissional autônomo), razão social ou nome, CNPJ, endereço com município e UF, contato; (2) responsável técnico — nome, CRMV e UF de registro; (3) acesso — e-mail e senha do administrador.
 
 **Layout.** Coluna de 640 px, `Stepper` horizontal no topo, ações no rodapé do cartão ("Voltar" e "Continuar"; no último passo, "Criar conta do estabelecimento").
 
@@ -471,7 +471,7 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 **Interações.** O tipo escolhido no passo 1 **altera os rótulos** dos passos seguintes, sem alterar os campos (RF07a): escolhido "profissional autônomo", o passo 2 passa a dizer "Seus dados profissionais" e informa que os papéis de administração e de atendimento serão atribuídos à mesma conta. Resumo revisável antes da confirmação final.
 
-**Estados.** Normal por passo; validação; documento de inscrição já cadastrado; carregando; sucesso.
+**Estados.** Normal por passo; validação; CNPJ já cadastrado; carregando; sucesso.
 
 **Responsividade.** `Stepper` vira indicador "Passo 2 de 3" com barra de progresso abaixo de `md`.
 
@@ -611,7 +611,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Objetivo.** Permitir que o tutor identifique seu animal — e deixar claro, sem constrangê-lo, que a caracterização clínica cabe ao veterinário.
 
-**Componentes.** Campo de fotografia com recorte circular; nome; seletor de espécie em dois cartões grandes com ícones `dog` e `cat`; bloco recolhível "Informações que você sabe" com sexo e data de nascimento estimada; `ConsentNotice` explicando a divisão de responsabilidade; botão "Cadastrar animal".
+**Componentes.** Campo de fotografia com recorte circular; nome; seletor de espécie em dois cartões grandes com ícones `dog` e `cat`; sexo e data de nascimento estimada, opcionais e no mesmo cartão de nome e espécie; `ConsentNotice` explicando a divisão de responsabilidade; botão "Cadastrar animal".
 
 **Layout.** Coluna única. O seletor de espécie é o elemento visualmente mais destacado — é a única escolha irreversível da tela após o primeiro registro clínico. Abaixo dos campos opcionais, bloco informativo: "Raça, peso, situação reprodutiva e micro-chip são preenchidos pelo veterinário na primeira consulta. Até lá, o cadastro fica marcado como preliminar."
 
@@ -1105,7 +1105,7 @@ Três telas, deliberadamente poucas. O papel administra a conta e **não acessa 
 
 **Objetivo.** Manter os dados cadastrais, preservando o histórico relevante para documentos já emitidos.
 
-**Componentes.** Formulário com tipo, razão social ou nome, documento de inscrição, endereço com município e UF, contato, responsável técnico com CRMV; bloco "Histórico de alterações".
+**Componentes.** Formulário com tipo, razão social ou nome, CNPJ, endereço com município e UF, contato, responsável técnico com CRMV; bloco "Histórico de alterações".
 
 **Layout.** Coluna de 720 px, campos agrupados por assunto.
 

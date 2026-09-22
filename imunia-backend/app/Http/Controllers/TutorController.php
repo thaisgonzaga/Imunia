@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTutorRequest;
 use App\Models\Tutor;
 use App\Models\User;
+use App\Support\DocumentosLegais;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -30,6 +31,9 @@ class TutorController extends Controller
                 'nome' => $dados['nome'],
                 'cpf' => $dados['cpf'],
                 'termos_aceitos_em' => now(),
+                // A versão vem da constante, e não do formulário: o cliente
+                // declara que aceita, o servidor determina o que estava no ar.
+                'termos_versao' => DocumentosLegais::VERSAO,
             ]);
 
             return [$tutor, $usuario];

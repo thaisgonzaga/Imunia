@@ -10,6 +10,7 @@ import {
   FileCheck,
   TriangleAlert,
 } from '@lucide/vue'
+import PublicFooter from '@/components/public/PublicFooter.vue'
 import PublicHeader from '@/components/public/PublicHeader.vue'
 import AppButton from '@/components/base/AppButton.vue'
 import AppInput from '@/components/base/AppInput.vue'
@@ -314,6 +315,8 @@ async function copiarResumo() {
         </p>
       </div>
     </main>
+
+    <PublicFooter />
   </div>
 </template>
 
@@ -325,8 +328,11 @@ async function copiarResumo() {
   background: var(--surface-page);
 }
 
+/* `flex: 1` empurra o rodapé para o fim da janela: a tela de verificação é
+   curta quando ainda espera o código, e sem isso o rodapé flutuaria no meio. */
 .verify__main {
   display: flex;
+  flex: 1;
   justify-content: center;
   padding: var(--space-6) var(--space-4) var(--space-12);
 }

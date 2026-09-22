@@ -42,4 +42,16 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Papel global de administração da plataforma (RF23, RF24). Fora do
+     * `#[Fillable]` do model, como `caracterizado_em` em `AnimalFactory` —
+     * mesmo caminho de escrita forçada após a criação.
+     */
+    public function adminPlataforma(): static
+    {
+        return $this->afterCreating(function (User $usuario): void {
+            $usuario->forceFill(['admin_plataforma' => true])->save();
+        });
+    }
 }

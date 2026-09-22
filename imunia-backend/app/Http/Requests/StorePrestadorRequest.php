@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Rules\DocumentoInscricaoValido;
+use App\Rules\CnpjValido;
 use App\Rules\SenhaForte;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -20,13 +20,13 @@ class StorePrestadorRequest extends FormRequest
     }
 
     /**
-     * Normaliza o documento para dígitos puros antes da validação, para que
-     * a regra de dígito verificador e a unicidade batam com o valor salvo.
+     * Normaliza o CNPJ para dígitos puros antes da validação, para que a regra
+     * de dígito verificador e a unicidade batam com o valor salvo.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'documento' => preg_replace('/\D/', '', (string) $this->input('documento')),
+            'cnpj' => preg_replace('/\D/', '', (string) $this->input('cnpj')),
         ]);
     }
 
@@ -35,13 +35,13 @@ class StorePrestadorRequest extends FormRequest
         return [
             'tipo' => ['required', 'in:clinica,hospital,autonomo'],
             'nome' => ['required', 'string', 'max:255'],
-            'documento' => ['required', 'string', new DocumentoInscricaoValido, 'unique:prestadores,documento'],
+            'cnpj' => ['required', 'string', new CnpjValido, 'unique:prestadores,cnpj'],
             'telefone' => ['required', 'string', 'max:20'],
             'endereco' => ['required', 'string', 'max:255'],
             'municipio' => ['required', 'string', 'max:120'],
             'uf' => ['required', 'string', 'in:'.implode(',', self::UFS)],
             'responsavel_tecnico_nome' => ['required', 'string', 'max:255'],
-            'responsavel_tecnico_crmv' => ['required', 'string', 'max:20'],
+            'responsavel_tecnico_crmv' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'responsavel_tecnico_crmv_uf' => ['required', 'string', 'in:'.implode(',', self::UFS)],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', new SenhaForte],
@@ -51,7 +51,8 @@ class StorePrestadorRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'documento.unique' => 'Já existe um estabelecimento cadastrado com este documento.',
+            'cnpj.unique' => 'Já existe um estabelecimento cadastrado com este CNPJ.',
+            'responsavel_tecnico_crmv.regex' => 'Informe apenas o número da inscrição, sem “CRMV” e sem a UF.',
             'email.unique' => 'Já existe uma conta com este e-mail.',
         ];
     }
