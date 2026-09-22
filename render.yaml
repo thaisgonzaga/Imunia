@@ -1,0 +1,79 @@
+# Blueprint do Render: um serviço web gratuito com a imagem do Dockerfile da
+# raiz. Os valores marcados com `sync: false` são pedidos pelo Render na
+# criação do Blueprint — o passo a passo de onde tirar cada um está em
+# deploy/LEIAME.md.
+services:
+  - type: web
+    name: imunia
+    runtime: docker
+    plan: free
+    # Mesma região do banco (TiDB Cloud em AWS us-east-1) e do bucket
+    # (Backblaze B2 us-east): cada consulta atravessa só alguns quilômetros.
+    region: virginia
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_NAME
+        value: Imunia
+      # base64 de 256 bits; deploy/iniciar.sh acrescenta o prefixo `base64:`.
+      - key: APP_KEY
+        generateValue: true
+      - key: LOG_LEVEL
+        value: warning
+
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+
+      # Banco — TiDB Cloud Starter (compatível com MySQL).
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "4000"
+      - key: DB_DATABASE
+        value: imunia
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # O TiDB Cloud só aceita conexão cifrada.
+      - key: MYSQL_ATTR_SSL_CA
+        value: /etc/ssl/certs/ca-certificates.crt
+
+      # E-mail — Brevo, pela API (o Render gratuito bloqueia SMTP).
+      - key: MAIL_MAILER
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: Imunia
+
+      # Arquivos — Backblaze B2 (compatível com S3).
+      - key: ARQUIVOS_NA_NUVEM
+        value: "true"
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        sync: false
+      - key: AWS_ENDPOINT
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+
+      # Quem administra o catálogo de vacinas (X01, X02).
+      - key: ADMIN_PLATAFORMA_EMAIL
+        sync: false

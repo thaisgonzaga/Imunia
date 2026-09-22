@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // é exigido em toda requisição de escrita (RNF08).
         $middleware->statefulApi();
 
+        // Em produção toda requisição chega pelo balanceador do Render, que
+        // termina o HTTPS e informa o endereço de origem em X-Forwarded-For.
+        // Sem confiar nele, o Laravel veria o mesmo IP para todo mundo — e os
+        // limites contados por IP (RF47c) bloqueariam todos de uma vez.
+        $middleware->trustProxies(at: '*');
+
         // Primeiro da fila: o identificador precisa existir antes de qualquer
         // camada que possa falhar, inclusive a própria autenticação.
         $middleware->api(prepend: [IdentificarOcorrencia::class]);

@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Administração da plataforma
+    |--------------------------------------------------------------------------
+    |
+    | Quem mantém o catálogo de vacinas (X01, X02) em produção. Nenhum
+    | formulário concede o papel: o comando `imunia:preparar` o atribui a este
+    | endereço a cada início do servidor, criando a conta se ela não existir.
+    |
+    */
+
+    'admin_plataforma_email' => env('ADMIN_PLATAFORMA_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

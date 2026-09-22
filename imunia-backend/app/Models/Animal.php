@@ -232,7 +232,17 @@ class Animal extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->foto_caminho);
+        $disco = Storage::disk(self::DISCO_DA_FOTO);
+
+        // Em produção o disco é um bucket privado (config/filesystems.php): o
+        // endereço é assinado e expira, e quem o copiar da tela não leva a
+        // foto consigo. As telas pedem o perfil de novo a cada visita, e cada
+        // pedido traz um endereço novo.
+        if ($disco->providesTemporaryUrls()) {
+            return $disco->temporaryUrl($this->foto_caminho, now()->addHours(2));
+        }
+
+        return $disco->url($this->foto_caminho);
     }
 
     /**

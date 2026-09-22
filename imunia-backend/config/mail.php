@@ -65,6 +65,14 @@ return [
             'transport' => 'resend',
         ],
 
+        // O plano gratuito do Render bloqueia as portas de SMTP (25, 465 e
+        // 587): em produção o e-mail sai pela API HTTP do Brevo. O transporte
+        // é registrado em AppServiceProvider, porque o Laravel não o traz.
+        'brevo' => [
+            'transport' => 'brevo',
+            'key' => env('BREVO_API_KEY'),
+        ],
+
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),

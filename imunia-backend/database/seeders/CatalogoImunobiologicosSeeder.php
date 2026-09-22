@@ -209,11 +209,17 @@ class CatalogoImunobiologicosSeeder extends Seeder
         // #[Fillable] do model (só a sessão decide quem tem o papel, nunca
         // um formulário) e por isso é atribuído à força, como `ativado_em`
         // em PrestadorController.
-        $adminPlataforma = User::firstOrCreate(
-            ['email' => 'admin.plataforma@imunia.app'],
-            ['name' => 'Administração Imunia', 'password' => 'Segredo123'],
-        );
-        $adminPlataforma->forceFill(['admin_plataforma' => true, 'email_verified_at' => now()])->save();
+        //
+        // Nunca em produção: a senha está no repositório, e quem a lesse
+        // alteraria o catálogo de vacinas de todos. Lá a administração nasce
+        // de ADMIN_PLATAFORMA_EMAIL, pelo comando `imunia:preparar`.
+        if (! app()->isProduction()) {
+            $adminPlataforma = User::firstOrCreate(
+                ['email' => 'admin.plataforma@imunia.app'],
+                ['name' => 'Administração Imunia', 'password' => 'Segredo123'],
+            );
+            $adminPlataforma->forceFill(['admin_plataforma' => true, 'email_verified_at' => now()])->save();
+        }
 
         $this->command?->info(
             'Catálogo pronto: '.count($itens).' imunobiológicos da WSAVA 2024 '
