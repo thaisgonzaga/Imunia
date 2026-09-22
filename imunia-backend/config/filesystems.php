@@ -24,10 +24,14 @@ $naNuvem = fn (string $prefixo): array => [
     // provedores compatíveis com S3 nem sempre as aceitam. Só quando exigido.
     'request_checksum_calculation' => 'when_required',
     'response_checksum_validation' => 'when_required',
-    'throw' => false,
-    // Sem isto, a falha de gravação no bucket volta só como `false`, e o log
-    // de produção não diria por quê.
-    'report' => true,
+    // A falha de gravação precisa interromper quem a causou. Com `false`, o
+    // envio volta só como `false`, e esse `false` segue adiante no lugar do
+    // caminho do arquivo: a foto do animal foi gravada no banco como "0", e a
+    // ficha passou a afirmar ter imagem que nunca chegou ao bucket. Lançando,
+    // a requisição vira E03 (bootstrap/app.php) — a tela recebe uma frase de
+    // gente com o número da ocorrência, o motivo real fica no log, e o
+    // cadastro não guarda caminho de arquivo que não existe.
+    'throw' => true,
 ];
 
 $arquivosNaNuvem = (bool) env('ARQUIVOS_NA_NUVEM', false);
