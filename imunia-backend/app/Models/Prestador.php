@@ -92,7 +92,7 @@ class Prestador extends Model
      * encerrado continuaria rendendo notificação sobre a clínica que desligou o
      * profissional.
      *
-     * De quebra resolve uma duplicidade: quem cadastrou a clínica em P03 tem
+     * De quebra resolve uma duplicidade: quem cadastrou a clínica em P04 tem
      * duas linhas no pivô e era notificado duas vezes.
      *
      * @return BelongsToMany<User, Prestador>

@@ -145,7 +145,7 @@ class ConviteController extends Controller
     private function representar(Convite $convite): array
     {
         // Filtra pelo papel, e não só pelo prestador: quem cadastrou a clínica
-        // em P03 tem duas linhas no pivô para o mesmo estabelecimento, e a de
+        // em P04 tem duas linhas no pivô para o mesmo estabelecimento, e a de
         // `admin_prestador` não carrega CRMV algum. Sem o filtro, P07 exibiria
         // "CRMV" em branco para quem tem os dois papéis.
         $vinculo = $convite->usuario->prestadores->first(
@@ -159,7 +159,7 @@ class ConviteController extends Controller
             'tipo' => $convite->tipo,
             'nome' => $usuario->name ?: null,
             // Convite de veterinário não pede aceite: quem responde pelos
-            // termos do estabelecimento é quem o cadastrou, em P03. O tutor
+            // termos do estabelecimento é quem o cadastrou, em P04. O tutor
             // cadastrado pela clínica, esse sim, aceita aqui — é a primeira
             // vez que ele está diante do documento.
             'aceita_termos' => $convite->tipo === 'tutor'

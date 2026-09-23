@@ -106,6 +106,17 @@ const diferenciais = [
               </RouterLink>
             </div>
 
+            <!-- As duas portas de entrada, lado a lado. A conta é uma só e o
+                 e-mail também (RN05); o que se escolhe aqui é com qual papel
+                 se quer trabalhar agora. Sem esta linha, quem é as duas coisas
+                 conclui que precisa de duas contas. -->
+            <p class="home-hero__signin">
+              Já tem conta?
+              <RouterLink to="/entrar/tutor">Entrar como tutor</RouterLink>
+              <span aria-hidden="true">·</span>
+              <RouterLink to="/entrar/veterinario">Entrar como veterinário</RouterLink>
+            </p>
+
             <p class="home-hero__assurance">
               <Lock :size="16" />
               Registro clínico imutável, com responsabilidade técnica identificada em cada
@@ -267,6 +278,27 @@ const diferenciais = [
 
 .home-cta__icon {
   color: var(--ink-muted);
+}
+
+.home-hero__signin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.home-hero__signin a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.home-hero__signin a:hover {
+  text-decoration: underline;
 }
 
 .home-hero__assurance {

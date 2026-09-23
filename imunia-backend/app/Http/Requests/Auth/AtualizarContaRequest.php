@@ -8,7 +8,7 @@ use Illuminate\Validation\Rule;
 /**
  * T18 — dados pessoais da própria conta (RF06).
  *
- * Ao contrário do autocadastro de P04, aqui a recusa por endereço em uso sai
+ * Ao contrário do autocadastro de P03, aqui a recusa por endereço em uso sai
  * pelo campo `email`, com a frase que diz o que houve. A discrição de RF12b
  * protege o formulário **público** de servir de consulta a quais endereços
  * possuem conta; esta rota exige sessão, e quem pergunta já está identificado

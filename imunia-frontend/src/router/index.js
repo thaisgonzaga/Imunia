@@ -12,9 +12,32 @@ const router = createRouter({
       component: () => import('@/views/public/HomeView.vue'),
     },
     {
+      // P02 — a entrada sem escolha de papel, que continua existindo: é para
+      // onde a guarda devolve quem perdeu a sessão no meio de uma tela, e aí
+      // ninguém escolheu nada. O destino é a precedência de `rotaInicial()`.
       path: '/entrar',
       name: 'login',
       component: () => import('@/views/public/LoginView.vue'),
+    },
+    {
+      // As duas portas por papel, sem código próprio no briefing — P02 é
+      // uma tela só, e as portas nasceram depois dele (RF01a). A mesma tela e a mesma
+      // credencial: um endereço, uma conta, os papéis que a pessoa tiver
+      // (RN05). O que o endereço da rota carrega é **com qual deles ela quer
+      // trabalhar agora**, e sem isso quem acumula papéis cairia todo dia no
+      // ambiente clínico — inclusive quando veio ver a carteira do próprio
+      // animal. O papel viaja em `meta`, e não em query, porque é o endereço
+      // que a pessoa guarda nos favoritos.
+      path: '/entrar/tutor',
+      name: 'login-tutor',
+      component: () => import('@/views/public/LoginView.vue'),
+      meta: { papel: 'tutor' },
+    },
+    {
+      path: '/entrar/veterinario',
+      name: 'login-veterinario',
+      component: () => import('@/views/public/LoginView.vue'),
+      meta: { papel: 'veterinario' },
     },
     {
       path: '/cadastrar-prestador',
@@ -75,6 +98,17 @@ const router = createRouter({
       path: '/conta',
       name: 'account',
       component: () => import('@/views/AccountView.vue'),
+      meta: { requerAutenticacao: true },
+    },
+    {
+      // O cadastro de tutor acrescentado a uma conta que já existe (RF12,
+      // RN05) — o caminho do veterinário que também tem um animal. Vive sob
+      // `/conta` como a tela que a origina, e sem `area`: quem chega aqui é
+      // justamente quem ainda não tem o papel de tutor, e uma guarda por área
+      // o recusaria na porta do cadastro que veio fazer.
+      path: '/conta/tutor',
+      name: 'account-tutor-profile',
+      component: () => import('@/views/CreateTutorProfileView.vue'),
       meta: { requerAutenticacao: true },
     },
     {
@@ -422,7 +456,7 @@ const router = createRouter({
     {
       // A01 — painel administrativo do prestador (RF07, RF08, RF09). Destino de
       // `rota_inicial` de quem tem o papel `admin_prestador` (P02) — o caminho
-      // que o cadastro de P03 já apontava e que até aqui caía em E02.
+      // que o cadastro de P04 já apontava e que até aqui caía em E02.
       path: '/prestador',
       name: 'prestador-dashboard',
       component: () => import('@/views/prestador/DashboardView.vue'),

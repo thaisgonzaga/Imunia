@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 /**
  * O que falta configurar na conta do prestador (A01).
  *
- * A lista existe porque o cadastro de P03 é deliberadamente curto — pede o
+ * A lista existe porque o cadastro de P04 é deliberadamente curto — pede o
  * indispensável para abrir a conta e deixa o resto para depois. "Depois" só
  * acontece se alguém cobrar, e é este serviço que cobra, no painel que o
  * administrador vê ao entrar.

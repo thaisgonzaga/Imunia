@@ -266,7 +266,7 @@ class EquipeDoPrestador
      * quem os assinou (RF10b, RF10c).
      *
      * Encerra **todas** as linhas daquela pessoa naquele prestador, e não só a
-     * de veterinário. Quem cadastrou a clínica em P03 tem duas, e encerrar uma
+     * de veterinário. Quem cadastrou a clínica em P04 tem duas, e encerrar uma
      * só deixaria a pessoa sem o ambiente clínico mas ainda administrando a
      * conta — o oposto de RF10a, que manda cessar o acesso ao prestador, não a
      * uma parte dele.
@@ -548,7 +548,7 @@ class EquipeDoPrestador
     /**
      * O responsável técnico é reconhecido pelo CRMV, e não pelo nome: é o
      * número da inscrição que o vincula ao estabelecimento perante o conselho
-     * (RN09), e é por ele que P03 amarra os dois no cadastro.
+     * (RN09), e é por ele que P04 amarra os dois no cadastro.
      */
     private function ehResponsavelTecnico(Prestador $prestador, User $membro): bool
     {

@@ -7,7 +7,7 @@ defineProps({
   /**
    * O índigo de consentimento é o eixo visual do bloco de autorizações e não
    * aparece em nenhuma outra parte do sistema (§3 do briefing). O passo a passo
-   * de T11 o carrega; o de P03, que é cadastro comum, continua na cor da marca.
+   * de T11 o carrega; o de P04, que é cadastro comum, continua na cor da marca.
    */
   tom: {
     type: String,

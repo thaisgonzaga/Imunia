@@ -142,7 +142,7 @@ class User extends Authenticatable implements MustVerifyEmail
      * diferentes (RF09, RN09).
      *
      * A busca é entre os vínculos **de veterinário**, e não entre todos os do
-     * prestador: quem cadastrou a clínica em P03 tem duas linhas no pivô para o
+     * prestador: quem cadastrou a clínica em P04 tem duas linhas no pivô para o
      * mesmo estabelecimento — a de `admin_prestador`, sem CRMV algum, e a de
      * `veterinario`, que é a que assina. Procurar só pelo id do prestador
      * devolveria a primeira, e o profissional apareceria sem inscrição no
@@ -230,10 +230,42 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Painel de destino após a autenticação (RF01a). Quem acumula papéis cai no
-     * ambiente de registro, o de uso diário; o alternador de papel fica na
-     * interface. O contexto de prestador, esse sim, é lembrado entre sessões —
-     * ver `lembrarContexto()`.
+     * Painel do papel com que a pessoa **escolheu** entrar — a entrada por
+     * papel, que o briefing não cataloga porque nasceu depois dele (RF01a).
+     *
+     * Quem acumula papéis (RN05) tem mais de uma porta, e desde as entradas
+     * separadas por papel é a tela que diz qual — não a precedência de
+     * `rotaInicial()`, que continua respondendo a quem entrou sem escolher.
+     *
+     * Devolve nulo quando a conta não tem o papel pedido, e é esse nulo que faz
+     * a diferença: a tela de entrada oferece criar o cadastro que falta, em vez
+     * de despejar a pessoa num painel que não é dela — que é o que aconteceria
+     * se a ausência caísse silenciosamente na precedência.
+     */
+    public function rotaInicialPara(string $papel): ?string
+    {
+        $papeis = $this->papeis();
+
+        if ($papel === 'tutor') {
+            return in_array('tutor', $papeis, true) ? '/inicio' : null;
+        }
+
+        // A entrada do profissional é uma só e atende os dois papéis do
+        // estabelecimento: quem administra a conta sem atender (RN08) não tem
+        // ambiente clínico, e mandá-lo a V01 seria recusá-lo na guarda logo em
+        // seguida. A porta é a mesma; o destino, o que cada um tem.
+        if (in_array('veterinario', $papeis, true)) {
+            return '/clinica/painel';
+        }
+
+        return in_array('admin_prestador', $papeis, true) ? '/prestador' : null;
+    }
+
+    /**
+     * Painel de destino de quem entrou sem escolher papel (RF01a). Quem acumula
+     * papéis cai no ambiente de registro, o de uso diário; o alternador de
+     * papel fica na interface. O contexto de prestador, esse sim, é lembrado
+     * entre sessões — ver `lembrarContexto()`.
      */
     public function rotaInicial(): string
     {

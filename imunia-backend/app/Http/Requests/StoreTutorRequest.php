@@ -25,9 +25,23 @@ class StoreTutorRequest extends FormRequest
     /**
      * Normaliza o CPF para dígitos puros antes da validação, para que a
      * regra de dígito verificador e a unicidade batam com o valor salvo.
+     *
+     * Antes disso, recusa quem já está em uma conta. O autocadastro cria conta
+     * e cadastro no mesmo ato, e quem chega aqui autenticado — a aba antiga
+     * deixada aberta, a ligação guardada nos favoritos — quer o papel de tutor,
+     * não uma segunda conta. A frase manda ao caminho que faz isso; sem ela, a
+     * pessoa leria "já existe uma conta com estes dados" estando dentro da sua.
      */
     protected function prepareForValidation(): void
     {
+        if ($this->user() !== null) {
+            abort(response()->json([
+                'situacao' => 'sessao_aberta',
+                'message' => 'Você já está em uma conta do Imunia. Crie seu cadastro de tutor por dentro dela — '
+                    .'o mesmo endereço serve aos dois papéis.',
+            ], 409));
+        }
+
         $this->merge([
             'cpf' => preg_replace('/\D/', '', (string) $this->input('cpf')),
         ]);

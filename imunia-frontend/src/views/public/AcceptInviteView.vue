@@ -47,7 +47,7 @@ const defineNome = computed(() => convite.value?.define_nome === true)
  * documento que ele não teve oportunidade de conhecer (CDC, art. 46).
  *
  * O convite de veterinário não pede: quem respondeu pelos termos foi quem
- * cadastrou o estabelecimento, em P03. Quem decide é o servidor.
+ * cadastrou o estabelecimento, em P04. Quem decide é o servidor.
  */
 const exigeAceite = computed(() => convite.value?.aceita_termos === true)
 

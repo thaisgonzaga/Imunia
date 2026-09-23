@@ -12,7 +12,7 @@ use Illuminate\Http\JsonResponse;
  * V12 — registrar óbito (RF22).
  *
  * Um verbo só, e sem serviço próprio: o óbito é uma escrita de cinco colunas no
- * próprio animal, e o padrão da casa admite o fluxo simples inline (P04). O que
+ * próprio animal, e o padrão da casa admite o fluxo simples inline (P03). O que
  * V07 e V08 têm de serviço existe pela complexidade que eles carregam — anexos,
  * prévia, janela de duplicidade — e nada disso existe aqui.
  *

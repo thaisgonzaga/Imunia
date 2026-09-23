@@ -55,7 +55,7 @@ class ContaController extends Controller
 
             $usuario->save();
 
-            // O cadastro de tutor nasce com o nome do usuário (P04) e é ele que
+            // O cadastro de tutor nasce com o nome do usuário (P03) e é ele que
             // encabeça a carteira e o histórico exportados. Deixar os dois
             // divergirem faria a mesma pessoa aparecer com dois nomes conforme
             // a tela — e o documento verificável exibiria o antigo para sempre.

@@ -32,6 +32,11 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
             'lembrar' => ['sometimes', 'boolean'],
+            // Por qual porta de P02 a pessoa entrou (RF01a). Não decide se a
+            // credencial vale, só para onde ela leva: papel que a conta não
+            // tem não recusa a entrada, apenas muda o que a tela oferece a
+            // seguir. Ver `SessionController::representar()`.
+            'papel' => ['sometimes', 'nullable', 'string', 'in:tutor,veterinario'],
         ];
     }
 

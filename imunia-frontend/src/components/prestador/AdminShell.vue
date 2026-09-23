@@ -43,7 +43,7 @@ const menuAberto = ref(false)
 
 /**
  * A volta do alternador de papel: quem funda a clínica é também veterinário
- * (P03) e precisa do caminho de retorno ao ambiente de registro. Para a
+ * (P04) e precisa do caminho de retorno ao ambiente de registro. Para a
  * administradora sem CRMV — o caso que esta moldura defende — o item não
  * existe, coerente com o bloco de limitação logo abaixo.
  */

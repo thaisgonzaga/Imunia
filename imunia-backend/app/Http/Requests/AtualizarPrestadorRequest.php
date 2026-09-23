@@ -16,7 +16,7 @@ use Illuminate\Validation\Rule;
  * técnico é opcional. RF07c prevê o estabelecimento sem responsável técnico —
  * é o que acontece quando quem respondia pela clínica sai antes de haver
  * substituto — e trata a consequência disso, que é não poder registrar
- * informação clínica. O cadastro de P03 continua exigindo os três campos: quem
+ * informação clínica. O cadastro de P04 continua exigindo os três campos: quem
  * abre a conta declara quem responde por ela; o que muda é o que pode acontecer
  * depois.
  */

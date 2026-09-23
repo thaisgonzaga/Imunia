@@ -1,7 +1,7 @@
 ---
 title: "Imunia --- Documento de Requisitos"
 subtitle: "Etapa 3 do Trabalho de Conclusão de Curso: engenharia de requisitos"
-date: "Agosto de 2026 --- versão 1.2"
+date: "Agosto de 2026 --- versão 1.3"
 lang: pt-BR
 ---
 
@@ -80,6 +80,14 @@ A matriz de rastreabilidade do documento de estudo de caso empregou numeração 
 Em consequência das inclusões, os requisitos anteriormente numerados de RF20 a RF54 passaram a RF21 a RF55, e as regras de RN17 a RN47 passaram a RN21 a RN51. Documentos derivados da versão 1.0 devem ser conferidos contra a numeração atual.
 
 **Versão 1.2.** Restrição do papel `admin_prestador` à administração da conta. Nas versões anteriores, o papel acumulava atribuições cadastrais — cadastro de tutores e animais, consulta a históricos, painel de pendências — atribuídas à recepção do estabelecimento. A revisão eliminou essas atribuições: **nenhum dado de tutor, de animal ou de registro clínico é acessível ao papel administrativo**. A numeração não foi alterada; foram ajustados os atores de quinze requisitos, a matriz de permissões (§3.2), a regra RN08 e as personas (§2).
+
+**Versão 1.3.** Explicitação da **unicidade da conta** e do caminho pelo qual os papéis se acumulam sobre ela. A acumulação já constava de §3.1, que lista entre os casos previstos "Dr. Marcelo, na condição de tutor do próprio cão", mas nenhum requisito descrevia como o segundo papel passa a existir — lacuna que, na implementação, obrigava a mesma pessoa a manter dois endereços de correio eletrônico para ser tutor e veterinário. Dois ajustes decorrem disso:
+
+1. **RF12** passou a admitir **três** origens para o cadastro do tutor, com o acréscimo do papel a conta existente, e ganhou os critérios (e) e (f), que fixam a unicidade do endereço e as condições do acréscimo.
+2. **RN05** foi reescrita para declarar a conta única por endereço, incluir o papel `tutor` entre os acumuláveis e exigir sessão autenticada do titular para o acréscimo de qualquer papel.
+3. **RF01** passou a prever a indicação do papel na entrada, com o critério (a) reformulado — o destino é o painel do papel indicado, e a precedência anterior fica reservada à entrada sem indicação — e o critério (e) acrescentado, que impede a indicação de virar condição de acesso.
+
+A numeração não foi alterada, e nenhum requisito foi acrescentado ou removido.
 
 ---
 
@@ -240,11 +248,13 @@ Cinco leituras dessa matriz merecem registro no texto da monografia, por constit
 ## 4.1 Autenticação, conta e perfil
 
 **RF01 — Autenticar usuário por credenciais**
-*Ator:* todos os papéis · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN01, RN02, RN03
+*Ator:* todos os papéis · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN01, RN02, RN03, RN05
 
 O sistema deve autenticar o usuário mediante endereço de correio eletrônico e senha, estabelecendo sessão por *cookie* `httpOnly` conforme o modo SPA do Laravel Sanctum. A resposta de erro deve ser idêntica para credencial inexistente e para senha incorreta, de modo a não revelar quais endereços possuem conta na plataforma.
 
-*Critérios de aceitação:* a) credenciais válidas estabelecem sessão e direcionam o usuário ao painel correspondente ao seu papel; b) credenciais inválidas retornam mensagem genérica; c) nenhum token de autenticação é gravado em `localStorage`; d) após o limite de tentativas de RN03, novas tentativas são recusadas pelo período definido.
+A entrada pode indicar **com qual papel** o usuário pretende trabalhar. A credencial é a mesma e a conta é única (RN05); a indicação não seleciona conta nem restringe acesso, apenas determina o painel de destino — sem ela, quem acumula papéis seria sempre conduzido ao de maior precedência, inclusive quando veio exercer o outro.
+
+*Critérios de aceitação:* a) credenciais válidas estabelecem sessão e direcionam o usuário ao painel do papel indicado na entrada; na ausência de indicação, ao painel de maior precedência entre os papéis que a conta exerce; b) credenciais inválidas retornam mensagem genérica; c) nenhum token de autenticação é gravado em `localStorage`; d) após o limite de tentativas de RN03, novas tentativas são recusadas pelo período definido; e) a indicação de papel não condiciona a autenticação: credencial válida de conta que não exerce o papel indicado estabelece sessão do mesmo modo, e o sistema oferece a criação do cadastro correspondente, na forma de RF12, em lugar de recusar o acesso.
 
 **RF02 — Encerrar sessão**
 *Ator:* todos os papéis · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN01
@@ -323,18 +333,21 @@ O sistema deve permitir que o tutor consulte quais prestadores utilizam a plataf
 ## 4.3 Tutores
 
 **RF12 — Cadastrar tutor**
-*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN10, RN11
+*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN05, RN10, RN11
 
-O sistema deve admitir duas origens para o cadastro do tutor, produzindo o mesmo registro global em ambos os casos:
+O sistema deve admitir três origens para o cadastro do tutor, produzindo o mesmo registro global nos três casos:
 
 - **Autocadastro.** O próprio tutor cria sua conta informando nome completo, CPF, endereço de correio eletrônico e senha, sem depender de convite de prestador algum.
 - **Cadastro pelo prestador.** No atendimento, o veterinário ou o administrador cadastra o tutor com os mesmos dados, e o titular recebe convite de ativação na forma de RF14.
+- **Acréscimo do papel a conta existente.** O usuário que já possui conta — tipicamente o médico-veterinário que é tutor dos próprios animais — acrescenta o cadastro de tutor à conta que já tem, informando apenas o CPF e prestando o mesmo consentimento exigido no autocadastro. Nome, endereço de correio eletrônico e senha são os da conta, e não se repetem.
 
 O tutor é entidade global: não possui `prestador_id` e não pertence ao estabelecimento que o cadastrou, qualquer que tenha sido a origem.
 
-*Critérios de aceitação:* a) o CPF é único em toda a plataforma e validado quanto aos dígitos verificadores; b) a tentativa de cadastro com CPF já existente, feita por prestador, conduz ao fluxo de RF13, e jamais cria segundo registro; c) o autocadastro dispara imediatamente a verificação de endereço de RF05; d) tutor autocadastrado não recebe acesso a dado algum de prestador, e nenhum prestador passa a enxergá-lo por força do cadastro.
+*Critérios de aceitação:* a) o CPF é único em toda a plataforma e validado quanto aos dígitos verificadores; b) a tentativa de cadastro com CPF já existente, feita por prestador, conduz ao fluxo de RF13, e jamais cria segundo registro; c) o autocadastro dispara imediatamente a verificação de endereço de RF05; d) tutor autocadastrado não recebe acesso a dado algum de prestador, e nenhum prestador passa a enxergá-lo por força do cadastro; e) o endereço de correio eletrônico é único na plataforma, e nenhuma das três origens cria segunda conta para endereço já cadastrado; f) o acréscimo do papel a conta existente exige sessão autenticada do titular, produz no máximo um cadastro de tutor por conta e recusa, com a mesma reserva do autocadastro, o CPF que já pertença a outro cadastro — sem distinguir em resposta ou em tela qual dado coincidiu.
 
 O autocadastro abre um caminho de adoção que não existia na versão anterior deste documento e que convém explicitar no Capítulo 4: o tutor pode começar a usar o sistema **antes** de qualquer clínica, registrando seus animais e o histórico pregresso de que disponha, e levando a plataforma ao profissional no atendimento seguinte. A adesão deixa de depender exclusivamente do estabelecimento, o que mitiga parcialmente a limitação de dependência de rede declarada na Etapa 2.
+
+A terceira origem não acrescenta funcionalidade nova: ela dá caminho ao que §3.1 já afirmava ao listar "Dr. Marcelo, na condição de tutor do próprio cão" entre as acumulações previstas. Sem ela, exercer os dois papéis exigiria dois endereços de correio eletrônico, e a plataforma passaria a tratar como duas pessoas quem é uma só — com consequências sobre o registro de acessos de RF18, sobre a autoria preservada de RF10 e sobre a unicidade do CPF exigida no critério (a) deste requisito.
 
 **RF13 — Localizar tutor já existente na plataforma**
 *Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1, P4 · *Regras:* RN11, RN12
@@ -785,7 +798,7 @@ O RNF15 traduz, em critério mensurável, a tensão identificada na persona do D
 | RN02 | Sessões inativas expiram automaticamente, exigindo nova autenticação |
 | RN03 | Tentativas sucessivas de autenticação malsucedidas para a mesma origem ou o mesmo endereço são limitadas por taxa, com bloqueio temporário |
 | RN04 | Senhas observam extensão mínima e verificação contra repositórios públicos de senhas comprometidas; ligações de redefinição e códigos de confirmação são de uso único e possuem prazo de validade |
-| RN05 | Um mesmo usuário pode acumular os papéis de administrador do prestador e de médico-veterinário sobre o mesmo prestador, e pode manter vínculo com mais de um prestador, atuando sempre sob um contexto ativo determinado |
+| RN05 | A conta é única por endereço de correio eletrônico, e os papéis acumulam-se sobre ela: um mesmo usuário pode reunir os de tutor, de administrador do prestador e de médico-veterinário — os dois últimos inclusive sobre o mesmo prestador —, e pode manter vínculo com mais de um prestador, atuando sempre sob um contexto ativo determinado. Nenhum papel confere privilégio a outro, e o acréscimo de qualquer deles a uma conta existente exige sessão autenticada do titular |
 | RN06 | Toda alteração de dado cadastral registra autor, data e hora |
 
 ## 6.2 Prestadores, tutores e animais

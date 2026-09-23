@@ -6,6 +6,7 @@ use App\Http\Controllers\AtendimentoController;
 use App\Http\Controllers\Auth\ContaController;
 use App\Http\Controllers\Auth\ConviteController;
 use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\PapelDeTutorController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\AutorizacaoController;
@@ -62,6 +63,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conta', [ContaController::class, 'show']);
     Route::post('/conta', [ContaController::class, 'update']);
     Route::post('/conta/senha', [ContaController::class, 'atualizarSenha']);
+
+    // O papel de tutor acrescentado a uma conta que já existe (RF12, RN05) —
+    // o caminho do veterinário que também cuida dos próprios animais. Vive em
+    // `/conta` porque é da conta que se trata: não há prestador algum no
+    // assunto. Com limite de frequência, porque o CPF é único na plataforma e
+    // sem ele a rota responderia, a qualquer conta, se um CPF tem cadastro.
+    Route::post('/conta/tutor', [PapelDeTutorController::class, 'store'])
+        ->middleware('throttle:6,1');
 
     // T01 — painel do tutor (RF50). Sob autenticação, como tudo o que não seja
     // a verificação pública de documento (RN01).
@@ -230,7 +239,7 @@ Route::middleware('auth:sanctum')->group(function () {
     );
 
     // T10 — diretório de prestadores (RF11). Mesmo caminho do cadastro público
-    // de prestador (P03), verbo diferente e propósito oposto: aquele cria o
+    // de prestador (P04), verbo diferente e propósito oposto: aquele cria o
     // estabelecimento sem sessão alguma, este lista para o tutor autenticado o
     // que há de público a respeito dos já cadastrados (RF11a).
     Route::get('/prestadores', [DiretorioPrestadoresController::class, 'index']);
@@ -332,7 +341,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // A01 — painel administrativo do prestador (RF07, RF08, RF09). O caminho é
     // `/prestador/painel`, e não `/prestador`, pela mesma simetria de
     // `/tutor/painel` e `/clinica/painel` — e porque `/prestadores`, no plural,
-    // já é o diretório de T10 e o cadastro de P03.
+    // já é o diretório de T10 e o cadastro de P04.
     //
     // Nada sob este prefixo alcança tutor, animal ou registro clínico: RN08
     // separa a administração da conta do acesso ao dado, e a separação é o

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { CircleCheck, KeyRound, Lock, TriangleAlert } from '@lucide/vue'
 import AuthSplitPage from '@/components/auth/AuthSplitPage.vue'
@@ -10,8 +10,25 @@ import PasswordChecklist from '@/components/auth/PasswordChecklist.vue'
 import { cpfValido, formatarCpf, somenteDigitos } from '@/lib/masks.js'
 import { apiPost, ApiError } from '@/lib/api.js'
 import { senhaForte } from '@/lib/senha.js'
+import { useSessaoStore } from '@/stores/sessao.js'
 
 const router = useRouter()
+const sessao = useSessaoStore()
+
+/**
+ * Quem já está numa conta não cria uma segunda: o papel de tutor cabe na que
+ * ela já tem (RN05), e é para lá que este caminho leva. A aba antiga deixada
+ * aberta e a ligação guardada nos favoritos chegam aqui autenticadas, e sem
+ * este desvio leriam "já existe uma conta com estes dados" estando dentro da
+ * sua — o servidor recusa o mesmo envio com 409, e este é o desvio amável.
+ */
+onMounted(async () => {
+  await sessao.carregar()
+
+  if (!sessao.autenticado) return
+
+  router.replace((sessao.usuario.papeis ?? []).includes('tutor') ? '/inicio' : '/conta/tutor')
+})
 
 const submitting = ref(false)
 const submitError = ref('')
@@ -166,7 +183,7 @@ function revisarDados() {
     :itens="ARGUMENTOS"
     rodape="Imunia · calendário vacinal e prontuário para cães e gatos"
     acao-rotulo="Entrar"
-    acao-destino="/entrar"
+    acao-destino="/entrar/tutor"
   >
     <!-- Sucesso: o estado troca na própria tela, e não em aviso solto (§6.1). -->
     <template v-if="resultado">
@@ -308,7 +325,7 @@ function revisarDados() {
 
       <div class="auth-footer">
         <span class="auth-footer__text">
-          Já tem conta? <RouterLink to="/entrar">Entrar</RouterLink>
+          Já tem conta? <RouterLink to="/entrar/tutor">Entrar</RouterLink>
         </span>
       </div>
     </template>

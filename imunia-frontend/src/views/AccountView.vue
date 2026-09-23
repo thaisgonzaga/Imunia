@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { CircleCheck, ClockAlert, LogOut, TriangleAlert } from '@lucide/vue'
+import { Building2, CircleCheck, ClockAlert, LogOut, PawPrint, TriangleAlert } from '@lucide/vue'
 import AppButton from '@/components/base/AppButton.vue'
 import AppInput from '@/components/base/AppInput.vue'
 import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
@@ -48,6 +48,35 @@ const erroDeSenha = ref('')
 const avisoDeSenha = ref('')
 
 const saindo = ref(false)
+
+const papeis = computed(() => conta.value?.papeis ?? [])
+
+/**
+ * Os papéis que esta conta exerce, em palavras. Uma pessoa pode ter todos
+ * (RN05), e a lista existe porque é o que responde, sem precisar explicar,
+ * por que o mesmo e-mail abre ambientes diferentes.
+ */
+const ROTULOS_DE_PAPEL = {
+  tutor: 'Tutor — os seus animais',
+  veterinario: 'Médico-veterinário — o atendimento clínico',
+  admin_prestador: 'Administrador — a conta do estabelecimento',
+  admin_plataforma: 'Administração do Imunia',
+}
+
+const papeisDaConta = computed(
+  () => papeis.value.map((papel) => ROTULOS_DE_PAPEL[papel]).filter(Boolean),
+)
+
+/**
+ * O que esta conta ainda pode ser. Não há segunda conta a criar: o cadastro de
+ * tutor e o vínculo com um estabelecimento se somam ao mesmo e-mail e à mesma
+ * senha, e é justamente isso que não se descobre sozinho.
+ */
+const ehTutor = computed(() => papeis.value.includes('tutor'))
+
+const trabalhaEmPrestador = computed(
+  () => papeis.value.includes('veterinario') || papeis.value.includes('admin_prestador'),
+)
 
 // O reenvio da confirmação é o mesmo da tarja de T01 (RF05c) — endereço
 // gravado, e não o que está sendo digitado: reenviar para o campo em edição
@@ -365,6 +394,56 @@ carregar()
           </div>
         </form>
 
+        <!--
+          Os papéis da conta, e o que ainda cabe nela. A seção existe porque a
+          acumulação de papéis (RN05) é invisível até alguém precisar dela: sem
+          esta explicação, o veterinário que tem um cão em casa conclui que
+          precisa de uma segunda conta — e duas contas são duas pessoas para o
+          resto do sistema, do livro de acessos à autoria dos registros.
+        -->
+        <section class="cartao">
+          <h2 class="cartao__titulo">O que esta conta é</h2>
+          <p class="cartao__texto">
+            Um e-mail, uma conta, os papéis que você exercer. Nada aqui pede uma segunda senha.
+          </p>
+
+          <ul v-if="papeisDaConta.length" class="papeis">
+            <li v-for="papel in papeisDaConta" :key="papel" class="papeis__item">
+              <CircleCheck :size="18" :stroke-width="1.75" />
+              <span>{{ papel }}</span>
+            </li>
+          </ul>
+
+          <div v-if="!ehTutor" class="oferta">
+            <PawPrint :size="20" :stroke-width="1.75" />
+            <div class="oferta__corpo">
+              <p class="oferta__titulo">Você também tem animais?</p>
+              <p class="oferta__texto">
+                Crie seu cadastro de tutor nesta mesma conta para guardar a carteira de vacinação
+                deles e decidir quais clínicas podem consultá-la.
+              </p>
+              <RouterLink to="/conta/tutor" class="botao botao--secundario">
+                Criar meu cadastro de tutor
+              </RouterLink>
+            </div>
+          </div>
+
+          <div v-if="!trabalhaEmPrestador" class="oferta">
+            <Building2 :size="20" :stroke-width="1.75" />
+            <div class="oferta__corpo">
+              <p class="oferta__titulo">Você atende animais?</p>
+              <p class="oferta__texto">
+                Cadastre sua clínica, hospital ou atendimento autônomo nesta mesma conta. Se você
+                faz parte de uma equipe que já usa o Imunia, peça a quem administra a conta que
+                convide este mesmo e-mail.
+              </p>
+              <RouterLink to="/cadastrar-prestador" class="botao botao--secundario">
+                Cadastrar meu estabelecimento
+              </RouterLink>
+            </div>
+          </div>
+        </section>
+
         <section class="cartao">
           <h2 class="cartao__titulo">Sessão</h2>
           <p class="cartao__texto">
@@ -576,6 +655,65 @@ carregar()
   color: var(--ink-muted);
 }
 
+.papeis {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+}
+
+.papeis__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+
+.papeis__item svg {
+  flex: none;
+  color: var(--status-ok);
+}
+
+.oferta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.oferta svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand);
+}
+
+.oferta__corpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.oferta__titulo {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.oferta__texto {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
 .acoes {
   display: flex;
   flex-wrap: wrap;
@@ -598,6 +736,9 @@ carregar()
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  /* A mesma peça serve a `button` e às ligações das ofertas de papel, que são
+     navegação e não envio — sem isto elas apareceriam sublinhadas. */
+  text-decoration: none;
 }
 
 .botao--primario {
