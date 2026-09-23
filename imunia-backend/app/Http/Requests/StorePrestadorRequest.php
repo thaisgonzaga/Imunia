@@ -9,13 +9,11 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * P04 — cadastrar prestador (RF07).
  *
- * O formulário tem duas leituras, conforme quem o envia. O visitante anônimo
- * cria conta e estabelecimento no mesmo ato, e por isso informa endereço e
- * senha. Quem já está no Imunia — a tutora que agora abre o próprio
- * consultório, o veterinário que deixa a clínica onde era convidado — cadastra
- * o estabelecimento **na conta que já tem**: endereço e senha já existem, e
- * pedi-los de novo só poderia produzir uma segunda conta para a mesma pessoa,
- * que é justamente o que RN05 dispensa.
+ * O formulário é um só, e pede endereço e senha de quem quer que o envie. A
+ * sessão de quem está no navegador não o encurta: ela diz quem preenche, e não
+ * quem vai administrar o estabelecimento — são a mesma pessoa com frequência,
+ * mas o cadastro não tem como saber, e supô-lo criaria vínculo e CRMV numa
+ * conta que ninguém indicou.
  */
 class StorePrestadorRequest extends FormRequest
 {
@@ -41,14 +39,6 @@ class StorePrestadorRequest extends FormRequest
         ]);
     }
 
-    /**
-     * Se o cadastro nasce junto com a conta ou dentro de uma que já existe.
-     */
-    public function criaConta(): bool
-    {
-        return $this->user() === null;
-    }
-
     public function rules(): array
     {
         return [
@@ -62,16 +52,8 @@ class StorePrestadorRequest extends FormRequest
             'responsavel_tecnico_nome' => ['required', 'string', 'max:255'],
             'responsavel_tecnico_crmv' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'responsavel_tecnico_crmv_uf' => ['required', 'string', 'in:'.implode(',', self::UFS)],
-            // Proibidos, e não ignorados, para quem já tem sessão: o campo
-            // preenchido nesse caso só pode significar que a tela mandou o que
-            // não devia, e aceitá-lo em silêncio deixaria a pessoa acreditando
-            // ter trocado de endereço ou de senha por aqui.
-            'email' => $this->criaConta()
-                ? ['required', 'string', 'email', 'max:255', 'unique:users,email']
-                : ['prohibited'],
-            'password' => $this->criaConta()
-                ? ['required', 'confirmed', new SenhaForte]
-                : ['prohibited'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', new SenhaForte],
         ];
     }
 
@@ -80,9 +62,7 @@ class StorePrestadorRequest extends FormRequest
         return [
             'cnpj.unique' => 'Já existe um estabelecimento cadastrado com este CNPJ.',
             'responsavel_tecnico_crmv.regex' => 'Informe apenas o número da inscrição, sem “CRMV” e sem a UF.',
-            'email.unique' => 'Já existe uma conta com este e-mail. Entre com ela e cadastre o estabelecimento por dentro: o Imunia não precisa de uma segunda conta para a mesma pessoa.',
-            'email.prohibited' => 'Você já está em uma conta: o estabelecimento será cadastrado nela.',
-            'password.prohibited' => 'Você já está em uma conta: continue com a senha que já usa.',
+            'email.unique' => 'Já existe uma conta com este e-mail. Se você atende em um estabelecimento que já usa o Imunia, o vínculo chega por convite de quem administra a conta.',
         ];
     }
 }

@@ -68,9 +68,9 @@ const papeisDaConta = computed(
 )
 
 /**
- * O que esta conta ainda pode ser. Não há segunda conta a criar: o cadastro de
- * tutor e o vínculo com um estabelecimento se somam ao mesmo e-mail e à mesma
- * senha, e é justamente isso que não se descobre sozinho.
+ * O que esta conta ainda pode ser. O cadastro de tutor se acrescenta a ela, e o
+ * vínculo com um estabelecimento chega ao mesmo e-mail por convite — nenhum dos
+ * dois pede segunda conta, e é justamente isso que não se descobre sozinho.
  */
 const ehTutor = computed(() => papeis.value.includes('tutor'))
 
@@ -433,12 +433,17 @@ carregar()
             <div class="oferta__corpo">
               <p class="oferta__titulo">Você atende animais?</p>
               <p class="oferta__texto">
-                Cadastre sua clínica, hospital ou atendimento autônomo nesta mesma conta. Se você
-                faz parte de uma equipe que já usa o Imunia, peça a quem administra a conta que
-                convide este mesmo e-mail.
+                Se você faz parte de uma equipe que já usa o Imunia, peça a quem administra a conta
+                que convide este mesmo e-mail: o vínculo chega por convite e passa a valer aqui,
+                sem segunda senha.
+              </p>
+              <p class="oferta__texto">
+                Cadastrar uma clínica, um hospital ou um atendimento autônomo é outro caminho — o
+                cadastro abre a conta administradora do próprio estabelecimento, com e-mail e senha
+                dele.
               </p>
               <RouterLink to="/cadastrar-prestador" class="botao botao--secundario">
-                Cadastrar meu estabelecimento
+                Cadastrar um estabelecimento
               </RouterLink>
             </div>
           </div>

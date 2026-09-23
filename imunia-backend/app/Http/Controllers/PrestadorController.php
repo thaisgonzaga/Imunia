@@ -11,42 +11,36 @@ use Illuminate\Support\Facades\DB;
 /**
  * P04 — cadastrar prestador (RF07).
  *
- * Duas origens, um resultado. O visitante anônimo cria conta e estabelecimento
- * no mesmo ato. Quem já está no Imunia cadastra o estabelecimento na conta que
- * já tem — a tutora que abre o próprio consultório não precisa de um segundo
- * endereço de correio para isso, porque os papéis se somam na mesma conta
- * (RN05) e o convite de A03 há tempos faz o caminho inverso.
+ * A tela é pública e cadastra estabelecimento e conta administradora no mesmo
+ * ato — inclusive quando quem a preenche já tem sessão aberta. O cadastro não
+ * lê a sessão de quem envia: quem abre um estabelecimento aqui pode não ser
+ * quem está no navegador, e tomar a conta corrente por destino do vínculo
+ * carimbaria o CRMV alheio num papel da conta de quem apenas preencheu o
+ * formulário.
  *
- * Mais de um estabelecimento por conta é previsto, e não acidente: RF09 admite
- * vínculo simultâneo com vários prestadores, e o contexto ativo é que decide
- * onde a pessoa está trabalhando (RF09b). O que não se repete é a conta.
+ * O caminho de quem quer acrescentar um vínculo à conta que já tem é outro, e
+ * é o de sempre: o convite de A03, que RF09 e RF14 desenham e que reaproveita
+ * a conta de quem já está no Imunia.
  */
 class PrestadorController extends Controller
 {
     public function store(StorePrestadorRequest $request): JsonResponse
     {
         $dados = $request->validated();
-        $criaConta = $request->criaConta();
-        $autenticado = $request->user();
 
-        [$prestador, $usuario] = DB::transaction(function () use ($dados, $criaConta, $autenticado) {
-            // O nome do responsável técnico batiza a conta nova, e só ela: na
-            // conta que já existe o nome é o da pessoa, escrito por ela, e é
-            // ele que assina cada registro clínico que ela já produziu. O
-            // cadastro do estabelecimento não rebatiza ninguém.
-            $usuario = $criaConta
-                ? User::create([
-                    'name' => $dados['responsavel_tecnico_nome'],
-                    'email' => $dados['email'],
-                    'password' => $dados['password'],
-                ])
-                : $autenticado;
+        [$prestador, $usuario] = DB::transaction(function () use ($dados) {
+            // O nome do responsável técnico batiza a conta que nasce aqui: é
+            // ele quem responde pelo estabelecimento e quem assinará os
+            // registros clínicos enquanto a equipe não existir.
+            $usuario = User::create([
+                'name' => $dados['responsavel_tecnico_nome'],
+                'email' => $dados['email'],
+                'password' => $dados['password'],
+            ]);
 
             // A senha é definida pelo próprio administrador no cadastro: a
             // conta nasce ativada, sem convite de RF14 a aceitar.
-            if ($criaConta) {
-                $usuario->forceFill(['ativado_em' => now()])->save();
-            }
+            $usuario->forceFill(['ativado_em' => now()])->save();
 
             $prestador = Prestador::create([
                 'tipo' => $dados['tipo'],
@@ -80,19 +74,10 @@ class PrestadorController extends Controller
 
         // Sem endereço confirmado a conta não recebe comunicação alguma (RN42),
         // e a tarja de pendência acompanha o administrador até que confirme.
-        // Quem já confirmou o endereço não é mandado confirmá-lo de novo: a
-        // mensagem repetida sugeriria que o cadastro suspendeu algo, e não
-        // suspendeu nada.
-        if (! $usuario->hasVerifiedEmail()) {
-            $usuario->sendEmailVerificationNotification();
-        }
+        $usuario->sendEmailVerificationNotification();
 
         return response()->json([
             'message' => 'Estabelecimento cadastrado com sucesso.',
-            // A tela de sucesso é outra conforme o caso: quem acabou de criar a
-            // conta ainda tem de confirmar o endereço antes de entrar; quem já
-            // estava dentro segue direto para a administração do que cadastrou.
-            'conta_nova' => $criaConta,
             'prestador' => [
                 'id' => $prestador->id,
                 'nome' => $prestador->nome,

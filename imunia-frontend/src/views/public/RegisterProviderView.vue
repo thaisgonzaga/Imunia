@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Building2, CircleCheck, KeyRound, Lock, TriangleAlert, UserRoundCheck } from '@lucide/vue'
 import AuthSplitPage from '@/components/auth/AuthSplitPage.vue'
@@ -12,20 +12,20 @@ import { ESTADOS } from '@/lib/estados.js'
 import { cnpjValido, formatarCnpj, formatarTelefone, somenteDigitos } from '@/lib/masks.js'
 import { apiPost, ApiError } from '@/lib/api.js'
 import { senhaForte } from '@/lib/senha.js'
-import { useSessaoStore } from '@/stores/sessao.js'
 
 /**
- * P04 — cadastrar prestador (RF07), em duas leituras conforme quem chega.
+ * P04 — cadastrar prestador (RF07).
  *
- * O visitante anônimo cria conta e estabelecimento no mesmo ato. Quem já está
- * no Imunia cadastra o estabelecimento **na conta que já tem** — a tutora que
- * abre o próprio consultório, o veterinário que monta a clínica onde antes era
- * convidado. Aí o terceiro passo não pede endereço nem senha: pedi-los só
- * poderia produzir uma segunda conta para a mesma pessoa, e os papéis se somam
- * na mesma (RN05).
+ * A tela é pública e cadastra o estabelecimento junto com a conta de quem o
+ * administra, sempre — inclusive quando quem preenche já tem sessão aberta no
+ * navegador. A sessão não é indício de nada aqui: quem cadastra pode estar
+ * abrindo o consultório de outra pessoa, e tomar a conta corrente por destino
+ * do vínculo carimbaria o CRMV alheio em quem apenas digitou o formulário.
+ *
+ * Quem já está no Imunia e passa a atender num estabelecimento entra por
+ * convite (A03, RF14) — o caminho em que alguém de dentro atesta o vínculo.
  */
 const router = useRouter()
-const sessao = useSessaoStore()
 
 const ufOptions = ESTADOS.map((estado) => ({ value: estado.sigla, label: `${estado.sigla} — ${estado.nome}` }))
 
@@ -37,7 +37,6 @@ const ARGUMENTOS = [
 ]
 
 const step = ref(1)
-const sessaoConsultada = ref(false)
 const submitting = ref(false)
 const submitError = ref('')
 const cnpjJaCadastrado = ref(false)
@@ -60,19 +59,6 @@ const form = reactive({
 })
 
 const errors = reactive({})
-
-/**
- * Se o cadastro nasce junto com a conta ou dentro de uma que já existe. A
- * consulta é feita uma vez, na montagem: o terceiro passo muda de forma
- * conforme a resposta, e trocá-la depois de a pessoa já estar digitando seria
- * apagar campos debaixo da mão dela.
- */
-const contaExistente = computed(() => sessaoConsultada.value && sessao.autenticado)
-
-onMounted(async () => {
-  await sessao.carregar()
-  sessaoConsultada.value = true
-})
 
 function limparErro(campo) {
   delete errors[campo]
@@ -119,10 +105,6 @@ function validarPasso2() {
 }
 
 function validarPasso3() {
-  // Quem já está numa conta não tem o que preencher aqui: o passo é só a
-  // revisão antes de confirmar.
-  if (contaExistente.value) return {}
-
   const novosErros = {}
   if (!/^\S+@\S+\.\S+$/.test(form.email)) novosErros.email = 'Informe um e-mail válido.'
   if (!senhaForte(form.password)) novosErros.password = 'A senha ainda não atende aos critérios abaixo.'
@@ -184,16 +166,6 @@ function irParaConfirmacao() {
   router.push({ path: '/verificar-email', state: { email: resultado.value.email } })
 }
 
-/**
- * A saída de quem já estava dentro: o papel novo abre um ambiente que não
- * existia um instante atrás, e sem recarregar a sessão a guarda da rota de
- * destino recusaria a entrada.
- */
-async function irParaAdministracao() {
-  await sessao.carregar({ recarregar: true })
-  router.push('/prestador')
-}
-
 async function enviar() {
   const novosErros = validarPasso3()
   substituirErros(CAMPOS_PASSO_3, novosErros)
@@ -215,23 +187,12 @@ async function enviar() {
       responsavel_tecnico_nome: form.responsavel_tecnico_nome,
       responsavel_tecnico_crmv: form.responsavel_tecnico_crmv,
       responsavel_tecnico_crmv_uf: form.responsavel_tecnico_crmv_uf,
-      // Omitidos, e não vazios, para quem já tem sessão: o servidor os recusa
-      // nesse caso, justamente para que nenhuma tela possa dar a entender que
-      // se troca endereço ou senha por aqui.
-      ...(contaExistente.value
-        ? {}
-        : {
-          email: form.email,
-          password: form.password,
-          password_confirmation: form.password_confirmation,
-        }),
+      email: form.email,
+      password: form.password,
+      password_confirmation: form.password_confirmation,
     })
 
-    resultado.value = {
-      ...resposta.prestador,
-      email: contaExistente.value ? sessao.usuario?.email : form.email,
-      contaNova: resposta.conta_nova,
-    }
+    resultado.value = { ...resposta.prestador, email: form.email }
   } catch (erro) {
     if (erro instanceof ApiError && erro.status === 422) {
       // O passo 1 não deixa passar CNPJ malformado nem com dígito verificador
@@ -264,7 +225,7 @@ function corrigirCnpj() {
     subtitulo="Cadastre sua clínica, hospital veterinário ou atendimento autônomo e comece a registrar vacinação e prontuário com o CRMV de cada profissional."
     :itens="ARGUMENTOS"
     rodape="Imunia · calendário vacinal e prontuário para cães e gatos"
-    :acao-rotulo="contaExistente ? '' : 'Entrar'"
+    acao-rotulo="Entrar"
     acao-destino="/entrar/veterinario"
     largo
   >
@@ -277,33 +238,18 @@ function corrigirCnpj() {
             Estabelecimento cadastrado
           </p>
 
-          <!-- Quem já estava dentro não é mandado confirmar endereço algum: a
-               conta é a mesma de sempre, e o que mudou foi o que ela alcança. -->
-          <template v-if="resultado.contaNova === false">
-            <h1 class="auth-title">Tudo pronto</h1>
-            <p class="auth-text">
-              <strong>{{ resultado.nome }}</strong> foi cadastrado no Imunia, em {{ resultado.municipio }}/{{ resultado.uf }},
-              na sua conta de sempre — <strong>{{ resultado.email }}</strong>. Os papéis que você já tinha continuam
-              valendo: o ambiente de trabalho e o dos seus animais convivem na mesma conta.
-            </p>
+          <h1 class="auth-title">Falta confirmar seu e-mail</h1>
+          <p class="auth-text">
+            <strong>{{ resultado.nome }}</strong> foi cadastrado no Imunia, em {{ resultado.municipio }}/{{ resultado.uf }}.
+            Enviamos uma mensagem para <strong>{{ resultado.email }}</strong> — confirme o endereço para manter o
+            acesso protegido e receber avisos sobre a conta.
+          </p>
 
-            <AppButton class="auth-submit" @click="irParaAdministracao">Ir para a administração</AppButton>
-          </template>
+          <AppButton class="auth-submit" @click="irParaConfirmacao">Confirmar meu e-mail</AppButton>
 
-          <template v-else>
-            <h1 class="auth-title">Falta confirmar seu e-mail</h1>
-            <p class="auth-text">
-              <strong>{{ resultado.nome }}</strong> foi cadastrado no Imunia, em {{ resultado.municipio }}/{{ resultado.uf }}.
-              Enviamos uma mensagem para <strong>{{ resultado.email }}</strong> — confirme o endereço para manter o
-              acesso protegido e receber avisos sobre a conta.
-            </p>
-
-            <AppButton class="auth-submit" @click="irParaConfirmacao">Confirmar meu e-mail</AppButton>
-
-            <div class="auth-footer">
-              <RouterLink to="/entrar/veterinario" class="auth-link">Entrar agora</RouterLink>
-            </div>
-          </template>
+          <div class="auth-footer">
+            <RouterLink to="/entrar/veterinario" class="auth-link">Entrar agora</RouterLink>
+          </div>
         </div>
       </section>
     </template>
@@ -338,10 +284,7 @@ function corrigirCnpj() {
 
     <template v-else>
       <section class="wizard-card">
-        <StepIndicator
-          :current="step" :total="3"
-          :label="step === 1 ? 'estabelecimento' : step === 2 ? 'responsável técnico' : (contaExistente ? 'confirmação' : 'acesso')"
-        />
+        <StepIndicator :current="step" :total="3" :label="step === 1 ? 'estabelecimento' : step === 2 ? 'responsável técnico' : 'acesso'" />
 
         <div class="wizard-card__body">
           <!-- Passo 1 -->
@@ -468,23 +411,9 @@ function corrigirCnpj() {
 
           <!-- Passo 3 -->
           <template v-else>
-            <h1 class="auth-title auth-title--wizard">
-              {{ contaExistente ? 'Confirmar o cadastro' : 'Acesso do administrador' }}
-            </h1>
+            <h1 class="auth-title auth-title--wizard">Acesso do administrador</h1>
 
-            <!-- A conta é a que já existe, e é preciso dizer qual: quem tem
-                 mais de um endereço precisa saber em qual deles o
-                 estabelecimento está sendo cadastrado antes de confirmar. -->
-            <div v-if="contaExistente" class="auth-notice auth-notice--consentimento">
-              <KeyRound :size="20" />
-              <p class="auth-notice__text">
-                O estabelecimento será cadastrado na conta que você já usa —
-                <strong>{{ sessao.usuario?.email }}</strong>. Seu e-mail e sua senha continuam os mesmos, e os
-                papéis que você já tem seguem valendo.
-              </p>
-            </div>
-
-            <div v-if="!contaExistente" class="fields-grid">
+            <div class="fields-grid">
               <div class="fields-grid__full">
                 <AppInput
                   id="email" label="E-mail" type="email" autocomplete="email"

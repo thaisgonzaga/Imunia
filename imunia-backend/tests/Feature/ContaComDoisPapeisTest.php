@@ -14,10 +14,15 @@ use Tests\TestCase;
  * Um endereço de correio, uma conta, os papéis que a pessoa tiver (RN05).
  *
  * O veterinário que também é tutor de um animal é a Larissa das personas, e era
- * exatamente quem o sistema não sabia cadastrar: os dois autocadastros criavam
- * conta nova e recusavam o endereço repetido, de modo que ser as duas coisas
- * exigia dois endereços — e dois endereços são duas pessoas para o resto do
- * sistema, do livro de acessos à autoria dos registros.
+ * exatamente quem o sistema não sabia cadastrar: o autocadastro criava conta
+ * nova e recusava o endereço repetido, de modo que ser as duas coisas exigia
+ * dois endereços — e dois endereços são duas pessoas para o resto do sistema,
+ * do livro de acessos à autoria dos registros.
+ *
+ * O acréscimo acontece pelo cadastro de tutor autenticado e pelo convite de
+ * equipe de A03. O cadastro público de estabelecimento (P04) não participa: ele
+ * é tela de porta, aberta a quem não tem conta, e não lê a sessão de quem a
+ * preenche.
  */
 class ContaComDoisPapeisTest extends TestCase
 {
@@ -40,104 +45,76 @@ class ContaComDoisPapeisTest extends TestCase
     }
 
     // ------------------------------------------------------------------
-    // O tutor que passa a atender
+    // O cadastro público de estabelecimento não olha para a sessão
     // ------------------------------------------------------------------
 
-    public function test_tutor_autenticado_cadastra_estabelecimento_na_propria_conta(): void
+    /**
+     * Quem preenche P04 nem sempre é quem vai administrar o estabelecimento —
+     * pode ser o colega que abre o consultório ao lado, no navegador de quem já
+     * está no Imunia. A conta administradora é a que o formulário informa, e o
+     * CRMV do responsável técnico não vira papel de quem apenas digitou.
+     */
+    public function test_cadastro_publico_nao_vincula_o_estabelecimento_a_sessao_aberta(): void
     {
         $usuario = User::factory()->create(['name' => 'Larissa Prado']);
         Tutor::factory()->for($usuario)->create(['nome' => 'Larissa Prado']);
 
         $resposta = $this->actingAs($usuario)->postJson('/api/prestadores', $this->dadosDoPrestador([
             'tipo' => 'autonomo',
-            'nome' => 'Larissa Prado — atendimento domiciliar',
-            'responsavel_tecnico_nome' => 'Larissa Prado',
+            'nome' => 'Marcelo Andrade — atendimento domiciliar',
+            'email' => 'marcelo@example.com',
+            'password' => 'Segredo123',
+            'password_confirmation' => 'Segredo123',
         ]));
 
         $resposta->assertCreated();
-        $resposta->assertJsonPath('conta_nova', false);
 
-        // Uma conta só, e os dois papéis nela.
-        $this->assertSame(1, User::query()->count());
+        $administrador = User::firstWhere('email', 'marcelo@example.com');
+        $this->assertNotNull($administrador);
+
+        // A conta de quem estava no navegador segue com os papéis que tinha.
+        $this->assertSame(['tutor'], $usuario->refresh()->papeis());
         $this->assertEqualsCanonicalizing(
-            ['admin_prestador', 'veterinario', 'tutor'],
-            $usuario->refresh()->papeis(),
+            ['admin_prestador', 'veterinario'],
+            $administrador->papeis(),
         );
     }
 
     /**
-     * O nome da conta é o que assina os registros clínicos e encabeça a
-     * carteira exportada. Cadastrar um estabelecimento não o reescreve, nem
-     * quando o formulário nomeia outro responsável técnico.
+     * E o endereço continua exigido de quem quer que envie o formulário: sem
+     * ele não haveria a quem entregar a administração do que se cadastrou.
      */
-    public function test_cadastro_de_estabelecimento_nao_renomeia_a_conta(): void
-    {
-        $usuario = User::factory()->create(['name' => 'Larissa Prado']);
-        Tutor::factory()->for($usuario)->create();
-
-        $this->actingAs($usuario)
-            ->postJson('/api/prestadores', $this->dadosDoPrestador([
-                'responsavel_tecnico_nome' => 'Dr. Marcelo',
-            ]))
-            ->assertCreated();
-
-        $this->assertSame('Larissa Prado', $usuario->refresh()->name);
-    }
-
-    public function test_endereco_e_senha_sao_recusados_de_quem_ja_esta_em_uma_conta(): void
+    public function test_endereco_e_senha_sao_exigidos_mesmo_de_quem_ja_esta_em_uma_conta(): void
     {
         $usuario = User::factory()->create();
 
-        $resposta = $this->actingAs($usuario)->postJson('/api/prestadores', $this->dadosDoPrestador([
-            'email' => 'outro@example.com',
-            'password' => 'Segredo123',
-            'password_confirmation' => 'Segredo123',
-        ]));
+        $resposta = $this->actingAs($usuario)->postJson('/api/prestadores', $this->dadosDoPrestador());
 
         $resposta->assertStatus(422);
         $resposta->assertJsonValidationErrors(['email', 'password']);
     }
 
     /**
-     * RF09 admite vínculo com mais de um prestador, e o autocadastro não é
-     * exceção: o que não se repete é a conta, não o estabelecimento.
+     * O endereço que já tem conta é recusado como sempre foi — o acréscimo de
+     * vínculo a uma conta existente é do convite de A03, onde alguém de dentro
+     * do estabelecimento atesta quem entra.
      */
-    public function test_a_mesma_conta_cadastra_mais_de_um_estabelecimento(): void
+    public function test_endereco_de_conta_existente_nao_cadastra_estabelecimento(): void
     {
-        $usuario = User::factory()->create();
+        $usuario = User::factory()->create(['email' => 'larissa@example.com']);
 
-        $this->actingAs($usuario)
-            ->postJson('/api/prestadores', $this->dadosDoPrestador())
-            ->assertCreated();
+        $resposta = $this->actingAs($usuario)->postJson('/api/prestadores', $this->dadosDoPrestador([
+            'email' => 'larissa@example.com',
+            'password' => 'Segredo123',
+            'password_confirmation' => 'Segredo123',
+        ]));
 
-        $this->actingAs($usuario)
-            ->postJson('/api/prestadores', $this->dadosDoPrestador([
-                'nome' => 'Hospital Veterinário Aurora',
-                'cnpj' => '26937175000113',
-            ]))
-            ->assertCreated();
-
-        $this->assertSame(1, User::query()->count());
-        $this->assertSame(2, Prestador::query()->count());
-        $this->assertCount(2, $usuario->refresh()->prestadoresComoVeterinario());
+        $resposta->assertStatus(422);
+        $resposta->assertJsonValidationErrors(['email']);
+        $this->assertSame(0, Prestador::query()->count());
     }
 
-    /**
-     * RN42 — endereço já confirmado não é mandado confirmar de novo: a
-     * mensagem repetida sugeriria que o cadastro suspendeu os lembretes.
-     */
-    public function test_conta_com_endereco_confirmado_nao_recebe_nova_verificacao(): void
-    {
-        $usuario = User::factory()->create(['email_verified_at' => now()]);
-
-        $this->actingAs($usuario)
-            ->postJson('/api/prestadores', $this->dadosDoPrestador())
-            ->assertCreated();
-
-        $this->assertSame(0, $usuario->tokensDeVerificacao()->count());
-    }
-
-    public function test_visitante_anonimo_continua_criando_conta_e_estabelecimento_juntos(): void
+    public function test_visitante_anonimo_cria_conta_e_estabelecimento_juntos(): void
     {
         $resposta = $this->postJson('/api/prestadores', $this->dadosDoPrestador([
             'email' => 'marcelo@example.com',
@@ -146,7 +123,6 @@ class ContaComDoisPapeisTest extends TestCase
         ]));
 
         $resposta->assertCreated();
-        $resposta->assertJsonPath('conta_nova', true);
 
         $this->assertNotNull(User::firstWhere('email', 'marcelo@example.com'));
     }

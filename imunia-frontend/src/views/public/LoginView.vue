@@ -118,13 +118,14 @@ const PAPEL_AUSENTE = {
   veterinario: {
     titulo: 'Esta conta ainda não atende em nenhum estabelecimento',
     detalhe:
-      'Seu acesso está correto. O ambiente clínico se abre pelo vínculo com um estabelecimento — '
-      + 'cadastre o seu, no mesmo e-mail e na mesma senha.',
-    acaoRotulo: 'Cadastrar meu estabelecimento',
+      'Seu acesso está correto. O ambiente clínico se abre pelo vínculo com um estabelecimento, e o '
+      + 'vínculo chega por convite: se você atende em uma clínica que já usa o Imunia, peça a quem '
+      + 'administra a conta que convide este mesmo endereço.',
+    acaoRotulo: 'Cadastrar um estabelecimento',
     acaoDestino: '/cadastrar-prestador',
     nota:
-      'Se você atende em uma clínica que já usa o Imunia, peça a quem administra a conta que convide '
-      + 'este mesmo endereço: o vínculo chega por convite, sem criar conta nova.',
+      'Cadastrar um estabelecimento abre a conta administradora dele, com endereço e senha próprios — '
+      + 'não é um acréscimo a esta conta.',
   },
 }
 
