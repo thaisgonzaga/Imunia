@@ -704,6 +704,16 @@ Encontrado em uso (23/09/2026), no mesmo dia de §9.27 e por causa dela: quem ca
 
 **O que §9.27 resolveu continua de pé onde a prova existe.** O cadastro de tutor autenticado (`POST /api/conta/tutor`) não muda: ali a pessoa está na própria conta, pede o próprio cadastro e presta o próprio consentimento. Larissa continua tutora e veterinária com um endereço só — o que ela não faz mais é abrir um consultório a partir de uma tela pública que presumiu ser dela.
 
+## 9.29 T18 não anuncia mais os papéis da conta
+
+Pedido em uso (23/09/2026): a seção "O que esta conta é" saiu da tela de conta — a relação de papéis vigentes e as duas ofertas que §9.27 acrescentara ali.
+
+**A tela voltou a ser o que o título dela diz.** T18 responde por dados pessoais, senha e sessão (RF04, RF06): o que se edita da própria conta. A relação de papéis não se edita, e a oferta de cadastrar um estabelecimento aparecia justamente a quem não atende — quem entrou para ver a carteira do próprio cão lia, no fim da tela, um convite a abrir clínica.
+
+**O caminho de quem descobre que lhe falta um papel continua de pé, e chega na hora certa.** As portas de P02 dizem isso a quem entrou com a credencial certa e o papel que falta (§9.27), e é ali que a pessoa esbarra na falta; `/conta/tutor` e `/cadastrar-prestador` seguem alcançáveis, e a recusa de P04 continua apontando o convite de A03 (§9.28).
+
+**O que se perde, dito por inteiro.** A acumulação de papéis (RN05) fica sem lugar onde se explique sozinha — era esse o argumento de §9.27 para a seção —, e quem chega a T18 sem ter passado por uma porta de entrada não encontra mais a explicação. `GET /api/conta` continua devolvendo `conta.papeis`, agora sem leitor no frontend: o contrato não mudou para não fazer de uma retirada de tela uma mudança de API.
+
 ---
 
 *Documento gerado como referência reutilizável entre as fases do projeto. Deve ser anexado ao início de cada nova conversa.*
