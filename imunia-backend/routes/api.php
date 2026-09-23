@@ -284,9 +284,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // T04 — perfil do animal (RF16, RF17, RF19).
     Route::get('/animais/{codigo}', [AnimalController::class, 'show']);
 
+    // T04a — editar a identificação do animal (RF16). A contrapartida de T03:
+    // o que o tutor escreveu, ele corrige. A espécie trava no primeiro registro
+    // clínico (RF19d) e o que o veterinário confirmou sai do alcance dele
+    // (RF19b) — as duas fronteiras valem na FormRequest, não só na tela.
+    Route::patch('/animais/{codigo}', [AnimalController::class, 'update']);
+
     // RF16b, RN20 — a fotografia sobe por rota própria, e o mesmo verbo a
-    // substitui a qualquer tempo.
+    // substitui a qualquer tempo. Retirá-la é manter a fotografia também, e por
+    // isso o DELETE mora ao lado, no mesmo endereço.
     Route::post('/animais/{codigo}/foto', [AnimalController::class, 'foto']);
+    Route::delete('/animais/{codigo}/foto', [AnimalController::class, 'removerFoto']);
 
     // T05 — carteira de vacinação digital (RF28, RF26).
     Route::get('/animais/{codigo}/carteira', [CarteiraVacinacaoController::class, 'show']);

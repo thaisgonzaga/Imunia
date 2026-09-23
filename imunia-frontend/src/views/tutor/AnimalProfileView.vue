@@ -11,6 +11,7 @@ import {
   Copy,
   Dog,
   FileCheck,
+  Pencil,
   QrCode,
   Stethoscope,
   TriangleAlert,
@@ -67,6 +68,11 @@ const icone = computed(() => (animal.value?.especie === 'gato' ? Cat : Dog))
  * que ele vai precisar ditar no balcão da clínica (RF17).
  */
 const recemCadastrado = computed(() => route.query.novo === '1')
+
+// Volta de T04a. A confirmação é a mesma de sempre — discreta e sem ação —,
+// mas o que mudou já está na tela: quem salvou vê o cadastro novo, não um
+// aviso dizendo que ele mudou.
+const recemEditado = computed(() => route.query.salvo === '1')
 
 const linhaDeIdade = computed(() => {
   if (!animal.value) return ''
@@ -190,6 +196,11 @@ onUnmounted(() => {
           </p>
         </div>
 
+        <div v-if="recemEditado" class="confirmacao" role="status">
+          <Check :size="20" :stroke-width="1.75" class="confirmacao__icone" />
+          <p class="confirmacao__texto">Cadastro de {{ animal.nome }} atualizado.</p>
+        </div>
+
         <!-- RN17 — visível em toda tela que exiba o animal, e diz de quem é a
              pendência: do veterinário, não do tutor. -->
         <div v-if="animal.preliminar" class="tarja">
@@ -210,6 +221,18 @@ onUnmounted(() => {
             </div>
             <p class="perfil__idade">{{ linhaDeIdade }}</p>
           </div>
+
+          <!-- T04a — RF16, RN20. Fica no cabeçalho, junto do que ele altera:
+               nome, espécie e fotografia são identificação, e identificação é
+               do tutor. O que o veterinário mantém continua sem botão algum
+               nesta tela (RN18), e o cartão de caracterização diz por quê. -->
+          <RouterLink
+            :to="`/animais/${animal.codigo}/editar`"
+            class="botao botao--secundario perfil__editar"
+          >
+            <Pencil :size="18" :stroke-width="1.75" />
+            Editar
+          </RouterLink>
         </div>
 
         <div class="perfil__grade">
@@ -407,8 +430,17 @@ onUnmounted(() => {
 
 .perfil__cabecalho {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
+}
+
+/* Em telas estreitas desce para a linha de baixo, alinhado à foto: ali ele
+   continua lendo como parte do bloco de identidade, e não como uma ação solta
+   no canto. Da largura de tablet em diante volta para a borda oposta ao nome
+   (ver `@media`). */
+.perfil__editar {
+  flex: none;
 }
 
 .perfil__foto {
@@ -651,7 +683,7 @@ onUnmounted(() => {
 /* Botões e avisos — mesmo vocabulário das demais telas do tutor. ----------- */
 
 .botao {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -853,6 +885,10 @@ onUnmounted(() => {
 /* Larguras derivadas ---------------------------------------------------------- */
 
 @media (min-width: 768px) {
+  .perfil__editar {
+    margin-left: auto;
+  }
+
   .perfil__grade {
     flex-direction: row;
     align-items: flex-start;

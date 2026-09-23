@@ -207,6 +207,25 @@ class Animal extends Model
     }
 
     /**
+     * Há ato clínico registrado sobre este animal — vacinação (RF25), histórico
+     * pregresso (RF29), atendimento (RF31) ou óbito (RF22). É o que trava a
+     * espécie: RF19d a declara inalterável depois do primeiro registro clínico,
+     * porque protocolo, dose e calendário foram calculados para a espécie que
+     * constava ali.
+     *
+     * O óbito entra na conta ainda que não haja vacinação nem atendimento: é
+     * registro de veterinário como os demais (RN27), e corrigir a espécie de um
+     * animal falecido não é correção de cadastro — é reescrever o que alguém
+     * assinou.
+     */
+    public function possuiRegistroClinico(): bool
+    {
+        return $this->obito_em !== null
+            || $this->vacinacoes()->exists()
+            || $this->atendimentos()->exists();
+    }
+
+    /**
      * Idade em meses completos, ou nulo quando não se sabe a data. Quem exibe o
      * resultado precisa exibir junto `nascimento_exato`: RN14 manda propagar a
      * natureza da informação a todo cálculo dela derivado, e "18 meses" a
@@ -284,6 +303,21 @@ class Animal extends Model
         return [
             ...$listagem,
             'caracterizacao' => $this->caracterizacao(),
+
+            // Identificação como o formulário de edição (T04a) precisa relê-la.
+            // O sexo e o nascimento viajam crus, e não só a idade derivada: é o
+            // que o tutor escreveu, e é o que ele volta para corrigir.
+            'sexo' => $this->sexo,
+
+            // O mês e o ano, no formato que o campo aceita. Quem declarou só o
+            // ano recebe de volta `01/aaaa`, porque a coluna guarda o primeiro
+            // dia do período (RN14, `DataAproximada`) e o dia não distingue as
+            // duas declarações. Reenviar o que vem aqui grava a mesma data.
+            'nascimento' => $this->nascimento_em?->format('m/Y'),
+
+            // RF19d — a tela precisa saber antes de oferecer o campo, e não
+            // depois de o servidor recusar.
+            'especie_alteravel' => ! $this->possuiRegistroClinico(),
 
             // Mesmo vocabulário do painel (T01) — 'sem_registros' enquanto não
             // houver vacinação, para não afirmar "em dia" sobre o que o

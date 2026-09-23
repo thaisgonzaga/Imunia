@@ -123,6 +123,15 @@ export function apiPost(caminho, payload) {
   return requisitar(caminho, { method: 'POST', payload })
 }
 
+/**
+ * Edição parcial: a tela manda o que ela edita, e o servidor decide o resto.
+ * É PATCH, e não PUT, porque nenhuma tela do Imunia é dona da linha inteira —
+ * a de T04a, por exemplo, não toca em campo algum da caracterização (RN18).
+ */
+export function apiPatch(caminho, payload) {
+  return requisitar(caminho, { method: 'PATCH', payload })
+}
+
 export function apiDelete(caminho) {
   return requisitar(caminho, { method: 'DELETE' })
 }

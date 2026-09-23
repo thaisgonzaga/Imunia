@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreAnimalRequest;
+use App\Http\Requests\UpdateAnimalRequest;
 use App\Models\Animal;
 use App\Models\Tutor;
 use App\Models\User;
@@ -86,6 +87,36 @@ class AnimalController extends Controller
     }
 
     /**
+     * T04a — editar a identificação do animal (RF16).
+     *
+     * O animal já foi resolvido pela FormRequest, que precisava dele para saber
+     * quais campos aceitar: a espécie trava no primeiro registro clínico
+     * (RF19d), e sexo e nascimento deixam de ser do tutor quando o veterinário
+     * caracteriza (RF19b). Por isso não há `$codigo` aqui.
+     */
+    public function update(UpdateAnimalRequest $request): JsonResponse
+    {
+        /** @var Animal $animal */
+        $animal = $request->animal;
+
+        $animal->update([
+            'nome' => $request->validated('nome'),
+            'especie' => $request->validated('especie'),
+
+            // Caracterizado o animal, estes dois saem do alcance do tutor —
+            // inclusive do `update`, e não só da validação: escrevê-los com o
+            // que a tela mandou rebaixaria a confirmação do veterinário a
+            // declaração de novo (RN14).
+            ...($animal->preliminar() ? [
+                'sexo' => $request->validated('sexo'),
+                'nascimento_em' => $request->nascimentoEm(),
+            ] : []),
+        ]);
+
+        return response()->json($animal->paraPerfil());
+    }
+
+    /**
      * RF16b, RN20 — a fotografia entra por rota própria, e não no corpo do
      * cadastro, por duas razões: o mesmo verbo serve à substituição a qualquer
      * tempo, e o cadastro pode prosseguir quando o envio falha. Perder a foto
@@ -136,6 +167,32 @@ class AnimalController extends Controller
         }
 
         return response()->json(['foto_url' => $animal->fotoUrl()]);
+    }
+
+    /**
+     * RN20 — manter a fotografia a qualquer tempo inclui retirá-la: o tutor que
+     * pôs a foto errada não fica com ela até conseguir tirar outra.
+     *
+     * Responde igual quando não havia foto alguma. O que o tutor pediu — que
+     * não haja foto — já vale, e inventar um 404 aqui faria a tela explicar um
+     * erro que não houve.
+     */
+    public function removerFoto(Request $request, string $codigo): JsonResponse
+    {
+        $animal = $this->animalDoTutor($request, $codigo);
+
+        $anterior = $animal->foto_caminho;
+
+        if ($anterior !== null) {
+            $animal->update(['foto_caminho' => null]);
+
+            // Some do disco no mesmo ato, como a substituída: a foto não é
+            // registro de nada (RN20), e guardá-la depois de o tutor mandar
+            // apagá-la seria conservar o que ele pediu para não existir.
+            Storage::disk(Animal::DISCO_DA_FOTO)->delete($anterior);
+        }
+
+        return response()->json(['foto_url' => null]);
     }
 
     /**

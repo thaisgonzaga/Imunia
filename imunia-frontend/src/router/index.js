@@ -168,6 +168,16 @@ const router = createRouter({
       meta: { requerAutenticacao: true, area: 'tutor' },
     },
     {
+      // T04a — editar a identificação do animal (RF16, RN20). Tela própria, e
+      // não modal sobre T04: o que ela altera é o cadastro inteiro — nome,
+      // espécie e fotografia —, e o endereço precisa poder ser guardado e
+      // recarregado como o de T03.
+      path: '/animais/:codigo/editar',
+      name: 'tutor-edit-animal',
+      component: () => import('@/views/tutor/AnimalEditView.vue'),
+      meta: { requerAutenticacao: true, area: 'tutor' },
+    },
+    {
       // T15 — a exportação é modal sobre T04, T05 e T07, não tela própria.
       // O endereço existiu nos botões antes de a fatia ser construída, e um
       // endereço que já circulou não pode virar "página não existe": ele leva
