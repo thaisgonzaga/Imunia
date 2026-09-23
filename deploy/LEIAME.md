@@ -45,9 +45,22 @@ Vá anotando os valores marcados com ➜: eles são pedidos juntos no passo 4.
    - ➜ `AWS_DEFAULT_REGION`: o trecho do endpoint entre `s3.` e
      `.backblazeb2.com` (por exemplo, `us-east-005`)
 3. Em **Application Keys → Add a New Application Key**, crie uma chave com
-   acesso **só a esse bucket**, do tipo **Read and Write**:
+   acesso **só a esse bucket**, do tipo **Read and Write**, e marque **Allow
+   List All Bucket Names** (o Backblaze a exige para compatibilidade com os
+   SDKs quando a chave é restrita a um bucket):
    - ➜ `AWS_ACCESS_KEY_ID`: o *keyID*
    - ➜ `AWS_SECRET_ACCESS_KEY`: o *applicationKey*. Ele só aparece uma vez.
+
+   **A chave mestra não serve.** A página de App Keys mostra no topo o
+   *masterApplicationKeyID* da conta, e a API compatível com S3 não o aceita —
+   ela só reconhece chaves criadas à mão, como manda a
+   [documentação do Backblaze](https://www.backblaze.com/docs/cloud-storage-s3-compatible-app-keys).
+   O *keyID* de uma chave criada aqui tem **25 caracteres** e começa pelo
+   número do cluster do endpoint (`005`, no exemplo acima); o da chave mestra
+   é mais curto. Errar isso — inclusive colar o valor com um espaço no fim —
+   faz toda gravação falhar com `InvalidAccessKeyId: Malformed Access Key Id`,
+   e o sintoma aparece longe daqui: a foto do animal não sobe, e o motivo só
+   consta no log do serviço.
 
 ## 3. E-mail: Brevo
 
