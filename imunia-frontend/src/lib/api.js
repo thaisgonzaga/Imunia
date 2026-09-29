@@ -13,6 +13,21 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Quem quer saber que o servidor deixou de reconhecer a sessão. O 401 chega a
+ * qualquer tela — a que estava aberta quando a sessão expirou —, e a tela não
+ * tem como tratá-lo sozinha: o que se faz é sair dela. Este módulo não conhece
+ * o roteador (é o roteador que o conhece, pela store), e por isso avisa em vez
+ * de navegar.
+ */
+const ouvintesDePerdaDeSessao = new Set()
+
+export function aoPerderSessao(ouvinte) {
+  ouvintesDePerdaDeSessao.add(ouvinte)
+
+  return () => ouvintesDePerdaDeSessao.delete(ouvinte)
+}
+
 function lerCookie(nome) {
   const encontrado = document.cookie
     .split('; ')
@@ -92,6 +107,21 @@ async function requisitar(caminho, { method, payload } = {}) {
       throw new ApiError(body?.message ?? 'Há campos que precisam ser corrigidos.', {
         status: 422,
         errors: body?.errors ?? {},
+        data: body ?? {},
+      })
+    }
+
+    // 401 — a sessão que o navegador acreditava aberta não existe mais no
+    // servidor: expirou por inatividade (RN02) ou foi encerrada em outro
+    // lugar. Não é erro da tela, e "Unauthenticated." não é frase para
+    // ninguém ler; quem escuta leva a pessoa de volta à porta. A consulta da
+    // própria sessão fica de fora: 401 ali é a resposta esperada de quem
+    // ainda não entrou.
+    if (response.status === 401 && !caminho.startsWith('/api/sessao')) {
+      ouvintesDePerdaDeSessao.forEach((ouvinte) => ouvinte())
+
+      throw new ApiError('Sua sessão expirou. Entre de novo para continuar.', {
+        status: 401,
         data: body ?? {},
       })
     }

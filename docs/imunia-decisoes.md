@@ -728,6 +728,16 @@ Encontrado em uso (29/09/2026), no celular: o botão de QR Code ao lado do campo
 
 **O que não mudou.** O QR Code de T04 continua a codificar o código puro, e não um endereço: é o que outro aparelho lê sem depender de domínio, e o que o leitor de qualquer aplicativo mostra em texto legível. O botão de leitura continua oculto de 768 px para cima, como a fatia de V03 decidiu; a rota, porém, funciona em qualquer largura, com a câmera que houver.
 
+## 9.31 A sessão que expira com a tela aberta — e o "Unauthenticated." que ninguém devia ler
+
+Encontrado em uso (29/09/2026), no celular, logo depois de §9.30: o QR Code era lido e V03 respondia "Não conseguimos concluir a busca. Unauthenticated." A leitura em si estava certa — reproduzida localmente com sessão real, os três pedidos do caminho respondem 200. O que aconteceu no celular foi outra coisa: a aba ficara aberta, a sessão expirou por inatividade (RN02, 120 minutos), e o aplicativo não tinha como saber. Reproduzido apagando `sessions` no banco com a página aberta: a moldura do leitor engole o 401 do contexto em silêncio, o QR é lido, e a busca exibe a recusa crua do servidor.
+
+**O guard de rota só pergunta ao servidor uma vez por carga da página.** Depois disso, as telas confiam na store, e a store não muda sozinha. Isso já era assim desde T01 e nunca fora um problema porque toda verificação em navegador partia de página recém-carregada. Sessão expirada era, portanto, um estado que nenhuma tela previa — e cada uma o mostrava do seu jeito: "Unauthenticated." no lugar da mensagem de erro, com um "Tentar novamente" que tentaria a mesma coisa.
+
+**Todo 401 vira a porta, com o caminho de volta.** `lib/api.js` passou a avisar os ouvintes de `aoPerderSessao()` antes de lançar o erro (agora com frase em português), exceto para `/api/sessao`, onde 401 é a resposta esperada de quem ainda não entrou. O único ouvinte mora no roteador, ao lado do guard: esvazia a store (`esquecer()`, que mantém `consultada` — perguntar de novo devolveria o mesmo 401) e substitui a rota protegida por `/entrar?voltar=<caminho>`. O guard passou a mandar o mesmo `voltar` quando barra uma rota sem sessão, e P02 o honra depois de entrar — só caminho relativo à raiz (`lib/retorno.js`), nunca endereço absoluto nem a própria porta, para que a consulta não vire redirecionamento aberto. Vários 401 ao mesmo tempo (moldura e tela pedem juntas) não disputam: o primeiro esvazia a store e os seguintes não têm mais o que fazer.
+
+**O que não mudou.** A duração da sessão e o encerramento explícito (RF03) são os de RN02; nenhuma tela ganhou tratamento próprio de 401, porque o ponto da correção é que nenhuma precise.
+
 ---
 
 *Documento gerado como referência reutilizável entre as fases do projeto. Deve ser anexado ao início de cada nova conversa.*

@@ -8,6 +8,7 @@ import AppCheckbox from '@/components/base/AppCheckbox.vue'
 import AppInput from '@/components/base/AppInput.vue'
 import { apiPost, ApiError } from '@/lib/api.js'
 import { useContagemRegressiva } from '@/lib/contagem.js'
+import { VOLTAR, caminhoDeRetorno } from '@/lib/retorno.js'
 import { useSessaoStore } from '@/stores/sessao.js'
 
 /**
@@ -185,7 +186,10 @@ async function entrar() {
       return
     }
 
-    router.push(resposta.usuario.rota_inicial)
+    // Quem foi interrompido pela porta — rota protegida sem sessão, sessão
+    // que expirou no meio do trabalho — volta para onde estava. Os demais vão
+    // ao ambiente de sempre.
+    router.push(caminhoDeRetorno(route.query[VOLTAR]) ?? resposta.usuario.rota_inicial)
   } catch (erro) {
     if (erro instanceof ApiError && erro.status === 429) {
       bloqueio.value = erro.message

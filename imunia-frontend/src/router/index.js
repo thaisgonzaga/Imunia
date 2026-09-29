@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { aoPerderSessao } from '@/lib/api.js'
 import { areaPorNome } from '@/lib/areas.js'
 import { relatarFalha } from '@/lib/falha.js'
+import { VOLTAR } from '@/lib/retorno.js'
 import { useSessaoStore } from '@/stores/sessao.js'
 
 const router = createRouter({
@@ -553,7 +555,8 @@ router.beforeEach(async (para) => {
   const sessao = useSessaoStore()
   await sessao.carregar()
 
-  if (!sessao.autenticado) return { name: 'login' }
+  // A porta guarda para onde se ia: quem entra volta ao que estava fazendo.
+  if (!sessao.autenticado) return { name: 'login', query: { [VOLTAR]: para.fullPath } }
 
   const area = areaPorNome(para.meta.area)
   if (area && !(sessao.usuario.papeis ?? []).includes(area.papel)) {
@@ -561,6 +564,30 @@ router.beforeEach(async (para) => {
   }
 
   return true
+})
+
+/**
+ * A sessão que o servidor recusa no meio do caminho. O guard acima só pergunta
+ * ao servidor uma vez por carga da página; depois disso as telas confiam no que
+ * a store diz, e a store não sabe que a sessão expirou por inatividade (RN02)
+ * enquanto ninguém foi ao servidor. Quem descobre é a primeira requisição a
+ * voltar 401 — e a resposta certa a ela não é um aviso dentro da tela, é a
+ * porta, com o caminho de volta guardado para depois de entrar.
+ *
+ * Várias requisições podem voltar 401 de uma vez (a moldura e a tela pedem
+ * coisas ao mesmo tempo); a primeira esvazia a store, e as seguintes não têm
+ * mais o que fazer.
+ */
+aoPerderSessao(() => {
+  const sessao = useSessaoStore()
+  if (!sessao.autenticado) return
+
+  sessao.esquecer()
+
+  const atual = router.currentRoute.value
+  if (atual.meta.requerAutenticacao) {
+    router.replace({ name: 'login', query: { [VOLTAR]: atual.fullPath } })
+  }
 })
 
 /**

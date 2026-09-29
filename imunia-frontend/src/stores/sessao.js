@@ -56,6 +56,15 @@ export const useSessaoStore = defineStore('sessao', () => {
     consultada.value = true
   }
 
+  /**
+   * O servidor deixou de reconhecer a sessão no meio da navegação. Fica
+   * `consultada`: perguntar de novo devolveria o mesmo 401.
+   */
+  function esquecer() {
+    usuario.value = null
+    consultada.value = true
+  }
+
   async function encerrar() {
     try {
       await apiDelete('/api/sessao')
@@ -65,5 +74,5 @@ export const useSessaoStore = defineStore('sessao', () => {
     }
   }
 
-  return { usuario, autenticado, primeiroNome, iniciais, carregar, registrar, encerrar }
+  return { usuario, autenticado, primeiroNome, iniciais, carregar, registrar, esquecer, encerrar }
 })
