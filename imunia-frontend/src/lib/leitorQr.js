@@ -47,7 +47,7 @@ export function interpretarQr(conteudo) {
 }
 
 const ACESSO_NEGADO =
-  'O acesso à câmera foi negado. Libere-o nas permissões do navegador, ou escolha uma foto do QR Code.'
+  'O acesso à câmera foi negado. Libere-o nas permissões do navegador, ou digite o código.'
 const SEM_CAMERA = 'Nenhuma câmera foi encontrada neste aparelho.'
 const CAMERA_OCUPADA =
   'A câmera não respondeu. Outro aplicativo pode estar usando-a — feche-o e tente de novo.'

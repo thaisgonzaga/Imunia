@@ -5,7 +5,6 @@ import {
   CameraOff,
   ClipboardPlus,
   FileCheck,
-  ImageUp,
   Keyboard,
   QrCode,
   ShieldCheck,
@@ -31,8 +30,8 @@ import { useContextoClinicoStore } from '@/stores/contextoClinico.js'
  * A leitura acontece no aparelho. O quadro da câmera vai a um canvas e é
  * decodificado ali — pelo `BarcodeDetector` do navegador quando existe, por
  * jsQR quando não —, e só o código lido segue, no endereço. Sem câmera (acesso
- * negado, aparelho sem ela, endereço sem https), restam a foto do QR Code e o
- * campo de texto de onde se veio.
+ * negado, aparelho sem ela, endereço sem https), resta o campo de texto de
+ * onde se veio.
  */
 const route = useRoute()
 const router = useRouter()
@@ -61,7 +60,6 @@ const video = ref(null)
 const estado = ref('abrindo')
 const falha = ref('')
 const lido = ref('')
-const decodificandoFoto = ref(false)
 
 /** O que a última leitura disse, quando não foi um animal. */
 const aviso = ref(null)
@@ -191,15 +189,17 @@ async function lerQuadro() {
 }
 
 /**
- * Desenha a fonte no canvas de trabalho, reduzida, e tenta ler o QR Code nela.
- * A redução é o que mantém a leitura em JavaScript a tempo de vídeo num
- * celular modesto; um QR Code que preencha um quarto do quadro ainda tem, a
- * 640 px, folga de sobra.
+ * O quadro é lido reduzido a este lado. A redução é o que mantém a leitura em
+ * JavaScript a tempo de vídeo num celular modesto; um QR Code que preencha um
+ * quarto do quadro ainda tem, a 640 px, folga de sobra.
  */
-async function decodificar(fonte, largura, altura, { ladoMaximo = 640, inversao = 'dontInvert' } = {}) {
+const LADO_MAXIMO = 640
+
+/** Desenha o quadro no canvas de trabalho, reduzido, e tenta ler o QR Code nele. */
+async function decodificar(fonte, largura, altura) {
   if (!largura || !altura) return null
 
-  const escala = Math.min(1, ladoMaximo / Math.max(largura, altura))
+  const escala = Math.min(1, LADO_MAXIMO / Math.max(largura, altura))
   tela.width = Math.round(largura * escala)
   tela.height = Math.round(altura * escala)
 
@@ -216,7 +216,7 @@ async function decodificar(fonte, largura, altura, { ladoMaximo = 640, inversao 
   }
 
   const imagem = contexto2d.getImageData(0, 0, tela.width, tela.height)
-  const resultado = jsQR(imagem.data, imagem.width, imagem.height, { inversionAttempts: inversao })
+  const resultado = jsQR(imagem.data, imagem.width, imagem.height, { inversionAttempts: 'dontInvert' })
 
   return resultado?.data ?? null
 }
@@ -251,39 +251,6 @@ function concluir(codigo) {
   pararCamera()
 
   router.push({ path: origem.value.caminho, query: { termo: codigo } })
-}
-
-/**
- * A foto no lugar da câmera: a do sistema, quando o navegador não teve acesso
- * à câmera, ou a que o tutor mandou por mensagem. Numa foto o QR Code pode
- * ocupar um canto e estar invertido, por isso a leitura vai mais larga e tenta
- * as duas polaridades.
- */
-async function lerFoto(evento) {
-  const arquivo = evento.target.files?.[0]
-  // O mesmo arquivo escolhido duas vezes ainda é uma escolha: sem isto, o
-  // `change` não dispararia de novo.
-  evento.target.value = ''
-  if (!arquivo) return
-
-  decodificandoFoto.value = true
-  aviso.value = null
-
-  try {
-    const imagem = await createImageBitmap(arquivo)
-    const conteudo = await decodificar(imagem, imagem.width, imagem.height, {
-      ladoMaximo: 1024,
-      inversao: 'attemptBoth',
-    })
-    imagem.close?.()
-
-    if (!conteudo) aviso.value = { tipo: 'nenhum' }
-    else if (!tratar(conteudo)) ultimoConteudo = ''
-  } catch {
-    aviso.value = { tipo: 'nenhum' }
-  } finally {
-    decodificandoFoto.value = false
-  }
 }
 
 /** Com a aba escondida não chega quadro novo; ler o mesmo de novo é só gasto. */
@@ -347,7 +314,13 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <p class="leitor__situacao" aria-live="polite">
+      <!-- A região viva fica sempre montada, para que o leitor de tela anuncie a
+           mudança; só encolhe quando não há o que dizer. -->
+      <p
+        class="leitor__situacao"
+        :class="{ 'leitor__situacao--vazia': estado !== 'lendo' && estado !== 'lido' }"
+        aria-live="polite"
+      >
         <template v-if="estado === 'lendo'">Procurando um QR Code…</template>
         <template v-else-if="estado === 'lido'">
           Código <span class="leitor__codigo">{{ lido }}</span> lido. Abrindo a busca…
@@ -374,12 +347,6 @@ onBeforeUnmount(() => {
               </RouterLink>
             </div>
           </template>
-          <template v-else-if="aviso.tipo === 'nenhum'">
-            <p class="nota__titulo">Não encontramos um QR Code nesta foto.</p>
-            <p class="nota__texto">
-              Tente uma foto mais de perto, com o código inteiro no quadro e sem reflexo.
-            </p>
-          </template>
           <template v-else>
             <p class="nota__titulo">Este QR Code não é de um animal do Imunia.</p>
             <p class="nota__texto">
@@ -391,17 +358,6 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="leitor__acoes">
-        <label class="botao botao--secundario" :class="{ 'botao--aguardando': decodificandoFoto }">
-          <ImageUp :size="16" :stroke-width="1.75" />
-          {{ decodificandoFoto ? 'Lendo a foto…' : 'Escolher uma foto do QR Code' }}
-          <input
-            type="file"
-            accept="image/*"
-            class="visually-hidden"
-            :disabled="decodificandoFoto"
-            @change="lerFoto"
-          >
-        </label>
         <RouterLink :to="origem.caminho" class="botao botao--secundario">
           <Keyboard :size="16" :stroke-width="1.75" />
           Digitar o código
@@ -522,6 +478,11 @@ onBeforeUnmount(() => {
   color: var(--ink-muted);
 }
 
+.leitor__situacao--vazia {
+  min-height: 0;
+  margin: 0;
+}
+
 .leitor__codigo {
   font-family: var(--font-mono);
   color: var(--ink);
@@ -603,18 +564,6 @@ onBeforeUnmount(() => {
   color: var(--ink);
 }
 
-/* O rótulo é o botão, e o campo de arquivo mora escondido dentro dele: o anel
-   de foco precisa aparecer no rótulo quando o teclado chega ao campo. */
-.botao:focus-within {
-  outline: 2px solid var(--brand-bright);
-  outline-offset: 2px;
-}
-
-.botao--aguardando {
-  opacity: .6;
-  pointer-events: none;
-}
-
 .leitor__privacidade {
   display: flex;
   align-items: flex-start;
@@ -628,15 +577,6 @@ onBeforeUnmount(() => {
 .leitor__privacidade-icone {
   flex: none;
   color: var(--consent);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 /* Larguras derivadas ------------------------------------------------------- */
