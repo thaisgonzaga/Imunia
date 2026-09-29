@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.31.0",
+    "jsqr": "^1.4.0",
     "pinia": "^4.0.2",
     "qrcode": "^1.5.4",
     "vue": "^3.5.40",

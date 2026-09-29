@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   Cat,
   ClipboardPlus,
@@ -38,6 +38,7 @@ import { CPF, classificarTermo, termoConsultavel, termoParaExibicao } from '@/li
  * registro.
  */
 const route = useRoute()
+const router = useRouter()
 
 /**
  * As duas ações do botão "Registrar". O que muda entre elas é a pergunta, o
@@ -185,8 +186,10 @@ function parametros(termoDaVez) {
   return busca
 }
 
-async function carregar(termoDaVez = '') {
-  if (termoDaVez) buscando.value = true
+async function carregar(termoDaVez = '', { abrindo = false } = {}) {
+  // Com termo, é uma busca sobre a tela já aberta. Abrindo a tela com um termo
+  // — o código que o leitor de QR Code entregou —, é a própria abertura.
+  if (termoDaVez && !abrindo) buscando.value = true
   else carregando.value = true
 
   erro.value = ''
@@ -204,24 +207,42 @@ async function carregar(termoDaVez = '') {
   }
 }
 
-function buscar() {
+/**
+ * RF13 — a conferência do dígito acontece antes da consulta, e por isso a
+ * requisição sequer sai: um número digitado errado é o CPF de outra pessoa, e
+ * não pode gerar registro de acesso no nome dela.
+ */
+function termoValido() {
   erroDoTermo.value = ''
 
   const { tipo, valor } = classificarTermo(termo.value)
-  if (valor === '') return
+  if (valor === '') return false
 
-  // RF13 — a conferência do dígito acontece antes da consulta, e por isso a
-  // requisição sequer sai: um número digitado errado é o CPF de outra pessoa, e
-  // não pode gerar registro de acesso no nome dela.
   if (!termoConsultavel(termo.value)) {
     erroDoTermo.value = tipo === CPF
       ? 'Este CPF não é válido: o dígito verificador não confere. Confira o número com o tutor.'
       : 'Não foi possível reconhecer este termo.'
 
-    return
+    return false
   }
 
-  carregar(termo.value)
+  return true
+}
+
+function buscar() {
+  if (termoValido()) carregar(termo.value)
+}
+
+/**
+ * O termo que chega pelo endereço é o código que o leitor de QR Code entregou.
+ * É consumido na montagem e retirado do endereço em seguida: a busca fora do
+ * âmbito fica registrada (RF18b), e recarregar a página não pode repeti-la
+ * sem que ninguém tenha pedido.
+ */
+function termoDoEndereco() {
+  const lido = route.query.termo
+
+  return typeof lido === 'string' ? lido.trim() : ''
 }
 
 /**
@@ -280,6 +301,21 @@ function percorrer(evento) {
 watch(() => route.params.acao, focar)
 
 onMounted(async () => {
+  const lido = termoDoEndereco()
+
+  if (lido) {
+    termo.value = lido
+    router.replace({ path: route.path, query: {} })
+  }
+
+  // Com o código lido pelo QR Code, a tela abre já no resultado — e o cursor
+  // não vai ao campo, que já está preenchido com o que se procurava.
+  if (lido && termoValido()) {
+    await carregar(lido, { abrindo: true })
+
+    return
+  }
+
   await carregar()
   // §8.3 — foco automático no campo, que é o que sustenta o registro em noventa
   // segundos (RNF15) quando o caminho começa pelo botão do cabeçalho.
@@ -339,9 +375,14 @@ onMounted(async () => {
           >
         </div>
 
-        <!-- O leitor de QR é da moldura do celular (§8.3); a leitura em si é
-             fatia própria, e até lá a ligação responde por ela. -->
-        <RouterLink to="/clinica/buscar/qr" class="leitor-qr" aria-label="Ler QR Code do animal">
+        <!-- O leitor de QR é da moldura do celular (§8.3). Leva a ação no
+             endereço para que o código lido volte para esta tela, e não para a
+             busca. -->
+        <RouterLink
+          :to="{ path: '/clinica/buscar/qr', query: { acao: route.params.acao } }"
+          class="leitor-qr"
+          aria-label="Ler QR Code do animal"
+        >
           <QrCode :size="24" :stroke-width="1.75" />
         </RouterLink>
       </form>

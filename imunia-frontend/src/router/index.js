@@ -307,6 +307,17 @@ const router = createRouter({
       meta: { requerAutenticacao: true, area: 'clinica' },
     },
     {
+      // V03 pelo celular — ler o QR Code do animal (RF17, RF51). O botão ao
+      // lado do campo apontava para cá desde a fatia de V03 e caía em E02; o
+      // endereço que circulou é o endereço da tela. O código lido volta pelo
+      // endereço, em `?termo=`, para quem pediu a leitura: sem `acao`, a busca;
+      // com `acao`, a escolha do animal de V07a/V08a.
+      path: '/clinica/buscar/qr',
+      name: 'vet-search-qr',
+      component: () => import('@/views/vet/LerQrCodeView.vue'),
+      meta: { requerAutenticacao: true, area: 'clinica' },
+    },
+    {
       // V04 — cadastrar tutor no atendimento (RF12, RF13, RF14). O endereço já
       // circulava nos botões de V01 e V03 antes de a fatia existir, como manda
       // o padrão da casa: o caminho definitivo primeiro, a tela depois.

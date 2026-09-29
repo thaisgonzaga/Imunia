@@ -714,6 +714,20 @@ Pedido em uso (23/09/2026): a seção "O que esta conta é" saiu da tela de cont
 
 **O que se perde, dito por inteiro.** A acumulação de papéis (RN05) fica sem lugar onde se explique sozinha — era esse o argumento de §9.27 para a seção —, e quem chega a T18 sem ter passado por uma porta de entrada não encontra mais a explicação. `GET /api/conta` continua devolvendo `conta.papeis`, agora sem leitor no frontend: o contrato não mudou para não fazer de uma retirada de tela uma mudança de API.
 
+## 9.30 O leitor de QR Code que V03 anunciava e nenhuma fatia tinha construído
+
+Encontrado em uso (29/09/2026), no celular: o botão de QR Code ao lado do campo de busca caía em E02. Ele apontava para `/clinica/buscar/qr` desde a fatia de V03 — "a leitura em si é fatia própria, e até lá a ligação responde por ela", dizia o comentário —, e V07a/V08a herdaram o mesmo botão com a mesma promessa. É esta a fatia.
+
+**A leitura é uma entrada do campo, não uma busca nova.** A tela lê o QR Code do perfil do animal (T04, que codifica o código de RF17 em texto puro) e devolve o código pelo endereço, em `?termo=`, à tela que pediu a leitura — que o consome como se tivesse sido digitado. O âmbito (RN48), a parcimônia do resultado (RN12) e o registro de acesso (RF18b) continuam onde estavam, pela razão de §9.7 e §9.14: uma segunda consulta com regra própria seria uma segunda chance de errar a regra. Quem pediu a leitura é quem a recebe: sem `acao`, V03; com `acao=vacinacao|atendimento`, a escolha do animal de V07a/V08a, onde resultado único já é escolha feita (§9.7). O termo é retirado do endereço assim que consumido: a busca fora do âmbito fica registrada, e recarregar a página não pode repeti-la sem que ninguém tenha pedido.
+
+**A imagem não sai do aparelho.** O quadro da câmera vai a um canvas e é decodificado ali — pelo `BarcodeDetector` do navegador quando ele existe e lê QR Code, por jsQR (dependência nova do frontend, Apache-2.0) nos navegadores que ainda não o implementam. Nenhum quadro é enviado a servidor algum, e a tela diz isso, como §6.3 do briefing manda dizer o que o sistema faz com o que vê. `getUserMedia` só existe em contexto seguro: em produção o endereço é https; no dev server acessado pelo celular por IP da rede local, a câmera não abre, e a tela explica que o problema é o endereço, não o aparelho.
+
+**Sem câmera, dois caminhos, e nenhum beco.** Acesso negado, aparelho sem câmera ou endereço sem https levam ao mesmo estado: a razão dita em uma frase, a foto do QR Code (o `<input type="file">` abre a câmera do sistema ou a galeria, e por isso serve também ao QR Code que o tutor mandou por mensagem) e o caminho de volta ao campo de texto. Os dois caminhos ficam na tela mesmo com a câmera aberta.
+
+**O QR Code do PDF é reconhecido, e não seguido.** O rodapé do documento exportado (T15) traz o QR Code da verificação pública (`/verificar/{codigo}`, §4.5). Apontar a câmera para ele em V03 é engano provável, e a resposta certa não é "código não reconhecido": a tela diz que aquilo é um documento, não um animal, e oferece a verificação como ligação — não navega sozinha para fora do ambiente clínico. A interpretação mora em `lib/leitorQr.js`, ao lado de `busca.js`, e reconhece também o código embutido num endereço, para um QR Code futuro que aponte para o perfil.
+
+**O que não mudou.** O QR Code de T04 continua a codificar o código puro, e não um endereço: é o que outro aparelho lê sem depender de domínio, e o que o leitor de qualquer aplicativo mostra em texto legível. O botão de leitura continua oculto de 768 px para cima, como a fatia de V03 decidiu; a rota, porém, funciona em qualquer largura, com a câmera que houver.
+
 ---
 
 *Documento gerado como referência reutilizável entre as fases do projeto. Deve ser anexado ao início de cada nova conversa.*
