@@ -17,6 +17,7 @@ import {
   KeyRound,
   Moon,
   Paperclip,
+  Pencil,
   Stethoscope,
   Syringe,
   TriangleAlert,
@@ -766,12 +767,6 @@ watch(() => route.params.codigo, carregar)
                   </dd>
                 </div>
                 <div class="dados__item">
-                  <dt class="dados__rotulo">Micro-chip</dt>
-                  <dd class="dados__valor dados__valor--codigo">
-                    {{ animal.microchip ?? 'não informado' }}
-                  </dd>
-                </div>
-                <div class="dados__item">
                   <dt class="dados__rotulo">Código do animal</dt>
                   <dd class="dados__valor dados__valor--codigo">{{ animal.codigo }}</dd>
                 </div>
@@ -783,6 +778,70 @@ watch(() => route.params.codigo, carregar)
                   </dd>
                 </div>
               </dl>
+            </section>
+
+            <!-- RF19 — a metade privativa do veterinário (RN18), com a
+                 assinatura de quem a escreveu (RF19c). O micro-chip mora aqui,
+                 e não na identificação, porque é caracterização: o tutor não o
+                 informa. "Completar e manter": a ficha é onde se relê o que foi
+                 registrado e de onde se parte para corrigi-lo. Enquanto o
+                 cadastro é preliminar, a tarja no alto já faz esse convite, e o
+                 bloco não o repete. -->
+            <section class="bloco">
+              <div class="bloco__cabecalho">
+                <h2 class="bloco__titulo">Caracterização</h2>
+                <RouterLink
+                  v-if="animal.caracterizacao"
+                  :to="comContexto(`/clinica/animais/${animal.codigo}/caracterizar`)"
+                  class="botao botao--secundario botao--sm"
+                >
+                  <Pencil :size="16" :stroke-width="1.75" />
+                  Editar
+                </RouterLink>
+              </div>
+
+              <p v-if="!animal.caracterizacao" class="bloco__vazio">
+                Ainda sem caracterização por veterinário. Raça, pelagem, situação reprodutiva e
+                micro-chip são registrados na consulta, pela ação no alto da ficha.
+              </p>
+
+              <template v-else>
+                <dl class="dados">
+                  <div class="dados__item">
+                    <dt class="dados__rotulo">Raça</dt>
+                    <dd class="dados__valor">{{ animal.caracterizacao.raca ?? 'não informada' }}</dd>
+                  </div>
+                  <div class="dados__item">
+                    <dt class="dados__rotulo">Pelagem</dt>
+                    <dd class="dados__valor">{{ animal.caracterizacao.pelagem ?? 'não informada' }}</dd>
+                  </div>
+                  <div class="dados__item">
+                    <dt class="dados__rotulo">Situação reprodutiva</dt>
+                    <dd class="dados__valor">
+                      {{ animal.caracterizacao.situacao_reprodutiva ?? 'não informada' }}
+                    </dd>
+                  </div>
+                  <div class="dados__item">
+                    <dt class="dados__rotulo">Micro-chip</dt>
+                    <dd class="dados__valor dados__valor--codigo">
+                      {{ animal.caracterizacao.microchip ?? 'não informado' }}
+                    </dd>
+                  </div>
+                </dl>
+
+                <!-- RF19c — autor e data acompanham o dado: é a assinatura que
+                     o faz valer como documento, e cada salvamento a reescreve. -->
+                <p v-if="animal.caracterizacao.caracterizado_em" class="dados__assinatura">
+                  <Stethoscope :size="14" :stroke-width="1.75" />
+                  <span>
+                    Registrada
+                    <template v-if="animal.caracterizacao.caracterizado_por">
+                      por {{ animal.caracterizacao.caracterizado_por }}
+                    </template>
+                    em {{ emNumeros(animal.caracterizacao.caracterizado_em) }}
+                  </span>
+                </p>
+              </template>
             </section>
 
             <section class="bloco">
@@ -1425,6 +1484,19 @@ watch(() => route.params.codigo, carregar)
 
 .dados__nota {
   display: block;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-muted);
+}
+
+/* RF19c — a assinatura fecha o bloco, como no perfil do tutor (T04). */
+.dados__assinatura {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--border-hairline);
   font-size: 12px;
   line-height: 16px;
   color: var(--ink-muted);

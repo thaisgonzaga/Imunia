@@ -95,7 +95,9 @@ class CadastroDeAnimalController extends Controller
     /**
      * O que a consolidação precisa saber antes de abrir (RF20b): a
      * identificação que já existe e o que o tutor declarou — apresentado ao
-     * veterinário para confirmação ou correção (RF19b).
+     * veterinário para confirmação ou correção (RF19b). Serve também à
+     * manutenção (RF19): aí o preenchido é o que outro profissional, ou o
+     * mesmo, já registrou.
      */
     public function opcoes(Request $request, string $codigo): JsonResponse
     {
@@ -123,6 +125,12 @@ class CadastroDeAnimalController extends Controller
                 'pelagem' => $animal->pelagem,
                 'situacao_reprodutiva' => $animal->situacao_reprodutiva,
                 'microchip' => $animal->microchip,
+
+                // RF19c — na manutenção, quem escreveu por último e quando: a
+                // tela diz de quem é a caracterização que está prestes a ser
+                // reescrita. Nulos enquanto o cadastro é preliminar.
+                'caracterizado_em' => $animal->caracterizado_em?->toDateString(),
+                'caracterizado_por' => $animal->caracterizadoPor?->name,
             ],
         ]);
     }

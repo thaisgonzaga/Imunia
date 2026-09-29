@@ -175,6 +175,12 @@ class FichaClinicaService
             'nascimento_exato' => $animal->nascimento_exato,
             'foto_url' => $animal->fotoUrl(),
             'preliminar' => $animal->preliminar(), // RN17
+
+            // RF19 — o que só o veterinário escreve, com autor e data (RF19c),
+            // ou nulo enquanto o cadastro é preliminar. A mesma representação
+            // que T04 mostra ao tutor: a ficha é onde o profissional relê o
+            // que registrou, e de onde parte para mantê-lo.
+            'caracterizacao' => $animal->caracterizacao(),
             'tutor' => [
                 'nome' => $animal->tutor->nome,
                 'email' => $animal->tutor->user?->email,

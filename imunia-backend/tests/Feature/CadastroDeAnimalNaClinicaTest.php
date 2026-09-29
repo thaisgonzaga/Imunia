@@ -346,6 +346,91 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $this->assertSame($marcelo->id, $atualizado->caracterizado_por_user_id);
     }
 
+    /**
+     * RF19 — "completar e *manter*": a mesma porta serve depois da primeira
+     * vez. O que o teste protege é o que a manutenção não pode fazer — criar
+     * um segundo cadastro (RN19) ou conservar a assinatura antiga sobre o
+     * dado novo (RF19c).
+     */
+    public function test_caracterizar_de_novo_reescreve_o_dado_e_a_autoria(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $joana = User::factory()->create(['name' => 'Joana Lima']);
+        $joana->prestadores()->attach($clinica, ['papel' => 'veterinario', 'crmv' => '54321', 'crmv_uf' => 'MG']);
+
+        $theo = Animal::factory()->caracterizado()->create([
+            'tutor_id' => $this->helena()->id,
+            'nome' => 'Théo',
+            'especie' => 'cao',
+            'raca' => 'SRD',
+            'pelagem' => 'caramelo',
+            'situacao_reprodutiva' => 'inteiro',
+        ]);
+        $theo->forceFill([
+            'caracterizado_em' => now()->subMonths(3),
+            'caracterizado_por_user_id' => $joana->id,
+        ])->save();
+        $this->autorizar($theo, $clinica);
+
+        // A leitura diz o que está gravado e por quem — é o que a tela mostra
+        // antes de oferecer a reescrita.
+        $this->actingAs($marcelo)
+            ->getJson("/api/clinica/animais/{$theo->codigo}/caracterizar")
+            ->assertOk()
+            ->assertJsonPath('animal.preliminar', false)
+            ->assertJsonPath('animal.raca', 'SRD')
+            ->assertJsonPath('animal.caracterizado_por', 'Joana Lima');
+
+        $this->actingAs($marcelo)
+            ->postJson("/api/clinica/animais/{$theo->codigo}/caracterizar", [
+                'raca' => 'Labrador',
+                'pelagem' => 'preta',
+                'situacao_reprodutiva' => 'castrado',
+                'microchip' => '076000000000123',
+            ])
+            ->assertOk()
+            ->assertJsonPath('animal.preliminar', false);
+
+        $atualizado = $theo->fresh();
+
+        $this->assertSame(1, Animal::query()->count());
+        $this->assertSame('Labrador', $atualizado->raca);
+        $this->assertSame('preta', $atualizado->pelagem);
+        $this->assertSame('castrado', $atualizado->situacao_reprodutiva);
+        $this->assertSame('076000000000123', $atualizado->microchip);
+
+        // RF19c — toda alteração registra autor, data e hora: a assinatura
+        // passa a ser de quem alterou, não de quem preencheu primeiro.
+        $this->assertSame($marcelo->id, $atualizado->caracterizado_por_user_id);
+        $this->assertTrue($atualizado->caracterizado_em->isSameDay(now()));
+    }
+
+    /**
+     * Salvar sem trocar o micro-chip não pode acusar conflito do animal com
+     * ele mesmo — a coluna é única, e a manutenção reenviaria o número.
+     */
+    public function test_manter_o_proprio_microchip_nao_e_conflito(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $theo = Animal::factory()->caracterizado()->comMicrochip('076000000000123')->create([
+            'tutor_id' => $this->helena()->id,
+            'raca' => 'SRD',
+        ]);
+        $this->autorizar($theo, $clinica);
+
+        $this->actingAs($marcelo)
+            ->postJson("/api/clinica/animais/{$theo->codigo}/caracterizar", [
+                'raca' => 'Poodle',
+                'microchip' => '076000000000123',
+            ])
+            ->assertOk();
+
+        $this->assertSame('Poodle', $theo->fresh()->raca);
+        $this->assertSame('076000000000123', $theo->fresh()->microchip);
+    }
+
     public function test_a_caracterizacao_aparece_no_perfil_do_tutor(): void
     {
         $clinica = $this->clinica();

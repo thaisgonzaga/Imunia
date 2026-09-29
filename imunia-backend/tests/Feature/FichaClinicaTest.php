@@ -50,7 +50,7 @@ class FichaClinicaTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $atributos
+     * @param  array<string, mixed>  $atributos
      */
     private function animalDe(string $nomeDoTutor, string $nome, array $atributos = []): Animal
     {
@@ -361,6 +361,41 @@ class FichaClinicaTest extends TestCase
 
         $this->assertNotNull($preliminar);
         $this->assertSame('Completar caracterização', $preliminar['acao']['rotulo']);
+
+        // Enquanto preliminar, não há bloco de caracterização a exibir — nem
+        // "não informado" a atribuir a ninguém.
+        $resposta->assertJsonPath('animal.caracterizacao', null);
+    }
+
+    /**
+     * RF19 — a ficha é onde o veterinário relê o que registrou sobre o animal
+     * e de onde parte para mantê-lo: raça, pelagem, situação reprodutiva e
+     * micro-chip viajam com a assinatura de quem os escreveu (RF19c).
+     */
+    public function test_a_ficha_traz_a_caracterizacao_com_a_assinatura(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $animal = $this->animalDe('Helena Ramos', 'Théo', [
+            'raca' => 'SRD',
+            'pelagem' => 'caramelo',
+            'situacao_reprodutiva' => 'castrado',
+        ]);
+        $animal->forceFill([
+            'microchip' => '076000000000123',
+            'caracterizado_por_user_id' => $marcelo->id,
+        ])->save();
+        $this->autorizar($animal, $clinica);
+
+        $this->abrirFicha($marcelo, $animal)
+            ->assertOk()
+            ->assertJsonPath('animal.preliminar', false)
+            ->assertJsonPath('animal.caracterizacao.raca', 'SRD')
+            ->assertJsonPath('animal.caracterizacao.pelagem', 'caramelo')
+            ->assertJsonPath('animal.caracterizacao.situacao_reprodutiva', 'castrado')
+            ->assertJsonPath('animal.caracterizacao.microchip', '076000000000123')
+            ->assertJsonPath('animal.caracterizacao.caracterizado_por', 'Marcelo Andrade')
+            ->assertJsonPath('animal.caracterizacao.caracterizado_em', now()->toDateString());
     }
 
     /* Óbito — RF22 -------------------------------------------------------- */

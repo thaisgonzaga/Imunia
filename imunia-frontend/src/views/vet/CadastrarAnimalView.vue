@@ -17,6 +17,7 @@ import AppInput from '@/components/base/AppInput.vue'
 import AppSelect from '@/components/base/AppSelect.vue'
 import { ApiError, apiGet, apiPost } from '@/lib/api.js'
 import { descreverEspecie } from '@/lib/animais.js'
+import { emNumeros } from '@/lib/datas.js'
 import {
   cpfValido,
   formatarCpf,
@@ -33,7 +34,10 @@ import {
  * a chave do balcão, verificada pela busca de V03 como em V04. Por
  * `/clinica/animais/:codigo/caracterizar` — o endereço que a tarja de V06
  * promete —, o modo de consolidação (RF20b): a identificação já existe e é do
- * tutor; o que se preenche é só a metade privativa.
+ * tutor; o que se preenche é só a metade privativa. A mesma porta serve à
+ * manutenção (RF19, "completar e manter"): com o cadastro já caracterizado, a
+ * tela abre em edição — o que está gravado aparece preenchido, com a
+ * assinatura de quem o registrou, e salvar reescreve autor e data (RF19c).
  *
  * A divisão de responsabilidade que sustenta o diferencial do sistema fica
  * explícita nos dois cabeçalhos do formulário: identificação, que o tutor
@@ -54,6 +58,25 @@ const semAutorizacao = ref('')
 
 /** O animal do modo consolidação, como o servidor o conhece. */
 const animal = ref(null)
+
+/**
+ * O modo consolidação tem dois momentos: completar (o cadastro ainda é
+ * preliminar, RN17) e editar (já caracterizado por veterinário). O que muda
+ * entre eles é o vocabulário — não o formulário, nem a rota.
+ */
+const editando = computed(() => modo.value === 'consolidar' && animal.value?.preliminar === false)
+
+const titulo = computed(() => {
+  if (modo.value === 'novo') return 'Cadastrar animal'
+
+  return editando.value ? 'Editar caracterização' : 'Completar caracterização'
+})
+
+const rotuloDoEnvio = computed(() => {
+  if (modo.value === 'novo') return 'Cadastrar animal'
+
+  return editando.value ? 'Salvar caracterização' : 'Registrar caracterização'
+})
 
 // Etapa do tutor (modo novo) ------------------------------------------------
 
@@ -330,7 +353,7 @@ onMounted(carregar)
 
 <template>
   <VetShell
-    :titulo="modo === 'consolidar' ? 'Completar caracterização' : 'Cadastrar animal'"
+    :titulo="titulo"
     :prestador="contexto?.prestador"
     :vinculos="contexto?.vinculos ?? []"
     @trocar-prestador="trocarPrestador"
@@ -380,9 +403,7 @@ onMounted(carregar)
         {{ modo === 'consolidar' ? 'Voltar à ficha' : 'Voltar à busca' }}
       </RouterLink>
 
-      <h1 class="tela__titulo">
-        {{ modo === 'consolidar' ? 'Completar caracterização' : 'Cadastrar animal' }}
-      </h1>
+      <h1 class="tela__titulo">{{ titulo }}</h1>
 
       <!-- Modo consolidação: a identificação já existe, é do tutor, e a tela a
            mostra como fato — não como formulário (RF20b, RN19). -->
@@ -515,10 +536,27 @@ onMounted(carregar)
                 Caracterização
               </h2>
               <p class="metade__nota">
-                Privativa do médico-veterinário (RN18) — é o que encerra o cadastro preliminar.
-                <template v-if="modo === 'consolidar'">
-                  O que o tutor declarou aparece preenchido: confirme ou corrija.
+                <template v-if="editando">
+                  Privativa do médico-veterinário (RN18). O que está registrado aparece
+                  preenchido: altere o que mudou. Salvar reescreve o autor e a data da
+                  caracterização.
                 </template>
+                <template v-else>
+                  Privativa do médico-veterinário (RN18) — é o que encerra o cadastro preliminar.
+                  <template v-if="modo === 'consolidar'">
+                    O que o tutor declarou aparece preenchido: confirme ou corrija.
+                  </template>
+                </template>
+              </p>
+              <!-- RF19c — de quem é a caracterização que está prestes a ser
+                   reescrita. -->
+              <p v-if="editando && animal.caracterizado_em" class="metade__assinatura">
+                <Stethoscope :size="14" :stroke-width="1.75" />
+                <span>
+                  Registrada
+                  <template v-if="animal.caracterizado_por">por {{ animal.caracterizado_por }}</template>
+                  em {{ emNumeros(animal.caracterizado_em) }}
+                </span>
               </p>
             </header>
 
@@ -652,7 +690,7 @@ onMounted(carregar)
 
         <div v-if="!duplicado" class="barra">
           <AppButton type="submit" :loading="enviando" :disabled="!podeEnviar">
-            {{ modo === 'consolidar' ? 'Registrar caracterização' : 'Cadastrar animal' }}
+            {{ rotuloDoEnvio }}
           </AppButton>
         </div>
       </form>
@@ -901,6 +939,16 @@ onMounted(carregar)
   margin: var(--space-1) 0 0;
   font-size: 13px;
   line-height: 18px;
+  color: var(--ink-muted);
+}
+
+.metade__assinatura {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  font-size: 12px;
+  line-height: 16px;
   color: var(--ink-muted);
 }
 

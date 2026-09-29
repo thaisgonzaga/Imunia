@@ -738,6 +738,16 @@ Encontrado em uso (29/09/2026), no celular, logo depois de §9.30: o QR Code era
 
 **O que não mudou.** A duração da sessão e o encerramento explícito (RF03) são os de RN02; nenhuma tela ganhou tratamento próprio de 401, porque o ponto da correção é que nenhuma precise.
 
+## 9.32 A caracterização que o veterinário só conseguia escrever uma vez
+
+Pedido em uso (29/09/2026): raça, pelagem e os demais campos de caracterização não tinham como ser corrigidos depois de salvos. O servidor já sabia — `POST /clinica/animais/{codigo}/caracterizar` nasceu na fatia de V05 (§9.17) dizendo servir "à primeira vez e à manutenção", e a conferência de micro-chip já excluía o próprio animal para não acusar conflito consigo mesmo. O que faltava era a interface: o único caminho até a tela era a tarja "Cadastro preliminar" de V06, que some no primeiro salvamento, e a ficha nem exibia raça, pelagem e situação reprodutiva — o veterinário salvava e não tinha onde reler.
+
+**A ficha ganhou o bloco de caracterização, e é dele que sai a edição.** `FichaClinicaService::identificar()` passou a entregar `caracterizacao` — a mesma representação de `Animal::caracterizacao()` que T04 mostra ao tutor, nula enquanto preliminar. Na aba Resumo, o bloco "Caracterização" lista raça, pelagem, situação reprodutiva e micro-chip com a assinatura de RF19c e um botão "Editar" que leva a `/caracterizar` com o contexto do prestador ativo. O micro-chip saiu do bloco de identificação, onde estava por falta de lugar melhor: é caracterização (RN18), e o tutor não o informa. Enquanto o cadastro é preliminar, o bloco não repete o convite da tarja — diz só que ainda não há caracterização e aponta para o alto da ficha. Sem mockup próprio no Claude Design: o bloco segue o desenho do bloco de identificação da própria ficha e o de caracterização de T04.
+
+**Uma tela, três vocabulários.** `CadastrarAnimalView` continua sendo a mesma tela pelas mesmas duas rotas; o que mudou é que o modo consolidação distingue completar (cadastro preliminar) de editar (já caracterizado): título "Editar caracterização", nota que avisa que salvar reescreve autor e data, a assinatura de quem registrou por último (`caracterizado_em` e `caracterizado_por` passaram a viajar na leitura de `/caracterizar`) e botão "Salvar caracterização". Formulário, validação e rota não mudaram — o trait `ValidaCaracterizacaoDoAnimal` já era o mesmo.
+
+**O que a manutenção não pode fazer, agora está em teste.** Criar um segundo cadastro (RN19), conservar a assinatura antiga sobre o dado novo (RF19c: a caracterização passa a ser de quem alterou, não de quem preencheu primeiro) e acusar o próprio micro-chip como conflito. E óbito não trava a edição: caracterização é cadastro, não registro clínico, e corrigir um micro-chip transcrito errado continua sendo correção de cadastro depois da morte do animal — RF22a encerra calendário e lembretes, não a ficha.
+
 ---
 
 *Documento gerado como referência reutilizável entre as fases do projeto. Deve ser anexado ao início de cada nova conversa.*
