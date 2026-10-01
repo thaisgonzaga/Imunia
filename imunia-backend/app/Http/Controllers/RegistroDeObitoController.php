@@ -51,8 +51,8 @@ class RegistroDeObitoController extends Controller
             $animal->refresh()->loadMissing('obitoRegistradoPor');
 
             // Estado da tela (§V12), não erro: quem tentou registrar de novo
-            // termina sabendo o que já consta — data e autor —, como o
-            // `ja_pendente` de V10 e pelo mesmo 409.
+            // termina sabendo o que já consta — data e autor —, com um 409
+            // que a tela trata como estado.
             return response()->json([
                 'situacao' => 'ja_registrado',
                 'em' => $animal->obito_em?->toDateString(),

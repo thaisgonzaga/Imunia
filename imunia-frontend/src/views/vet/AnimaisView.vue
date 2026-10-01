@@ -55,7 +55,7 @@ const temFiltroAtivo = computed(() => filtrosAtivos.value.length > 0)
 /**
  * O único vazio possível com animal acompanhado é o dos filtros: sem filtro,
  * o plantel é a própria lista — e o plantel vazio é o estado
- * `sem_autorizacoes`, que tem tela própria.
+ * `sem_animais`, que tem tela própria.
  */
 const filtradoSemResultado = computed(
   () => consulta.value?.total === 0 && consulta.value?.total_sem_filtros > 0,
@@ -172,9 +172,8 @@ function acompanhaDesde(vinculo) {
     </div>
 
     <!-- O vazio da carteira precisa dizer que está funcionando: os animais
-         entram aqui quando a clínica os cadastra ou atende. (O estado ainda
-         se chama `sem_autorizacoes` na resposta.) -->
-    <div v-else-if="consulta.estado === 'sem_autorizacoes'" class="animais animais--estreito">
+         entram aqui quando a clínica os cadastra ou atende. -->
+    <div v-else-if="consulta.estado === 'sem_animais'" class="animais animais--estreito">
       <div class="sem-acompanhados">
         <div class="sem-acompanhados__topo">
           <PawPrint :size="24" :stroke-width="1.75" class="sem-acompanhados__icone" />

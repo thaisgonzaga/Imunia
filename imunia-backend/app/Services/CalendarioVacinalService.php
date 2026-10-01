@@ -149,7 +149,7 @@ class CalendarioVacinalService
 
     /**
      * A mesma situação, para quem já montou a carteira. O painel do veterinário
-     * (V01) monta uma por animal autorizado e usa o resultado duas vezes — nas
+     * (V01) monta uma por animal da carteira e usa o resultado duas vezes — nas
      * pendências e na coluna de situação da tabela —; sem esta porta de entrada,
      * a segunda pergunta refaria a consulta inteira.
      *
@@ -403,8 +403,8 @@ class CalendarioVacinalService
      *
      * @param  int  $dosesAplicadas  quantas doses da série já foram dadas
      * @return array{data: ?Carbon, rotulo: string, regra_texto: string, tipo: string}
-     *                                                                                `data` é nula quando o protocolo não prevê revacinação:
-     *                                                                                a série acabou, e não há dose seguinte a prever
+     *                                                                                 `data` é nula quando o protocolo não prevê revacinação:
+     *                                                                                 a série acabou, e não há dose seguinte a prever
      */
     public function preverDoseSeguinte(
         ProtocoloVacinal $protocolo,

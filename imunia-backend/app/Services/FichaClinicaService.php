@@ -68,7 +68,6 @@ class FichaClinicaService
         }
 
         return [
-            'acesso' => 'completo',
             'animal' => $this->identificar($animal),
             'vinculo' => $this->apresentarVinculo($animal, $prestador),
 

@@ -20,8 +20,8 @@ use App\Models\Vacinacao;
  *
  * Três diferenças em relação à leitura do tutor, todas de âmbito:
  *
- * 1. o âmbito é a autorização vigente do prestador ativo, e não a titularidade
- *    (RN48);
+ * 1. o âmbito é o contexto clínico do prestador ativo, que alcança o animal
+ *    pelo código, e não a titularidade;
  * 2. abrir o registro de outro prestador grava a linha do livro de acessos
  *    (RF52, RN49) — o mesmo que V06 faz quando a ficha traz histórico alheio, e
  *    pela mesma razão: chegar por endereço direto não pode custar menos do que
@@ -100,7 +100,7 @@ class RegistroClinicoService
      *
      * `AtendimentoService` monta os endereços da rota do tutor, que pergunta
      * pela titularidade — e o veterinário não é titular de animal nenhum. A
-     * rota clínica pergunta outra coisa, a autorização vigente do prestador
+     * rota clínica pergunta outra coisa, o contexto clínico do prestador
      * ativo, e é ela que responde por este arquivo. Duas portas, uma
      * verificação em cada.
      *

@@ -74,8 +74,8 @@ class ExportacaoDeHistoricoService
      * **antes** de a emissão existir, pela mesma ordem de RF52b na ficha — a
      * gravação é condição do ato, não um segundo momento dele.
      *
-     * O âmbito (autorização vigente, não titularidade) é julgado no
-     * controlador, que é a porta; aqui já se está dentro.
+     * O alcance (contexto clínico do prestador ativo, não titularidade) é
+     * julgado no controlador, que é a porta; aqui já se está dentro.
      */
     public function emitirPelaClinica(
         Animal $animal,

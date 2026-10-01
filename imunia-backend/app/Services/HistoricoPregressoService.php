@@ -31,7 +31,7 @@ class HistoricoPregressoService
      * Prestador nulo, e de propósito: T09 é do tutor, que relata o que já
      * aconteceu em algum lugar. O acervo próprio de uma clínica (A04) é lista
      * de trabalho dela, e oferecê-lo aqui contaria ao tutor de uma vacina que
-     * ele não tem como ter recebido — e a um tutor autorizado por duas
+     * ele não tem como ter recebido — e a um tutor atendido por duas
      * clínicas, contaria uma sobre a outra.
      *
      * @return array<int, array<string, string>>

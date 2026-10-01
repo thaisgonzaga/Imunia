@@ -61,12 +61,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tutor/painel', [PainelTutorController::class, 'show']);
 
     // V01 — painel do veterinário (RF48). Primeira rota do ambiente clínico: o
-    // âmbito é o do prestador ativo (RF48a) e o das autorizações vigentes
-    // (RN48), nunca o do usuário autenticado sozinho.
+    // âmbito é a carteira do prestador ativo (RF48a, RN48) — os animais
+    // vinculados a ele —, nunca o do usuário autenticado sozinho.
     Route::get('/clinica/painel', [PainelVeterinarioController::class, 'show']);
 
     // V02 — painel de pendências vacinais (RF49). Mesmo âmbito de V01, e é dele
-    // que vem a garantia de RF49c: animal sem autorização vigente não figura no
+    // que vem a garantia de RF49c: animal fora da carteira não figura no
     // resultado. A exportação (RF49b) repete os filtros da tela para que o
     // arquivo da rechamada seja conferível contra ela.
     Route::get('/clinica/pendencias', [PendenciasVacinaisController::class, 'index']);
@@ -74,30 +74,26 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Relação de animais da clínica — o destino "Animais" da barra lateral
     // (§5.3), sem código de tela no briefing. Mesmo âmbito de V01 e V02
-    // (RN48); a lista navega o plantel, e quem procura um animal determinado
-    // continua indo a V03, que é quem sabe responder sobre o que está fora.
+    // (RN48); a lista navega a carteira, e quem procura um animal determinado
+    // continua indo a V03, que alcança por identificador o que está fora.
     Route::get('/clinica/animais', [AnimaisDaClinicaController::class, 'index']);
 
     // Relação de registros da clínica — o destino "Registros" da barra
     // lateral (§5.3), sem código de tela no briefing, como a relação de
-    // animais. O âmbito é o inverso do dela: decide a autoria (RN40 — a
-    // revogação não alcança o que o próprio prestador produziu), não a
-    // autorização vigente. É a única listagem do ambiente clínico em que um
-    // animal fora do âmbito de RN48 figura — pelos registros que este
-    // prestador assinou, e só por eles.
+    // animais. O âmbito é o inverso do dela: decide a autoria, não o vínculo —
+    // figuram os registros que este prestador assinou, e só eles.
     Route::get('/clinica/registros', [RegistrosDaClinicaController::class, 'index']);
 
-    // V03 — buscar animal ou tutor (RF51, RF18, RF13). Diferente de V01 e V02,
-    // esta rota responde também sobre o que está fora do âmbito de autorização
-    // — e é justamente por isso que ela responde tão pouco: só a existência do
-    // cadastro (RN12), e registrando a consulta em log (RF18b).
+    // V03 — buscar animal ou tutor (RF51, RF18, RF13). Por nome, só a carteira,
+    // como V01 e V02; por CPF, código ou micro-chip, qualquer animal — e o
+    // encontro de animal fora da carteira fica registrado em log (RF18b), à
+    // vista do tutor em T14.
     Route::get('/clinica/buscar', [BuscaClinicaController::class, 'index']);
 
     // V04 — cadastrar tutor no atendimento (RF12, RF13, RF14). A verificação
     // de CPF que precede o formulário não tem rota própria: é a busca de V03,
-    // que já responde "novo", "existe fora do âmbito" ou "já autorizado" — e
-    // já registra a revelação de existência. Com o mesmo limite de frequência
-    // do convite de equipe, porque o sucesso dispara e-mail.
+    // que já responde se o CPF é novo ou já tem titular — e já registra o
+    // encontro. Com o mesmo limite de frequência do convite de equipe.
     Route::post('/clinica/tutores', [CadastroDeTutorController::class, 'store'])
         ->middleware('throttle:6,1');
 
@@ -111,8 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // consolidação são o mesmo ato profissional por duas portas: `store` cria
     // com identificação e caracterização de uma vez; `caracterizar` completa o
     // cadastro preliminar do tutor sem jamais criar um segundo (RN19). O tutor
-    // do cadastro novo entra por CPF — a chave do balcão —, e o cadastro
-    // criado não entra no âmbito do prestador: autorização é ato do tutor.
+    // do cadastro novo entra por CPF — a chave do balcão —, o animal criado
+    // entra na carteira do prestador, e o primeiro animal do tutor leva a ele o
+    // convite de ativação.
     Route::post('/clinica/animais', [CadastroDeAnimalController::class, 'store']);
     Route::get('/clinica/animais/{codigo}/caracterizar', [CadastroDeAnimalController::class, 'opcoes']);
     Route::post('/clinica/animais/{codigo}/caracterizar', [CadastroDeAnimalController::class, 'caracterizar']);
@@ -125,8 +122,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clinica/animais/{codigo}', [FichaClinicaController::class, 'show']);
 
     // RF32c — o anexo do ambiente clínico. Rota própria, e não a de T08, porque
-    // a verificação é outra: lá o âmbito é a titularidade do tutor; aqui, a
-    // autorização vigente do prestador ativo.
+    // a verificação é outra: lá o âmbito é a titularidade do tutor; aqui, o
+    // contexto clínico do prestador ativo.
     Route::get('/clinica/animais/{codigo}/anexos/{anexo}', [FichaClinicaController::class, 'anexo']);
 
     // V07 — registrar vacinação (RF25, RF26, RF27). A primeira escrita de
@@ -200,10 +197,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // V06 → T15 — exportar pelo ambiente clínico (RF46 nomeia o veterinário
     // como ator). O mesmo modal e o mesmo documento de T15, por outra porta,
     // porque a verificação é outra: lá, titularidade do tutor (404 para animal
-    // alheio, RN12); aqui, autorização vigente do prestador ativo (403 que
-    // nomeia o caminho). A emissão cujo recorte leva registro de outro
+    // alheio, RN12); aqui, o contexto clínico do prestador ativo, que alcança o
+    // animal pelo código. A emissão cujo recorte leva registro de outro
     // prestador grava a linha de RN49 antes de existir, e o download reverifica
-    // a autorização a cada pedido, como o anexo de RF32c.
+    // o contexto clínico a cada pedido, como o anexo de RF32c.
     Route::post(
         '/clinica/animais/{codigo}/exportacoes',
         [ExportacaoPelaClinicaController::class, 'store'],
@@ -275,7 +272,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // A01 — painel administrativo do prestador (RF07, RF08, RF09). O caminho é
     // `/prestador/painel`, e não `/prestador`, pela mesma simetria de
     // `/tutor/painel` e `/clinica/painel` — e porque `/prestadores`, no plural,
-    // já é o diretório de T10 e o cadastro de P04.
+    // já é o cadastro de P04.
     //
     // Nada sob este prefixo alcança tutor, animal ou registro clínico: RN08
     // separa a administração da conta do acesso ao dado, e a separação é o
@@ -291,9 +288,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // e-mail, e por isso são os únicos desta fatia com limite de frequência: a
     // tela de equipe não pode virar um disparador.
     //
-    // O encerramento responde a `DELETE` embora não remova linha alguma, pelo
-    // mesmo motivo de `DELETE /autorizacoes/{autorizacao}`: o que se encerra é
-    // a relação, e o registro que a comprova permanece (RF10b).
+    // O encerramento responde a `DELETE` embora não remova linha alguma: o que
+    // se encerra é a relação, e o registro que a comprova permanece (RF10b).
     Route::get('/prestador/equipe', [EquipePrestadorController::class, 'index']);
     Route::post('/prestador/equipe', [EquipePrestadorController::class, 'store'])
         ->middleware('throttle:6,1');

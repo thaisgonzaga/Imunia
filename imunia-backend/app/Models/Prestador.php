@@ -30,9 +30,9 @@ class Prestador extends Model
 
     /**
      * RF07a — o tipo determina os rótulos da interface sem alterar o modelo de
-     * dados. A tabela fica no modelo, e não em cada tela, porque o diretório
-     * (T10), a ficha do prestador e o rodapé do documento exportado precisam
-     * dizer a mesma coisa sobre o mesmo estabelecimento.
+     * dados. A tabela fica no modelo, e não em cada tela, porque o livro de
+     * acessos (T14), o painel e os dados do prestador precisam dizer a mesma
+     * coisa sobre o mesmo estabelecimento.
      *
      * "Atendimento domiciliar" para o autônomo é o rótulo do desenho: ao tutor
      * que procura quem vai atender, o que distingue o profissional sem endereço

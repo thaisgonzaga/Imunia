@@ -136,7 +136,7 @@ class FichaClinicaTest extends TestCase
 
         $this->abrirFicha($this->marcelo($clinica), $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'completo')
+            ->assertJsonMissingPath('acesso')
             ->assertJsonPath('animal.nome', 'Mel')
             ->assertJsonPath('animal.especie', 'gato')
             ->assertJsonPath('animal.codigo', $animal->codigo)
@@ -192,7 +192,7 @@ class FichaClinicaTest extends TestCase
 
         $this->abrirFicha($marcelo, $animal, ['prestador' => $hospital->id])
             ->assertOk()
-            ->assertJsonPath('acesso', 'completo')
+            ->assertJsonMissingPath('acesso')
             ->assertJsonPath('prestador.id', $hospital->id);
 
         $this->assertTrue($hospital->acompanha($animal));
@@ -233,7 +233,7 @@ class FichaClinicaTest extends TestCase
 
         $this->abrirFicha($marcelo, $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'completo')
+            ->assertJsonMissingPath('acesso')
             ->assertJsonPath('aviso_outro_prestador', false);
 
         $this->assertDatabaseCount('registros_de_acesso', 0);
@@ -293,7 +293,7 @@ class FichaClinicaTest extends TestCase
 
         $resposta = $this->abrirFicha($marcelo, $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'completo')
+            ->assertJsonMissingPath('acesso')
             ->assertJsonPath('animal.tutor.nome', 'Helena Ramos')
             ->assertJsonPath('vinculo.desde', now()->toDateString())
             ->assertJsonPath('vinculo.origem', Prestador::VINCULO_POR_ATENDIMENTO)

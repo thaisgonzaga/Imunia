@@ -11,19 +11,17 @@ class BuscaClinicaController extends Controller
 {
     use ResolvePrestadorAtivo;
 
-    public function __construct(private readonly BuscaClinicaService $busca)
-    {
-    }
+    public function __construct(private readonly BuscaClinicaService $busca) {}
 
     /**
      * V03 — buscar animal ou tutor (RF51, RF18, RF13).
      *
-     * O âmbito é o mesmo de V01 e V02 (RN48), mas esta tela tem uma segunda
-     * resposta que aquelas não têm: a existência de cadastro fora do âmbito.
-     * É o ponto de maior risco de vazamento por desenho de interface de todo o
-     * sistema, e por isso o que sai daqui é o mínimo — a existência, e nada
-     * dela (RN12). Quem monta esse mínimo é o serviço, que também registra a
-     * consulta em log antes de revelá-la (RF18b, RF52b).
+     * Por nome, o âmbito é o mesmo de V01 e V02: a carteira do prestador ativo
+     * (RN48). Por CPF, código ou micro-chip, a busca alcança qualquer animal,
+     * porque quem tem o identificador na mão está com o animal à sua frente. O
+     * encontro de animal fora da carteira é registrado em log antes de a
+     * resposta sair (RF18b, RF52b), e o tutor o vê em T14 — quem decide o
+     * alcance e grava a linha é o serviço.
      */
     public function index(BuscarNaClinicaRequest $request): JsonResponse
     {

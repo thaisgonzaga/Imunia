@@ -49,9 +49,7 @@ const resultados = ref(null)
 
 const estado = computed(() => consulta.value?.estado ?? 'inicial')
 const inicial = computed(() => estado.value === 'inicial')
-// A chave ainda se chama `autorizados` na resposta; o conteúdo é o de todos os
-// animais encontrados, acompanhados ou não por esta clínica.
-const encontrados = computed(() => consulta.value?.autorizados ?? [])
+const encontrados = computed(() => consulta.value?.animais ?? [])
 /** Pelo CPF, o titular encontrado — com ou sem animal. */
 const tutor = computed(() => consulta.value?.tutor ?? null)
 const prestador = computed(() => consulta.value?.prestador?.nome ?? 'este prestador')

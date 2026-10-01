@@ -229,10 +229,7 @@ class CadastroDeAnimalController extends Controller
 
         return response()->json([
             'message' => 'Este tutor já tem um cadastro parecido com este.',
-            'duplicado' => [
-                ...$duplicado->paraListagem(),
-                'ambito' => 'autorizado',
-            ],
+            'duplicado' => $duplicado->paraListagem(),
         ], 409);
     }
 

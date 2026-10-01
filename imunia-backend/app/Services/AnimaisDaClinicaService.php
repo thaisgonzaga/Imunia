@@ -62,7 +62,7 @@ class AnimaisDaClinicaService
 
         return [
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
-            'estado' => $animais->isEmpty() ? 'sem_autorizacoes' : 'normal',
+            'estado' => $animais->isEmpty() ? 'sem_animais' : 'normal',
             'filtros' => $this->descreverFiltros($filtros),
             'total' => $total,
             'total_sem_filtros' => $todas->count(),

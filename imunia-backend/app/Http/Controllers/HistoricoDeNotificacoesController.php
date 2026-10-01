@@ -14,9 +14,9 @@ use Illuminate\Http\Request;
  * idempotência de RN43, e um histórico que o tutor pudesse editar deixaria de
  * responder se o lembrete já foi enviado.
  *
- * A visão do veterinário (RF45a) é outra rota e outra fatia. O âmbito dela é a
- * autorização vigente do prestador ativo, e não a titularidade — o mesmo
- * motivo por que a exportação pela clínica não é um `if` a mais em T15.
+ * A visão do veterinário (RF45a) é outra rota e outra fatia. O âmbito dela é o
+ * contexto clínico do prestador ativo, e não a titularidade — o mesmo motivo
+ * por que a exportação pela clínica não é um `if` a mais em T15.
  */
 class HistoricoDeNotificacoesController extends Controller
 {

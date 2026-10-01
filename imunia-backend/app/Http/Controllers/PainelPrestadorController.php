@@ -13,8 +13,7 @@ use Illuminate\Http\Request;
  * A01 — painel administrativo do prestador (RF07, RF08, RF09).
  *
  * O que este painel **não** devolve é tão deliberado quanto o que devolve: não
- * há contagem de animais, de atendimentos, de vacinas aplicadas nem de
- * autorizações. RN08 mantém o papel administrativo fora do dado clínico, e um
+ * há contagem de animais, de atendimentos nem de vacinas aplicadas. RN08 mantém o papel administrativo fora do dado clínico, e um
  * indicador agregado continua sendo dado clínico — saber que a clínica aplicou
  * 240 vacinas no mês é informação sobre os animais atendidos ali.
  *

@@ -101,7 +101,7 @@ class PainelVeterinarioService
 
         return match (true) {
             $semRegistroAlgum => 'primeiro_acesso',
-            $acompanhados->isEmpty() => 'sem_autorizacoes',
+            $acompanhados->isEmpty() => 'sem_animais',
             default => 'normal',
         };
     }

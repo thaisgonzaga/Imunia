@@ -41,7 +41,8 @@ use Illuminate\Support\Facades\DB;
  * 3. **Nada aqui impede o registro.** RF27c e RN36: o serviço calcula, alerta e
  *    sugere conduta; a decisão é do médico-veterinário. Não há neste arquivo um
  *    caminho que recuse gravar por divergência clínica — só os que recusam por
- *    falta de autorização, de vínculo ou de inscrição, que são outra coisa.
+ *    óbito, por falta de vínculo com o prestador ou de inscrição no CRMV, que
+ *    são outra coisa.
  */
 class RegistroDeVacinacaoService
 {

@@ -66,13 +66,8 @@ class BuscaClinicaService
                 default => 'normal',
             },
 
-            'autorizados' => $this->cartoes($animais),
+            'animais' => $this->cartoes($animais),
             'tutor' => $tutor === null ? null : ['nome' => $tutor->nome],
-
-            // A seção de "existência fora do âmbito" deixou de existir: o
-            // identificador exato agora traz o cadastro inteiro. A chave fica
-            // nula enquanto as telas ainda a leem.
-            'existencia' => null,
         ];
     }
 

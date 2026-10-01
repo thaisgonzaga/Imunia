@@ -129,9 +129,8 @@ class EquipePrestadorController extends Controller
     }
 
     /**
-     * RF10 — encerra o vínculo. Verbo `DELETE` embora nada seja removido, pelo
-     * mesmo motivo de `DELETE /api/autorizacoes/{autorizacao}`: o que a rota
-     * encerra é a relação, e a linha que a comprova permanece.
+     * RF10 — encerra o vínculo. Verbo `DELETE` embora nada seja removido: o
+     * que a rota encerra é a relação, e a linha que a comprova permanece.
      */
     public function encerrar(Request $request, int $vinculo): JsonResponse
     {

@@ -218,9 +218,8 @@ function diaEMes(iso) {
     </div>
 
     <!-- O vazio da carteira precisa dizer que está funcionando: os animais
-         entram aqui quando a clínica os cadastra ou atende. (O estado ainda
-         se chama `sem_autorizacoes` na resposta.) -->
-    <div v-else-if="painel.estado === 'sem_autorizacoes'" class="painel painel--estreito">
+         entram aqui quando a clínica os cadastra ou atende. -->
+    <div v-else-if="painel.estado === 'sem_animais'" class="painel painel--estreito">
       <div class="sem-acompanhados">
         <div class="sem-acompanhados__topo">
           <PawPrint :size="24" :stroke-width="1.75" class="sem-acompanhados__icone" />

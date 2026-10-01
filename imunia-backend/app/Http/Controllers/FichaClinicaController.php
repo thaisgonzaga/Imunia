@@ -15,21 +15,18 @@ class FichaClinicaController extends Controller
 {
     use ResolvePrestadorAtivo;
 
-    public function __construct(private readonly FichaClinicaService $ficha)
-    {
-    }
+    public function __construct(private readonly FichaClinicaService $ficha) {}
 
     /**
      * V06 — ficha clínica do animal (RF19, RF35, RF52).
      *
-     * Ao contrário de T04, esta rota **não** responde 404 para o animal fora do
-     * âmbito. A diferença é deliberada e é a materialização de P2: no ambiente
-     * do tutor, o animal de outro tutor não existe, e dizer que existe já seria
-     * informação; no ambiente clínico, o animal de outro prestador existe e o
-     * profissional pode saber que existe — RF18a autoriza espécie, nome e
-     * código, e nada mais. O que 404 esconderia aqui não é dado sensível: é o
-     * caminho para pedir a autorização, que é justamente o que a tela precisa
-     * oferecer.
+     * Ao contrário de T04, esta rota **não** responde 404 para o animal que o
+     * prestador ainda não acompanha. A diferença é deliberada: no ambiente do
+     * tutor, o animal de outro tutor não existe, e dizer que existe já seria
+     * informação; no ambiente clínico, quem tem o código está com o animal à
+     * sua frente, e o atendimento não espera pelo tutor. A ficha sai inteira,
+     * com o histórico de todas as clínicas, e o animal entra na carteira do
+     * prestador ativo.
      *
      * A resposta vem inteira em uma requisição porque o briefing exige abas que
      * trocam sem recarregar, e porque a gravação do acesso é condição da
@@ -42,8 +39,8 @@ class FichaClinicaController extends Controller
 
         $animal = Animal::where('codigo', $codigo)->first();
 
-        // Código inexistente é 404 para todo mundo. Aqui não há o que proteger:
-        // não existe cadastro cuja existência se pudesse revelar.
+        // Código inexistente é 404 para todo mundo, e é a única recusa por
+        // animal desta rota.
         abort_if($animal === null, 404, 'Animal não encontrado.');
 
         return response()->json([
@@ -56,7 +53,7 @@ class FichaClinicaController extends Controller
     /**
      * RF32c — o mesmo arquivo de T08, servido pela rota do ambiente clínico,
      * porque o âmbito é outro: ali quem pede é o tutor titular; aqui, o
-     * prestador sob autorização vigente. Duas portas, uma verificação em cada,
+     * contexto clínico do prestador ativo. Duas portas, uma verificação em cada,
      * e nenhum endereço direto do armazenamento em nenhuma das duas.
      */
     public function anexo(Request $request, string $codigo, int $anexo): StreamedResponse

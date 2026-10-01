@@ -8,15 +8,14 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * Os filtros da auditoria de acessos (T14, RF53).
  *
- * Como no diretório de T10, nada aqui é obrigatório e nada aqui volta como erro
- * de campo: código de animal que não existe ou período desconhecido não é
- * estado que a tela precise explicar ao tutor — é recorte que não encontra
- * nada, ou que recai no padrão. As regras existem para limitar o que chega à
+ * Nada aqui é obrigatório e nada aqui volta como erro de campo: código de
+ * animal que não existe ou período desconhecido não é estado que a tela
+ * precise explicar ao tutor — é recorte que não encontra nada, ou que recai no
+ * padrão. As regras existem para limitar o que chega à
  * consulta, não para conversar com quem digitou.
  *
- * A tolerância importa mais aqui do que ali por causa de quem monta a URL: um
- * endereço guardado pode apontar para um recorte que já não tem linha alguma.
- * A resposta certa é a lista vazia, não a tela de erro.
+ * A tolerância importa por causa de quem monta a URL: um endereço guardado
+ * pode apontar para um recorte que já não tem linha alguma. A resposta certa é a lista vazia, não a tela de erro.
  */
 class ConsultarAcessosRequest extends FormRequest
 {

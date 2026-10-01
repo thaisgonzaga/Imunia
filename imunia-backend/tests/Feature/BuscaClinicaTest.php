@@ -116,8 +116,7 @@ class BuscaClinicaTest extends TestCase
             ->assertJsonPath('estado', 'inicial')
             ->assertJsonPath('prestador.nome', 'Clínica Vet Amigo')
             ->assertJsonCount(1, 'vinculos')
-            ->assertJsonCount(0, 'autorizados')
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(0, 'animais');
 
         $this->assertDatabaseCount('registros_de_acesso', 0);
     }
@@ -135,12 +134,11 @@ class BuscaClinicaTest extends TestCase
             ->assertOk()
             ->assertJsonPath('tipo', 'nome')
             ->assertJsonPath('estado', 'normal')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Théo')
-            ->assertJsonPath('autorizados.0.codigo', $theo->codigo)
-            ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
-            ->assertJsonPath('autorizados.0.vinculado', true)
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.nome', 'Théo')
+            ->assertJsonPath('animais.0.codigo', $theo->codigo)
+            ->assertJsonPath('animais.0.tutor', 'Helena Ramos')
+            ->assertJsonPath('animais.0.vinculado', true);
     }
 
     public function test_busca_por_nome_encontra_o_animal_pelo_nome_do_tutor(): void
@@ -152,8 +150,8 @@ class BuscaClinicaTest extends TestCase
         // No balcão, "a Helena" e "o Théo" identificam a mesma ficha.
         $this->buscar($marcelo, 'Helena')
             ->assertOk()
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Théo');
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.nome', 'Théo');
     }
 
     /**
@@ -171,8 +169,7 @@ class BuscaClinicaTest extends TestCase
         $resposta = $this->buscar($marcelo, 'Helena')
             ->assertOk()
             ->assertJsonPath('estado', 'sem_resultado')
-            ->assertJsonCount(0, 'autorizados')
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(0, 'animais');
 
         $this->assertStringNotContainsString('Ramos', $resposta->getContent());
         $this->assertStringNotContainsString('Fontes', $resposta->getContent());
@@ -189,7 +186,7 @@ class BuscaClinicaTest extends TestCase
         // carteira do hospital, o Théo não é resultado por nome.
         $this->buscar($marcelo, 'Théo', ['prestador' => $hospital->id])
             ->assertOk()
-            ->assertJsonCount(0, 'autorizados');
+            ->assertJsonCount(0, 'animais');
     }
 
     /**
@@ -220,10 +217,9 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, $theo->codigo)
             ->assertOk()
             ->assertJsonPath('tipo', 'codigo')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
-            ->assertJsonPath('autorizados.0.vinculado', true)
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.tutor', 'Helena Ramos')
+            ->assertJsonPath('animais.0.vinculado', true);
     }
 
     /**
@@ -246,7 +242,7 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, $solto)
             ->assertOk()
             ->assertJsonPath('tipo', 'codigo')
-            ->assertJsonPath('autorizados.0.codigo', $theo->codigo);
+            ->assertJsonPath('animais.0.codigo', $theo->codigo);
     }
 
     /**
@@ -263,12 +259,11 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, $mel->codigo)
             ->assertOk()
             ->assertJsonPath('estado', 'normal')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Mel')
-            ->assertJsonPath('autorizados.0.especie', 'gato')
-            ->assertJsonPath('autorizados.0.tutor', 'Antônio Prado')
-            ->assertJsonPath('autorizados.0.vinculado', false)
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.nome', 'Mel')
+            ->assertJsonPath('animais.0.especie', 'gato')
+            ->assertJsonPath('animais.0.tutor', 'Antônio Prado')
+            ->assertJsonPath('animais.0.vinculado', false);
 
         $this->assertDatabaseMissing('animal_prestador', [
             'animal_id' => $mel->id,
@@ -289,12 +284,11 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, '076000000000099')
             ->assertOk()
             ->assertJsonPath('tipo', 'microchip')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Mel')
-            ->assertJsonPath('autorizados.0.especie', 'gato')
-            ->assertJsonPath('autorizados.0.tutor', 'Antônio Prado')
-            ->assertJsonPath('autorizados.0.vinculado', false)
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.nome', 'Mel')
+            ->assertJsonPath('animais.0.especie', 'gato')
+            ->assertJsonPath('animais.0.tutor', 'Antônio Prado')
+            ->assertJsonPath('animais.0.vinculado', false);
     }
 
     /**
@@ -312,15 +306,14 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, '238.471.905-04')
             ->assertOk()
             ->assertJsonPath('tipo', 'cpf')
-            ->assertJsonCount(2, 'autorizados')
+            ->assertJsonCount(2, 'animais')
             // Ordenados por nome.
-            ->assertJsonPath('autorizados.0.nome', 'Nina')
-            ->assertJsonPath('autorizados.0.vinculado', false)
-            ->assertJsonPath('autorizados.1.nome', 'Théo')
-            ->assertJsonPath('autorizados.1.vinculado', true)
-            ->assertJsonPath('autorizados.1.tutor', 'Helena Ramos')
-            ->assertJsonPath('tutor.nome', 'Helena Ramos')
-            ->assertJsonPath('existencia', null);
+            ->assertJsonPath('animais.0.nome', 'Nina')
+            ->assertJsonPath('animais.0.vinculado', false)
+            ->assertJsonPath('animais.1.nome', 'Théo')
+            ->assertJsonPath('animais.1.vinculado', true)
+            ->assertJsonPath('animais.1.tutor', 'Helena Ramos')
+            ->assertJsonPath('tutor.nome', 'Helena Ramos');
     }
 
     public function test_cpf_de_tutor_sem_animal_devolve_o_titular_e_fica_registrado(): void
@@ -334,7 +327,7 @@ class BuscaClinicaTest extends TestCase
         $this->buscar($marcelo, '238.471.905-04')
             ->assertOk()
             ->assertJsonPath('estado', 'normal')
-            ->assertJsonCount(0, 'autorizados')
+            ->assertJsonCount(0, 'animais')
             ->assertJsonPath('tutor.nome', 'Helena Ramos');
 
         $this->assertDatabaseHas('registros_de_acesso', [
@@ -363,8 +356,9 @@ class BuscaClinicaTest extends TestCase
             ->assertOk()
             ->assertJsonPath('tipo', 'codigo')
             ->assertJsonPath('estado', 'sem_resultado')
-            ->assertJsonPath('existencia', null)
-            ->assertJsonCount(0, 'autorizados');
+            // A seção de "existência fora do âmbito" deixou de existir.
+            ->assertJsonMissingPath('existencia')
+            ->assertJsonCount(0, 'animais');
     }
 
     /* Registro de acesso (RF18b, RF52) ------------------------------------- */
@@ -460,7 +454,7 @@ class BuscaClinicaTest extends TestCase
 
         $this->buscar($marcelo, $theo->codigo, ['prestador' => $hospital->id])
             ->assertOk()
-            ->assertJsonPath('autorizados.0.vinculado', false);
+            ->assertJsonPath('animais.0.vinculado', false);
 
         $this->assertDatabaseHas('registros_de_acesso', [
             'prestador_id' => $hospital->id,

@@ -12,14 +12,12 @@ class PendenciasVacinaisController extends Controller
 {
     use ResolvePrestadorAtivo;
 
-    public function __construct(private readonly PendenciasVacinaisService $pendencias)
-    {
-    }
+    public function __construct(private readonly PendenciasVacinaisService $pendencias) {}
 
     /**
-     * V02 — painel de pendências vacinais (RF49). O âmbito é o do prestador
-     * ativo e o das autorizações vigentes (RN48), como em V01: animal que
-     * ninguém autorizou não figura no resultado, e é RF49c escrito no serviço.
+     * V02 — painel de pendências vacinais (RF49). O âmbito é a carteira do
+     * prestador ativo (RN48), como em V01: animal que a clínica não acompanha
+     * não figura no resultado, e é RF49c escrito no serviço.
      */
     public function index(Request $request): JsonResponse
     {
@@ -111,7 +109,7 @@ class PendenciasVacinaisController extends Controller
     }
 
     /**
-     * @param list<string> $aceitos
+     * @param  list<string>  $aceitos
      */
     private function dentroDaLista(string $valor, array $aceitos): ?string
     {

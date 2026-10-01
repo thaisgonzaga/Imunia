@@ -15,10 +15,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * escrita que atualize uma linha destas, e a tabela sequer tem `updated_at`
  * para tanto. A leitura pelo tutor é T14 (RF53), fatia própria.
  *
- * Nesta fatia grava-se apenas a consulta feita **sem autorização vigente**
- * (RF18b): a que devolve ao profissional só a existência do cadastro. A
- * visualização de histórico produzido por outro prestador, que é o outro caso
- * de RF52, entra com a fatia de V06.
+ * Grava-se aqui o encontro, por CPF, código ou micro-chip, de animal que a
+ * clínica ainda não acompanha (RF18b); a leitura, na ficha, de registro que
+ * outro prestador produziu (RN49); e a exportação que leva esse registro para
+ * fora da plataforma.
  */
 #[Fillable([
     'prestador_id',
@@ -53,13 +53,14 @@ class RegistroDeAcesso extends Model
     public const BUSCA_POR_NOME = 'busca_por_nome';
 
     /**
-     * Os dois termos da fatia de V06, que são o outro caso de RF52 — não mais
-     * a busca que revela existência, e sim a ficha aberta.
+     * Os dois termos da ficha aberta (V06), o outro caso de RF52.
      *
-     * A distinção entre eles é a que RF52c manda o log fazer: abrir a ficha de
-     * um animal que ninguém autorizou é fato diferente de ler, com autorização
-     * vigente, o registro que outra clínica produziu. Quem lê T14 precisa poder
-     * dizer qual dos dois aconteceu.
+     * Só `HISTORICO_DE_OUTRO_PRESTADOR` é gravado hoje: o veterinário lê o
+     * histórico inteiro do animal, e abrir o registro que outra clínica
+     * produziu é o que T14 precisa contar ao tutor (RN49).
+     * `FICHA_SEM_AUTORIZACAO` vem do modelo em que a clínica dependia de
+     * autorização do tutor; não se grava mais, e fica apenas para que as linhas
+     * antigas do livro continuem legíveis.
      */
     public const FICHA_SEM_AUTORIZACAO = 'ficha_sem_autorizacao';
 
@@ -67,10 +68,9 @@ class RegistroDeAcesso extends Model
 
     /**
      * O termo da fatia de V05: o alerta de duplicidade (RF20a) revelou, a quem
-     * cadastrava um animal fora do próprio âmbito, que o tutor já tem um
-     * parecido. É revelação de existência como a da busca — descobrir pelo
-     * formulário é descobrir por busca com outro nome —, e por isso presta
-     * contas do mesmo jeito (RF18b).
+     * cadastrava um animal, que o tutor já tem um parecido que a clínica ainda
+     * não acompanha. Descobrir pelo formulário é descobrir por busca com outro nome, e por
+     * isso presta contas do mesmo jeito (RF18b).
      */
     public const ALERTA_DE_DUPLICIDADE = 'alerta_de_duplicidade';
 

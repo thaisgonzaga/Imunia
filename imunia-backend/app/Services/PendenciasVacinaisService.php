@@ -70,7 +70,7 @@ class PendenciasVacinaisService
 
         return [
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
-            'estado' => $animais->isEmpty() ? 'sem_autorizacoes' : 'normal',
+            'estado' => $animais->isEmpty() ? 'sem_animais' : 'normal',
             'filtros' => $this->descreverFiltros($filtros),
 
             // O denominador do vazio positivo: "os N animais acompanhados

@@ -132,7 +132,7 @@ class AnimaisDaClinicaTest extends TestCase
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/animais')
             ->assertJsonPath('total', 0)
-            ->assertJsonPath('estado', 'sem_autorizacoes');
+            ->assertJsonPath('estado', 'sem_animais');
     }
 
     /**

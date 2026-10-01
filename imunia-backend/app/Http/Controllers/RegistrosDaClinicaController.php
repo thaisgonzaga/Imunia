@@ -15,9 +15,8 @@ class RegistrosDaClinicaController extends Controller
 
     /**
      * Relação de registros da clínica — o destino "Registros" da barra lateral
-     * (§5.3). O âmbito é a autoria (RN40), não a autorização vigente — o
-     * inverso da relação de animais, e a razão está no comentário de
-     * `RegistrosDaClinicaService`.
+     * (§5.3). O âmbito é a autoria, não o vínculo — o inverso da relação de
+     * animais, e a razão está no comentário de `RegistrosDaClinicaService`.
      *
      * Sem registro de acesso, como toda listagem agregada do ambiente clínico
      * — e aqui com um motivo a mais: tudo o que este livro relaciona é

@@ -138,7 +138,7 @@ class PendenciasVacinaisTest extends TestCase
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/pendencias')
             ->assertJsonPath('total', 0)
-            ->assertJsonPath('estado', 'sem_autorizacoes');
+            ->assertJsonPath('estado', 'sem_animais');
     }
 
     /**

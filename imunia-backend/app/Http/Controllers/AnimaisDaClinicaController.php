@@ -15,8 +15,8 @@ class AnimaisDaClinicaController extends Controller
 
     /**
      * Relação de animais da clínica — o destino "Animais" da barra lateral
-     * (§5.3). O âmbito é o de V01 e V02: prestador ativo (RF48a) e autorização
-     * vigente (RN48).
+     * (§5.3). O âmbito é o de V01 e V02: a carteira do prestador ativo (RF48a,
+     * RN48), os animais vinculados a ele.
      *
      * Sem registro de acesso, pela mesma razão de V01 e V02: listagem agregada
      * não é abertura de histórico. O acesso "por ver" é o da ficha (RF52b), e

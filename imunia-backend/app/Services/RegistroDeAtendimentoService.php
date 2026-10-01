@@ -67,7 +67,7 @@ class RegistroDeAtendimentoService
      * Prazo do rascunho de anexo. Passado ele, o arquivo é apagado na próxima
      * abertura da tela pelo mesmo profissional: um anexo que nunca virou
      * registro é papel esquecido no balcão, e guardá-lo indefinidamente seria
-     * manter dado clínico fora de todo controle de autorização.
+     * manter dado clínico fora de todo controle de acesso.
      */
     private const HORAS_DE_VIDA_DO_RASCUNHO = 24;
 

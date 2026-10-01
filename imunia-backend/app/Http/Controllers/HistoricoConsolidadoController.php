@@ -9,9 +9,7 @@ use Illuminate\Http\Request;
 
 class HistoricoConsolidadoController extends Controller
 {
-    public function __construct(private readonly HistoricoConsolidadoService $historico)
-    {
-    }
+    public function __construct(private readonly HistoricoConsolidadoService $historico) {}
 
     /**
      * T07 — histórico consolidado (RF35). Mesma checagem de âmbito de T04, T05
@@ -26,8 +24,7 @@ class HistoricoConsolidadoController extends Controller
      * RF52 não incide aqui. O registro de acesso em log imutável é do prestador
      * que consulta histórico produzido por outro (RN49), e esta rota é o tutor
      * vendo o próprio animal — para quem RN49 nada tem a registrar. A visão do
-     * veterinário, com o aviso de acesso registrado e o estado "sem
-     * autorização", é a fatia de V06 e V10.
+     * veterinário, com o aviso de acesso registrado, é a ficha clínica (V06).
      */
     public function show(Request $request, string $codigo): JsonResponse
     {

@@ -221,7 +221,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $resposta->assertJsonPath('duplicado.codigo', $theo->codigo);
         $resposta->assertJsonPath('duplicado.nome', 'Theo');
         $resposta->assertJsonPath('duplicado.especie', 'cao');
-        $resposta->assertJsonPath('duplicado.ambito', 'autorizado');
+        $resposta->assertJsonMissingPath('duplicado.ambito');
 
         // RF18b por analogia: o encontro de animal que a clínica não
         // acompanhava presta contas ao titular.
@@ -247,7 +247,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $resposta = $this->cadastrar($marcelo)->assertStatus(409);
 
         $resposta->assertJsonPath('duplicado.codigo', $theo->codigo);
-        $resposta->assertJsonPath('duplicado.ambito', 'autorizado');
+        $resposta->assertJsonMissingPath('duplicado.ambito');
 
         // O que a clínica já acompanha não é revelação, e não gera linha
         // (mesma condição da busca de V03).

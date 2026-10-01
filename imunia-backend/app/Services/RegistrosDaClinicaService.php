@@ -18,7 +18,7 @@ use Illuminate\Support\Collection;
  *
  * O âmbito é o inverso do da relação de animais, e a inversão é a tela: lá
  * decide o vínculo (RN48 — quem a clínica *acompanha*); aqui decide a autoria
- * (RN40 — o que a clínica *produziu e guarda*, como manda a Resolução CFMV
+ * (o que a clínica *produziu e guarda*, como manda a Resolução CFMV
  * nº 1.321/2020). Toda linha tem endereço: o registro se abre pelo código do
  * animal, como qualquer outro.
  */
@@ -82,7 +82,7 @@ class RegistrosDaClinicaService
     }
 
     /**
-     * RN40 — a consulta que define o âmbito: `prestador_id` nos próprios
+     * A consulta que define o âmbito: `prestador_id` nos próprios
      * registros, e nenhuma junção com vínculo. A ordem é a cronológica do
      * ato clínico, invertida: livro se folheia do que acabou de acontecer para
      * trás, e a retificação — que conserva a data do original (V09) — aparece

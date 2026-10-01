@@ -14,9 +14,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AtendimentoController extends Controller
 {
-    public function __construct(private readonly AtendimentoService $atendimentos)
-    {
-    }
+    public function __construct(private readonly AtendimentoService $atendimentos) {}
 
     /**
      * T08 — detalhe do atendimento (RF31, RF32, RF33). Mesma checagem de âmbito
@@ -49,7 +47,8 @@ class AtendimentoController extends Controller
      * RF32c — o arquivo é servido por esta rota, que confere a autorização a
      * cada pedido, e nunca por endereço direto do armazenamento. O disco é
      * privado justamente para que não exista o segundo caminho: uma URL pública
-     * assinada uma vez continuaria valendo depois de revogado o acesso.
+     * assinada uma vez continuaria valendo depois que quem a recebeu deixasse
+     * de ter acesso ao animal.
      */
     public function anexo(Request $request, string $codigo, int $atendimento, int $anexo): StreamedResponse
     {

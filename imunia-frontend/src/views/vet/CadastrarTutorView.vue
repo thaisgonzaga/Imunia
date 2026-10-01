@@ -99,8 +99,8 @@ async function verificar() {
 
     const consulta = await apiGet(`/api/clinica/buscar?${busca}`)
 
-    if (consulta.tutor || consulta.autorizados?.length) {
-      animaisDoTutor.value = consulta.autorizados ?? []
+    if (consulta.tutor || consulta.animais?.length) {
+      animaisDoTutor.value = consulta.animais ?? []
       tutorExistente.value = consulta.tutor?.nome ?? null
       etapa.value = 'vinculado'
     } else {

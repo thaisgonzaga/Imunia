@@ -44,8 +44,8 @@ trait ResolvePrestadorAtivo
         // A escolha fica lembrada para a próxima tela e a próxima sessão: os
         // destinos da barra lateral não carregam `?prestador=`, e sem memória
         // cada navegação devolveria o profissional ao primeiro vínculo — foi
-        // assim que um animal recém-autorizado à clínica passou despercebido
-        // de quem estava no contexto do consultório.
+        // assim que um animal recém-chegado à carteira da clínica passou
+        // despercebido de quem estava no contexto do consultório.
         //
         // Só a escolha, porém: o vínculo a que se chega por falta de outro não
         // é decisão de ninguém, e gravá-lo apagaria a decisão anterior — ver o

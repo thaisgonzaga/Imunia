@@ -117,8 +117,7 @@ class EscolhaDeAnimalTest extends TestCase
             ->assertOk()
             ->assertJsonPath('estado', 'inicial')
             ->assertJsonPath('prestador.nome', 'Clínica Vet Amigo')
-            ->assertJsonCount(0, 'autorizados')
-            ->assertJsonPath('existencia', null)
+            ->assertJsonCount(0, 'animais')
             ->assertJsonCount(1, 'recentes')
             ->assertJsonPath('recentes.0.nome', 'Théo')
             ->assertJsonPath('recentes.0.tutor', 'Helena Ramos')
@@ -253,10 +252,10 @@ class EscolhaDeAnimalTest extends TestCase
         $this->escolher($marcelo, ['termo' => 'Théo'])
             ->assertOk()
             ->assertJsonPath('estado', 'normal')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.codigo', $theo->codigo)
-            ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
-            ->assertJsonPath('autorizados.0.vinculado', true);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.codigo', $theo->codigo)
+            ->assertJsonPath('animais.0.tutor', 'Helena Ramos')
+            ->assertJsonPath('animais.0.vinculado', true);
     }
 
     /**
@@ -271,11 +270,10 @@ class EscolhaDeAnimalTest extends TestCase
 
         $this->escolher($marcelo, ['termo' => $pipoca->codigo])
             ->assertOk()
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Pipoca')
-            ->assertJsonPath('autorizados.0.tutor', 'Denise Colombo')
-            ->assertJsonPath('autorizados.0.vinculado', false)
-            ->assertJsonPath('existencia', null);
+            ->assertJsonCount(1, 'animais')
+            ->assertJsonPath('animais.0.nome', 'Pipoca')
+            ->assertJsonPath('animais.0.tutor', 'Denise Colombo')
+            ->assertJsonPath('animais.0.vinculado', false);
     }
 
     /**
@@ -290,7 +288,7 @@ class EscolhaDeAnimalTest extends TestCase
         $this->escolher($marcelo, ['termo' => 'Pipoca'])
             ->assertOk()
             ->assertJsonPath('estado', 'sem_resultado')
-            ->assertJsonCount(0, 'autorizados')
+            ->assertJsonCount(0, 'animais')
             ->assertJsonMissing(['tutor' => 'Denise Colombo']);
 
         $this->assertDatabaseCount('registros_de_acesso', 0);

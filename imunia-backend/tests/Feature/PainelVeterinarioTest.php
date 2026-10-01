@@ -324,7 +324,7 @@ class PainelVeterinarioTest extends TestCase
         $this->atendimento($animal, $clinica, $marcelo);
 
         $this->actingAs($marcelo)->getJson('/api/clinica/painel')
-            ->assertJsonPath('estado', 'sem_autorizacoes')
+            ->assertJsonPath('estado', 'sem_animais')
             ->assertJsonPath('animais_atendidos.itens', []);
     }
 

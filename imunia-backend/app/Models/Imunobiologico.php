@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * O acervo próprio de cada clínica (A04) é o que a diretriz não nomeia, e sobre
  * o qual a plataforma não tem o que dizer: invisível às demais na escolha de
  * uma aplicação nova, e visível a qualquer um na leitura do histórico — a dose
- * é do animal, e quem a leu autorizado tem de saber o nome do que foi aplicado.
+ * é do animal, e quem a lê tem de saber o nome do que foi aplicado.
  *
  * `prestador_id` fica fora do `#[Fillable]` pelo mesmo motivo que
  * `admin_plataforma` fica fora do usuário: de quem é o item é decisão do
