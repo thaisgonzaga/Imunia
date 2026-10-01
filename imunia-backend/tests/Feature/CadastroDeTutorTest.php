@@ -8,7 +8,6 @@ use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
 use App\Models\User;
-use App\Notifications\ConviteDeAtivacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -20,7 +19,7 @@ use Tests\TestCase;
  * registro para CPF que já existe (RF12b) — devolve o cadastro encontrado para
  * o atendimento seguir — e não deixa o encontro de tutor fora da carteira sem
  * linha no livro de acessos (RF18b). O caminho feliz é o mesmo desenho de A03:
- * conta de senha inacessível, ativação por convite.
+ * conta de senha inacessível; o convite de ativação sai com o primeiro animal.
  */
 class CadastroDeTutorTest extends TestCase
 {
@@ -69,7 +68,7 @@ class CadastroDeTutorTest extends TestCase
         ];
     }
 
-    public function test_veterinario_cadastra_tutor_e_o_convite_de_ativacao_sai(): void
+    public function test_veterinario_cadastra_tutor_sem_enviar_convite_ainda(): void
     {
         Notification::fake();
 
@@ -80,8 +79,8 @@ class CadastroDeTutorTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('tutor.nome', 'Helena Ramos')
-            ->assertJsonPath('convite.email', 'helena@example.com')
-            ->assertJsonPath('convite.validade_em_dias', Convite::VALIDADE_EM_DIAS);
+            ->assertJsonPath('tutor.cpf', self::CPF_VALIDO)
+            ->assertJsonPath('tutor.email', 'helena@example.com');
 
         // O CPF entra como dígitos puros, com a máscara digitada e tudo.
         $tutor = Tutor::query()->where('cpf', self::CPF_VALIDO)->first();
@@ -95,13 +94,10 @@ class CadastroDeTutorTest extends TestCase
         $this->assertNull($tutor->user->ativado_em);
         $this->assertNull($tutor->user->email_verified_at);
 
-        $convite = Convite::query()->where('user_id', $tutor->user_id)->first();
-        $this->assertNotNull($convite);
-        $this->assertSame('tutor', $convite->tipo);
-        $this->assertSame($clinica->id, $convite->prestador_id);
-        $this->assertSame($marcelo->id, $convite->convidado_por);
-
-        Notification::assertSentTo($tutor->user, ConviteDeAtivacao::class);
+        // O convite sai com o primeiro animal, não aqui: um e-mail que diz
+        // "seu pet foi cadastrado" antes de existir pet não teria o que dizer.
+        $this->assertSame(0, Convite::query()->count());
+        Notification::assertNothingSent();
     }
 
     public function test_cpf_existente_nao_cria_segundo_registro_e_devolve_o_cadastro(): void
@@ -230,24 +226,5 @@ class CadastroDeTutorTest extends TestCase
     public function test_sem_sessao_nao_ha_cadastro(): void
     {
         $this->postJson('/api/clinica/tutores', $this->dados())->assertStatus(401);
-    }
-
-    public function test_o_convite_carimba_o_prestador_ativo_escolhido(): void
-    {
-        Notification::fake();
-
-        $primeira = $this->clinica();
-        $segunda = $this->clinica('Hospital Veterinário Central');
-        $marcelo = $this->marcelo($primeira, $segunda);
-
-        $this->actingAs($marcelo)->postJson(
-            "/api/clinica/tutores?prestador={$segunda->id}",
-            $this->dados(),
-        )->assertStatus(201);
-
-        // RF09b — o convite sai em nome do contexto escolhido na faixa, não do
-        // primeiro vínculo: é o nome dele que o tutor lê no e-mail.
-        $convite = Convite::query()->firstOrFail();
-        $this->assertSame($segunda->id, $convite->prestador_id);
     }
 }

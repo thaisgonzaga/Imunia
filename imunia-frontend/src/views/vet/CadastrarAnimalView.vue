@@ -169,9 +169,11 @@ async function carregar() {
       contexto.value = await apiGet('/api/clinica/buscar')
 
       // Vindo de V04 com o tutor já resolvido, a barreira do CPF se confere
-      // sozinha.
-      if (route.query.cpf) {
-        cpf.value = String(route.query.cpf)
+      // sozinha. O CPF chega pelo estado do histórico, e não pela URL, para
+      // não ficar gravado no endereço.
+      const cpfRecebido = window.history.state?.cpf
+      if (cpfRecebido) {
+        cpf.value = String(cpfRecebido)
         await verificar()
       }
 
@@ -298,7 +300,7 @@ async function enviar({ apesarDaDuplicidade = false } = {}) {
     })
 
     duplicado.value = null
-    irParaFicha(resposta.animal.codigo)
+    irParaFicha(resposta.animal.codigo, resposta.tutor_avisado?.tipo)
   } catch (excecao) {
     tratarFalha(excecao)
   } finally {
@@ -307,14 +309,16 @@ async function enviar({ apesarDaDuplicidade = false } = {}) {
 }
 
 /**
- * O sucesso conduz à ficha (V06), como o briefing manda. O cadastro novo chega
- * lá no estado sem autorização — e é ali que está o pedido de V10, fechando o
- * caminho do balcão: tutor, animal, solicitação.
+ * O sucesso conduz à ficha (V06), como o briefing manda: cadastrado o animal, o
+ * atendimento segue dali. A ficha diz o que o tutor recebeu por e-mail.
  */
-function irParaFicha(codigo) {
-  const destino = `/clinica/animais/${codigo}`
+function irParaFicha(codigo, avisado = null) {
+  const busca = new URLSearchParams()
+  if (prestadorId.value) busca.set('prestador', prestadorId.value)
+  if (avisado) busca.set('avisado', avisado)
 
-  router.push(prestadorId.value ? `${destino}?prestador=${prestadorId.value}` : destino)
+  const consulta = busca.toString()
+  router.push(`/clinica/animais/${codigo}${consulta ? `?${consulta}` : ''}`)
 }
 
 function tratarFalha(excecao) {

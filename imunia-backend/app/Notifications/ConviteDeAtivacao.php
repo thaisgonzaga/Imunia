@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\Animal;
 use App\Models\Convite;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -12,7 +13,11 @@ use Illuminate\Notifications\Notification;
  */
 class ConviteDeAtivacao extends Notification
 {
-    public function __construct(private Convite $convite, private string $token) {}
+    public function __construct(
+        private Convite $convite,
+        private string $token,
+        private ?Animal $animal = null,
+    ) {}
 
     /**
      * @return list<string>
@@ -26,22 +31,30 @@ class ConviteDeAtivacao extends Notification
     {
         $prestador = $this->convite->prestador->nome;
 
-        $mensagem = (new MailMessage)
-            ->subject("Ative seu acesso no Imunia — convite de {$prestador}");
-
         if ($this->convite->tipo === 'veterinario') {
-            $mensagem
+            return (new MailMessage)
+                ->subject("Ative seu acesso no Imunia — convite de {$prestador}")
                 ->greeting('Convite de equipe')
-                ->line("{$prestador} convidou você para atuar como médico-veterinário na plataforma.");
-        } else {
-            $mensagem
-                ->greeting('Ative sua conta')
-                ->line("{$prestador} criou uma conta para você no Imunia, onde fica o histórico de saúde dos seus animais.");
+                ->line("{$prestador} convidou você para atuar como médico-veterinário na plataforma.")
+                ->action('Ativar meu acesso', $this->ligacao())
+                ->line(sprintf('O convite vale por %d dias.', Convite::VALIDADE_EM_DIAS));
         }
 
+        // O tutor não precisa fazer nada para ser atendido: o convite é a
+        // oferta de acompanhar o que a clínica registra, e diz isso.
+        $mensagem = (new MailMessage)
+            ->subject($this->animal !== null
+                ? "{$this->animal->nome} foi cadastrado no Imunia"
+                : "Acompanhe seus animais no Imunia — convite de {$prestador}")
+            ->greeting('Olá!')
+            ->line($this->animal !== null
+                ? "{$prestador} cadastrou {$this->animal->nome} no Imunia, a plataforma que a clínica usa para registrar vacinas, atendimentos e exames."
+                : "{$prestador} usa o Imunia para registrar vacinas, atendimentos e exames dos seus animais.")
+            ->line('Se quiser acompanhar tudo o que for registrado, crie sua senha pelo botão abaixo. Não é preciso fazer mais nada: o atendimento não depende disso.');
+
         return $mensagem
-            ->action('Ativar meu acesso', $this->ligacao())
-            ->line(sprintf('O convite vale por %d dias.', Convite::VALIDADE_EM_DIAS));
+            ->action('Criar minha senha', $this->ligacao())
+            ->line(sprintf('O convite vale por %d dias. Se ele vencer, a própria página oferece um novo.', Convite::VALIDADE_EM_DIAS));
     }
 
     private function ligacao(): string

@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvePrestadorAtivo;
 use App\Http\Requests\CadastrarTutorNaClinicaRequest;
 use App\Models\Animal;
-use App\Models\Convite;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -19,9 +18,10 @@ use Illuminate\Validation\ValidationException;
  * V04 — cadastrar tutor no atendimento (RF12, RF13, RF14).
  *
  * A segunda origem do cadastro que RF12 admite: o profissional cria o registro
- * global no balcão, e o titular recebe o convite de ativação pelo qual define a
- * própria senha (RF14). O atendimento não espera por isso: até ativar, a conta
- * existe para o registro clínico, e o tutor que quiser acompanhar entra depois.
+ * global no balcão. O convite de ativação (RF14) não sai daqui: sai com o
+ * cadastro do primeiro animal. O atendimento não espera por nada disso — até
+ * ativar, a conta existe para o registro clínico, e o tutor que quiser
+ * acompanhar entra depois.
  *
  * A conta nasce como a do veterinário convidado em A03: senha aleatória
  * inacessível, `ativado_em` nulo. A diferença é o nome, que aqui vem preenchido
@@ -54,7 +54,7 @@ class CadastroDeTutorController extends Controller
             ]);
         }
 
-        [$convite, $token, $tutor] = DB::transaction(function () use ($dados, $prestador, $profissional) {
+        $tutor = DB::transaction(function () use ($dados) {
             $usuario = User::create([
                 'name' => $dados['nome'],
                 'email' => $dados['email'],
@@ -71,25 +71,18 @@ class CadastroDeTutorController extends Controller
                 // ativação. O veterinário não pode consentir por ele.
             ]);
 
-            [$convite, $token] = Convite::emitir($usuario, $prestador, 'tutor', $profissional);
-
-            return [$convite, $token, $tutor];
+            return $tutor;
         });
 
-        // Fora da transação, como em P03 e A03: o envio é efeito colateral, e
-        // uma falha de entrega não pode desfazer o cadastro já criado — o
-        // convite expirado ou perdido se reenvia, o registro não se refaz.
-        $convite->enviar($token);
-
+        // Nenhum e-mail sai aqui: o convite vai com o primeiro animal
+        // (`ConviteDoTutorService`), que é o que dá sentido à mensagem.
         return response()->json([
-            'message' => 'Tutor cadastrado. O convite de ativação foi enviado por e-mail.',
+            'message' => 'Tutor cadastrado. Cadastre agora o animal — o convite de acesso sai com ele.',
             'tutor' => [
                 'id' => $tutor->id,
                 'nome' => $tutor->nome,
-            ],
-            'convite' => [
+                'cpf' => $tutor->cpf,
                 'email' => $dados['email'],
-                'validade_em_dias' => Convite::VALIDADE_EM_DIAS,
             ],
         ], 201);
     }

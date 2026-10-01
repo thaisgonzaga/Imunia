@@ -3,11 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
+use App\Models\Convite;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
 use App\Models\User;
+use App\Notifications\AnimalCadastradoPelaClinica;
+use App\Notifications\ConviteDeAtivacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 /**
@@ -499,5 +503,127 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
             ->assertForbidden();
 
         $this->assertTrue($theo->fresh()->preliminar());
+    }
+
+    /* O tutor fica sabendo ------------------------------------------------ */
+
+    public function test_o_primeiro_animal_leva_o_convite_ao_tutor_nao_ativado(): void
+    {
+        Notification::fake();
+
+        $primeira = $this->clinica();
+        $segunda = $this->clinica('Hospital Veterinário Central');
+        $marcelo = $this->marcelo($primeira, $segunda);
+        $helena = $this->helena();
+
+        // RF09b — o convite sai em nome do contexto escolhido na faixa, não do
+        // primeiro vínculo: é o nome dele que o tutor lê no e-mail.
+        $this->actingAs($marcelo)
+            ->postJson("/api/clinica/animais?prestador={$segunda->id}", [
+                'cpf' => self::CPF_VALIDO,
+                'nome' => 'Théo',
+                'especie' => 'cao',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('tutor_avisado.tipo', 'convite')
+            ->assertJsonPath('tutor_avisado.email', $helena->user->email);
+
+        $convite = Convite::query()->sole();
+        $this->assertSame('tutor', $convite->tipo);
+        $this->assertSame($helena->user_id, $convite->user_id);
+        $this->assertSame($segunda->id, $convite->prestador_id);
+        $this->assertSame($marcelo->id, $convite->convidado_por);
+
+        Notification::assertSentTo(
+            $helena->user,
+            ConviteDeAtivacao::class,
+            function (ConviteDeAtivacao $notificacao) use ($helena) {
+                $mensagem = $notificacao->toMail($helena->user);
+
+                return $mensagem->subject === 'Théo foi cadastrado no Imunia'
+                    && $mensagem->actionText === 'Criar minha senha';
+            },
+        );
+    }
+
+    public function test_o_segundo_animal_reemite_o_convite_pendente(): void
+    {
+        Notification::fake();
+
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $helena = $this->helena();
+
+        $this->cadastrar($marcelo)->assertCreated();
+        $primeiro = Convite::query()->sole();
+        $tokenAnterior = $primeiro->token;
+
+        $this->travel(3)->days();
+
+        $this->cadastrar($marcelo, ['nome' => 'Nina', 'especie' => 'gato'])
+            ->assertCreated()
+            ->assertJsonPath('tutor_avisado.tipo', 'convite');
+
+        // RF14a — um convite só: token novo, prazo contado de novo, e a
+        // ligação do primeiro e-mail deixa de valer.
+        $convite = Convite::query()->sole();
+        $this->assertNotSame($tokenAnterior, $convite->token);
+        $this->assertTrue($convite->expira_em->isAfter(now()->addDays(Convite::VALIDADE_EM_DIAS - 1)));
+
+        Notification::assertSentToTimes($helena->user, ConviteDeAtivacao::class, 2);
+    }
+
+    public function test_tutor_que_ja_tem_acesso_recebe_so_o_aviso(): void
+    {
+        Notification::fake();
+
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $helena = $this->helena();
+        $helena->user->forceFill(['ativado_em' => now()])->save();
+
+        $this->cadastrar($marcelo)
+            ->assertCreated()
+            ->assertJsonPath('tutor_avisado.tipo', 'aviso');
+
+        $this->assertSame(0, Convite::query()->count());
+        Notification::assertSentTo($helena->user, AnimalCadastradoPelaClinica::class);
+        Notification::assertNotSentTo($helena->user, ConviteDeAtivacao::class);
+    }
+
+    public function test_tutor_ativo_sem_email_verificado_nao_recebe_aviso(): void
+    {
+        // RN42 — só endereço verificado recebe notificação.
+        Notification::fake();
+
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $helena = $this->helena();
+        $helena->user->forceFill(['ativado_em' => now(), 'email_verified_at' => null])->save();
+
+        $this->cadastrar($marcelo)
+            ->assertCreated()
+            ->assertJsonPath('tutor_avisado.tipo', null);
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_a_caracterizacao_nao_envia_nada_ao_tutor(): void
+    {
+        Notification::fake();
+
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $theo = Animal::factory()->create(['tutor_id' => $this->helena()->id]);
+
+        $this->actingAs($marcelo)
+            ->postJson("/api/clinica/animais/{$theo->codigo}/caracterizar", [
+                'sexo' => 'macho',
+                'nascimento' => '04/06/2024',
+                'nascimento_exato' => true,
+            ])
+            ->assertOk();
+
+        Notification::assertNothingSent();
     }
 }

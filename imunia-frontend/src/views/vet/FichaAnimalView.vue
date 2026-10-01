@@ -15,6 +15,7 @@ import {
   History,
   Hourglass,
   KeyRound,
+  Mail,
   Moon,
   Paperclip,
   Pencil,
@@ -370,6 +371,19 @@ async function carregar() {
  * selo é um selo como os outros, que é o que ele de fato é.
  */
 const novoRegistro = computed(() => Number(route.query.novo) || null)
+
+/**
+ * Logo depois do cadastro (V05), o que o tutor recebeu por e-mail — e a frase
+ * que o profissional pode dizer no balcão. Vem pela rota só o tipo; o endereço
+ * sai da própria ficha, para não viajar dado pessoal na URL.
+ */
+const tutorAvisado = computed(() =>
+  ['convite', 'aviso'].includes(route.query.avisado) ? route.query.avisado : null,
+)
+
+function dispensarAviso() {
+  router.replace({ query: { ...route.query, avisado: undefined } })
+}
 const destacando = ref(false)
 let relogioDoDestaque = null
 
@@ -734,6 +748,28 @@ watch(() => route.params.codigo, carregar)
         <div class="coluna coluna--principal">
           <!-- RF52b — antes do conteúdo, porque a gravação do acesso é
                condição da exibição, e não consequência dela. -->
+          <div v-if="tutorAvisado" class="aviso-ao-tutor" role="status">
+            <Mail :size="20" :stroke-width="1.75" class="aviso-ao-tutor__icone" />
+            <div class="aviso-ao-tutor__corpo">
+              <p v-if="tutorAvisado === 'convite'" class="aviso-ao-tutor__texto">
+                Enviamos a <strong>{{ animal.tutor.email }}</strong> o convite para acompanhar
+                {{ animal.nome }} no Imunia. O atendimento não depende disso.
+              </p>
+              <p v-else class="aviso-ao-tutor__texto">
+                Avisamos <strong>{{ animal.tutor.email }}</strong> que {{ animal.nome }} foi
+                cadastrado. O tutor já acompanha os animais pelo Imunia.
+              </p>
+              <p v-if="tutorAvisado === 'convite'" class="aviso-ao-tutor__fala">
+                Você pode dizer: “Nós usamos o Imunia para registrar as informações do seu pet.
+                Se quiser acompanhar tudo o que for registrado, você vai receber um e-mail para
+                criar seu acesso.”
+              </p>
+            </div>
+            <button type="button" class="aviso-ao-tutor__fechar" @click="dispensarAviso">
+              Entendi
+            </button>
+          </div>
+
           <div v-if="ficha.aviso_outro_prestador" class="aviso-de-acesso">
             <Eye :size="20" :stroke-width="1.75" class="aviso-de-acesso__icone" />
             <p class="aviso-de-acesso__texto">
@@ -1371,6 +1407,57 @@ watch(() => route.params.codigo, carregar)
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+}
+
+.aviso-ao-tutor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+}
+
+.aviso-ao-tutor__icone {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.aviso-ao-tutor__corpo {
+  flex: 1 1 0;
+  min-width: 220px;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.aviso-ao-tutor__texto,
+.aviso-ao-tutor__fala {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+
+.aviso-ao-tutor__fala {
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.aviso-ao-tutor__fechar {
+  flex: none;
+  align-self: center;
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
 }
 
 .aviso-de-acesso {

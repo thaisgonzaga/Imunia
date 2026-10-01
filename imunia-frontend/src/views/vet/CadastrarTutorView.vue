@@ -243,17 +243,18 @@ onMounted(carregar)
         <CircleCheck :size="32" :stroke-width="1.75" class="sucesso__icone" />
         <h1 class="sucesso__titulo">Tutor cadastrado</h1>
         <p class="sucesso__texto">
-          Enviamos o convite de ativação para
-          <strong>{{ criado?.convite?.email }}</strong>. Ele vale por
-          {{ criado?.convite?.validade_em_dias }} dias, e é por ele que
-          {{ criado?.tutor?.nome }} define a própria senha.
+          {{ criado?.tutor?.nome }} já está no Imunia. Agora cadastre o animal: o convite
+          para acompanhar as informações sai para <strong>{{ criado?.tutor?.email }}</strong>
+          junto com ele.
         </p>
         <p class="sucesso__ressalva">
-          Até ativar o acesso, o tutor não recebe lembretes de vacina nem pode
-          conceder autorizações. O registro clínico que você fizer vale desde já.
+          O atendimento não depende do tutor: tudo o que você registrar vale desde já.
         </p>
         <div class="sucesso__acoes">
-          <RouterLink to="/clinica/animais/novo" class="botao botao--primario">
+          <RouterLink
+            :to="{ path: '/clinica/animais/novo', state: { cpf: criado?.tutor?.cpf } }"
+            class="botao botao--primario"
+          >
             Cadastrar animal
           </RouterLink>
           <button type="button" class="botao botao--secundario" @click="cadastrarOutro">
@@ -269,8 +270,8 @@ onMounted(carregar)
           <h1 class="cabecalho__titulo">Cadastrar tutor</h1>
           <p class="cabecalho__texto">
             O cadastro é único na plataforma: verifique o CPF antes de preencher
-            qualquer coisa. Se o tutor já está no Imunia, o caminho é a
-            autorização — nunca um segundo cadastro.
+            qualquer coisa. Se o tutor já está no Imunia, siga direto para o
+            animal — nunca um segundo cadastro.
           </p>
         </header>
 
@@ -363,7 +364,7 @@ onMounted(carregar)
         <section v-else-if="etapa === 'vinculado'" class="secao-vinculado">
           <p class="secao-vinculado__texto">
             Este tutor já está cadastrado no Imunia. Abra a ficha de um animal abaixo ou
-            <RouterLink :to="`/clinica/animais/novo?cpf=${somenteDigitos(cpf)}`">cadastre um novo animal</RouterLink>.
+            <RouterLink :to="{ path: '/clinica/animais/novo', state: { cpf: somenteDigitos(cpf) } }">cadastre um novo animal</RouterLink>.
           </p>
           <div class="cartoes">
             <RouterLink
@@ -414,16 +415,16 @@ onMounted(carregar)
             type="email"
             autocomplete="off"
             :error="primeiroErro('email')"
-            hint="É para este endereço que vai o convite de ativação."
+            hint="É para este endereço que vai o convite de acesso."
           />
 
           <!-- O bloco de convite: o que acontece ao concluir, dito antes (RF14). -->
           <div class="bloco-convite">
             <Mail :size="20" :stroke-width="1.75" class="bloco-convite__icone" />
             <p class="bloco-convite__texto">
-              Ao concluir, o tutor recebe por e-mail um convite para definir a
-              própria senha. Até ativar, ele não recebe lembretes nem pode
-              conceder autorizações — o registro clínico vale desde já.
+              Quando você cadastrar o primeiro animal, o tutor recebe por e-mail
+              um convite para acompanhar as informações. O atendimento não depende
+              disso — tudo o que você registrar vale desde já.
             </p>
           </div>
 

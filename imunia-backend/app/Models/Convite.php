@@ -99,9 +99,13 @@ class Convite extends Model
         return $token;
     }
 
-    public function enviar(string $token): void
+    /**
+     * O animal, quando há, é o motivo do convite do tutor: a mensagem diz qual
+     * pet a clínica acabou de cadastrar.
+     */
+    public function enviar(string $token, ?Animal $animal = null): void
     {
-        $this->usuario->notify(new ConviteDeAtivacao($this, $token));
+        $this->usuario->notify(new ConviteDeAtivacao($this, $token, $animal));
     }
 
     public static function localizar(string $token): ?self

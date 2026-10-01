@@ -11,6 +11,7 @@ use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
 use App\Models\User;
+use App\Services\ConviteDoTutorService;
 use App\Support\NomeSemelhante;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,8 @@ use Illuminate\Validation\ValidationException;
 class CadastroDeAnimalController extends Controller
 {
     use AlcancaAnimal, ResolvePrestadorAtivo;
+
+    public function __construct(private readonly ConviteDoTutorService $convites) {}
 
     public function store(CadastrarAnimalNaClinicaRequest $request): JsonResponse
     {
@@ -84,6 +87,10 @@ class CadastroDeAnimalController extends Controller
 
         $prestador->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
 
+        // Depois do cadastro gravado, como todo envio: uma falha de entrega não
+        // desfaz o animal, e o convite perdido se reenvia pela própria página.
+        $aviso = $this->convites->avisarCadastroDeAnimal($animal, $prestador, $profissional);
+
         return response()->json([
             'message' => "Animal cadastrado com o código {$animal->codigo}.",
             'animal' => [
@@ -91,6 +98,7 @@ class CadastroDeAnimalController extends Controller
                 'nome' => $animal->nome,
                 'especie' => $animal->especie,
             ],
+            'tutor_avisado' => $aviso,
         ], 201);
     }
 
