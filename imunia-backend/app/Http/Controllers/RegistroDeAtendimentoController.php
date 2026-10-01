@@ -44,7 +44,7 @@ class RegistroDeAtendimentoController extends Controller
         [$profissional, $prestador] = $this->contextoClinico($request);
         $this->crmvExigido($profissional, $prestador);
 
-        $animal = $this->animalAutorizado($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         return response()->json([
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
@@ -64,7 +64,7 @@ class RegistroDeAtendimentoController extends Controller
         [$profissional, $prestador] = $this->contextoClinico($request);
         $this->crmvExigido($profissional, $prestador);
 
-        $this->animalAutorizado($codigo, $prestador);
+        $this->animalDoAtendimento($codigo, $prestador);
 
         $nome = $this->nomeInformado($request);
         // Sem espaço depois da vírgula: a lista é lida como parâmetro da regra,
@@ -103,7 +103,7 @@ class RegistroDeAtendimentoController extends Controller
         [$profissional, $prestador] = $this->contextoClinico($request);
         $this->crmvExigido($profissional, $prestador);
 
-        $this->animalAutorizado($codigo, $prestador);
+        $this->animalDoAtendimento($codigo, $prestador);
 
         abort_if(
             ! $this->registro->descartarRascunhoDeAnexo($profissional, $token),
@@ -154,7 +154,7 @@ class RegistroDeAtendimentoController extends Controller
      * Código inexistente é 404; o animal existente entra na carteira do
      * prestador (`AlcancaAnimal`) e só o óbito impede o registro.
      */
-    private function animalAutorizado(string $codigo, Prestador $prestador): Animal
+    private function animalDoAtendimento(string $codigo, Prestador $prestador): Animal
     {
         $animal = $this->animalAlcancado($codigo, $prestador);
 

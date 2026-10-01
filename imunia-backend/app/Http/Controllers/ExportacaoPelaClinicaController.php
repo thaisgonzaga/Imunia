@@ -35,7 +35,7 @@ class ExportacaoPelaClinicaController extends Controller
     public function store(EmitirExportacaoRequest $request, string $codigo): JsonResponse
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
-        $animal = $this->animalSobAutorizacao($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         $exportacao = $this->exportacoes->emitirPelaClinica(
             $animal,
@@ -82,7 +82,7 @@ class ExportacaoPelaClinicaController extends Controller
     public function documento(Request $request, string $codigo, string $emissao): StreamedResponse
     {
         [, $prestador] = $this->contextoClinico($request);
-        $animal = $this->animalSobAutorizacao($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         $exportacao = Exportacao::query()
             ->where('codigo', Exportacao::normalizarCodigo($emissao))
@@ -102,7 +102,7 @@ class ExportacaoPelaClinicaController extends Controller
         );
     }
 
-    private function animalSobAutorizacao(string $codigo, Prestador $prestador): Animal
+    private function animalDoAtendimento(string $codigo, Prestador $prestador): Animal
     {
         return $this->animalAlcancado($codigo, $prestador);
     }

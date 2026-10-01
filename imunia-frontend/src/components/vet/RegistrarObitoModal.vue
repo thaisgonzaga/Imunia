@@ -271,7 +271,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
               <p class="obito__texto">
                 Registrado em {{ emNumeros(resultado.em) }}. A ficha de {{ animal.nome }} passa ao
                 estado inativo: sem calendário e sem lembretes ao tutor. O histórico permanece
-                consultável por ele e pelos prestadores autorizados.
+                consultável por ele e pelas clínicas que acompanham o animal.
               </p>
 
               <div class="obito__acoes">
@@ -315,7 +315,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
       'O calendário vacinal deixa de ser calculado.',
     ]"
     :nao-acontece="[
-      'O histórico permanece consultável pelo tutor e pelos prestadores autorizados.',
+      'O histórico permanece consultável pelo tutor e pelas clínicas que acompanham o animal.',
       'Este registro não pode ser excluído — apenas retificado, como todo registro clínico.',
     ]"
     rotulo-confirmar="Registrar óbito"

@@ -6,7 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Dog,
-  KeyRound,
+  PawPrint,
   TriangleAlert,
 } from '@lucide/vue'
 import VetShell from '@/components/vet/VetShell.vue'
@@ -20,8 +20,8 @@ import { apiGet } from '@/lib/api.js'
  * respondem melhor como número clicável que leva à lista filtrada.
  *
  * O que a tela mostra tem dois âmbitos, e os dois são visíveis na própria
- * interface: o prestador ativo, anunciado na faixa de contexto (RF48a), e as
- * autorizações vigentes, explicadas quando não há nenhuma (RN48).
+ * interface: o prestador ativo, anunciado na faixa de contexto (RF48a), e os
+ * animais que ele acompanha, explicados quando ainda não há nenhum.
  */
 const painel = ref(null)
 const carregando = ref(true)
@@ -183,8 +183,8 @@ function diaEMes(iso) {
           <p class="passo__ordem">Passo 1</p>
           <p class="passo__titulo">Cadastrar o tutor</p>
           <p class="passo__texto">
-            O CPF é a chave. Se o tutor já existe no Imunia, você não vê os dados dele:
-            pede a autorização.
+            O CPF é a chave. Se o tutor já existe no Imunia, o cadastro dele aparece e
+            você segue direto para o animal.
           </p>
           <RouterLink to="/clinica/tutores/novo" class="botao botao--primario">
             Cadastrar tutor
@@ -217,31 +217,26 @@ function diaEMes(iso) {
       </div>
     </div>
 
-    <!-- RN48 — o painel vazio por falta de autorização precisa dizer que está
-         funcionando. Sem esta explicação, a regra parece defeito. -->
+    <!-- O vazio da carteira precisa dizer que está funcionando: os animais
+         entram aqui quando a clínica os cadastra ou atende. (O estado ainda
+         se chama `sem_autorizacoes` na resposta.) -->
     <div v-else-if="painel.estado === 'sem_autorizacoes'" class="painel painel--estreito">
-      <div class="consentimento">
-        <div class="consentimento__topo">
-          <KeyRound :size="24" :stroke-width="1.75" class="consentimento__icone" />
-          <h1 class="consentimento__titulo">Nenhuma autorização vigente neste prestador</h1>
+      <div class="sem-acompanhados">
+        <div class="sem-acompanhados__topo">
+          <PawPrint :size="24" :stroke-width="1.75" class="sem-acompanhados__icone" />
+          <h1 class="sem-acompanhados__titulo">Nenhum animal acompanhado ainda</h1>
         </div>
-        <p class="consentimento__texto">
-          O painel abrange somente animais sob autorização vigente para
-          {{ painel.prestador.nome }}. Sem nenhuma, não há indicadores, lista de
-          atendidos nem pendências a exibir — e isso não é uma falha do sistema.
+        <p class="sem-acompanhados__texto">
+          Os animais entram no painel de {{ painel.prestador.nome }} quando você os cadastra
+          ou atende. Busque pelo CPF do tutor, pelo código ou pelo micro-chip — o atendimento
+          não depende do tutor.
         </p>
-        <p class="consentimento__texto consentimento__texto--secundario">
-          Os registros que você já produziu continuam no prontuário da clínica. O que
-          depende de autorização é ver o histórico completo do animal, incluindo o que
-          outros prestadores registraram.
-        </p>
-        <div class="consentimento__acoes">
-          <RouterLink to="/clinica/buscar" class="botao botao--consentimento">
-            <KeyRound :size="16" :stroke-width="1.75" />
-            Buscar e solicitar autorização
+        <div class="sem-acompanhados__acoes">
+          <RouterLink to="/clinica/buscar" class="botao botao--primario">
+            Buscar animal
           </RouterLink>
-          <RouterLink to="/clinica/tutores/novo" class="botao botao--secundario">
-            Cadastrar tutor
+          <RouterLink to="/clinica/animais/novo" class="botao botao--secundario">
+            Cadastrar animal
           </RouterLink>
         </div>
       </div>
@@ -856,27 +851,27 @@ function diaEMes(iso) {
   color: var(--ink-muted);
 }
 
-/* Sem autorização vigente -------------------------------------------------- */
+/* Nenhum animal acompanhado ------------------------------------------------ */
 
-.consentimento {
+.sem-acompanhados {
   padding: var(--space-6);
   background: var(--surface-card);
-  border: 1px solid var(--consent);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
 }
 
-.consentimento__topo {
+.sem-acompanhados__topo {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-.consentimento__icone {
+.sem-acompanhados__icone {
   flex: none;
-  color: var(--consent);
+  color: var(--brand);
 }
 
-.consentimento__titulo {
+.sem-acompanhados__titulo {
   margin: 0;
   font-family: var(--font-display);
   font-size: 22px;
@@ -885,20 +880,14 @@ function diaEMes(iso) {
   color: var(--ink);
 }
 
-.consentimento__texto {
+.sem-acompanhados__texto {
   margin: var(--space-3) 0 0;
-  max-width: 75ch;
   font-size: 14px;
   line-height: 20px;
   color: var(--ink);
 }
 
-.consentimento__texto--secundario {
-  margin-top: var(--space-2);
-  color: var(--ink-muted);
-}
-
-.consentimento__acoes {
+.sem-acompanhados__acoes {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
@@ -941,17 +930,6 @@ function diaEMes(iso) {
 .botao--secundario:hover {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 /* Avisos ------------------------------------------------------------------- */

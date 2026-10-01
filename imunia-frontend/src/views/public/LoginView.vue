@@ -44,7 +44,7 @@ const PORTAS = {
     itens: [
       'As doses atrasadas e as próximas abrem a tela inicial',
       'Lembrete por e-mail antes de cada dose',
-      'Você autoriza e revoga clínicas quando quiser',
+      'Você vê quem consultou o histórico, e quando',
     ],
     tituloDoFormulario: 'Entrar como tutor',
     legenda: 'Para quem cuida dos próprios animais.',
@@ -59,11 +59,11 @@ const PORTAS = {
   veterinario: {
     titulo: 'O atendimento com responsabilidade técnica registrada em cada dose.',
     subtitulo:
-      'O plantel autorizado, as rechamadas pendentes e o prontuário de quem você atende — sob o CRMV de quem assina.',
+      'O plantel acompanhado, as rechamadas pendentes e o prontuário de quem você atende — sob o CRMV de quem assina.',
     itens: [
       'As pendências vacinais do plantel abrem o painel',
       'Cada registro leva o profissional e o CRMV de quem aplicou',
-      'Histórico de outra clínica, mediante autorização do tutor',
+      'O histórico completo do animal, de qualquer clínica',
     ],
     tituloDoFormulario: 'Entrar como veterinário',
     legenda: 'Para quem atende em clínica, hospital ou por conta própria.',
@@ -81,11 +81,11 @@ const PORTAS = {
   '': {
     titulo: 'Bem-vindo de volta!',
     subtitulo:
-      'O histórico de saúde dos seus animais continua onde você parou — e quem decide quem o vê continua sendo você.',
+      'O histórico de saúde dos seus animais continua onde você parou — e cada consulta a ele fica registrada para você.',
     itens: [
       'As doses atrasadas e as próximas abrem a tela inicial',
       'Cada registro traz a clínica, o profissional e o CRMV de quem o fez',
-      'As autorizações concedidas continuam sob controle do tutor',
+      'Toda consulta ao histórico fica registrada para o tutor',
     ],
     tituloDoFormulario: 'Entrar',
     legenda: '',

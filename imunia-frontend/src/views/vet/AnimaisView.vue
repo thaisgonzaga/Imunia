@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Dog,
-  KeyRound,
   PawPrint,
   TriangleAlert,
   X,
@@ -22,17 +21,18 @@ import { emNumeros } from '@/lib/datas.js'
 /**
  * Relação de animais da clínica — o destino "Animais" da barra lateral (§5.3).
  * A lista de navegação do plantel: quem está sob os cuidados do prestador
- * ativo, em que situação vacinal, quando passou por aqui e até quando a
- * autorização vale.
+ * ativo, em que situação vacinal, quando passou por aqui e desde quando a
+ * clínica o acompanha.
  *
  * Não é busca — achar um animal determinado é papel de V03, sempre à mão no
  * cabeçalho da moldura. Daí a ordem alfabética e a ausência de campo de texto:
  * lista de navegação se percorre como catálogo, e a urgência já tem tela
  * própria em V02.
  *
- * O âmbito é o de V01 e V02, e não é escolha desta tela: prestador ativo e
- * autorização vigente (RN48). Quando não há autorização alguma, a tela explica
- * a regra em vez de exibir uma lista vazia que pareceria defeito.
+ * O âmbito é o de V01 e V02, e não é escolha desta tela: os animais que o
+ * prestador ativo acompanha — os que ele cadastrou ou atendeu. Quando ainda não
+ * há nenhum, a tela explica a regra em vez de exibir uma lista vazia que
+ * pareceria defeito.
  */
 const consulta = ref(null)
 const carregando = ref(true)
@@ -53,7 +53,7 @@ const filtrosAtivos = computed(() =>
 const temFiltroAtivo = computed(() => filtrosAtivos.value.length > 0)
 
 /**
- * O único vazio possível com autorização vigente é o dos filtros: sem filtro,
+ * O único vazio possível com animal acompanhado é o dos filtros: sem filtro,
  * o plantel é a própria lista — e o plantel vazio é o estado
  * `sem_autorizacoes`, que tem tela própria.
  */
@@ -171,23 +171,25 @@ function acompanhaDesde(vinculo) {
       </div>
     </div>
 
-    <!-- RN48 — a lista vazia por falta de autorização precisa dizer que está
-         funcionando. Sem a explicação, a regra parece defeito. -->
+    <!-- O vazio da carteira precisa dizer que está funcionando: os animais
+         entram aqui quando a clínica os cadastra ou atende. (O estado ainda
+         se chama `sem_autorizacoes` na resposta.) -->
     <div v-else-if="consulta.estado === 'sem_autorizacoes'" class="animais animais--estreito">
-      <div class="consentimento">
-        <div class="consentimento__topo">
-          <KeyRound :size="24" :stroke-width="1.75" class="consentimento__icone" />
-          <h1 class="consentimento__titulo">Nenhuma autorização vigente neste prestador</h1>
+      <div class="sem-acompanhados">
+        <div class="sem-acompanhados__topo">
+          <PawPrint :size="24" :stroke-width="1.75" class="sem-acompanhados__icone" />
+          <h1 class="sem-acompanhados__titulo">Nenhum animal acompanhado ainda</h1>
         </div>
-        <p class="consentimento__texto">
-          A relação abrange somente animais sob autorização vigente para
-          {{ consulta.prestador.nome }}. Sem nenhuma, não há animal a listar — e isso
-          não é uma falha do sistema.
+        <p class="sem-acompanhados__texto">
+          Os animais entram nesta relação de {{ consulta.prestador.nome }} quando você os
+          cadastra ou atende.
         </p>
-        <div class="consentimento__acoes">
-          <RouterLink to="/clinica/buscar" class="botao botao--consentimento">
-            <KeyRound :size="16" :stroke-width="1.75" />
-            Buscar e solicitar autorização
+        <div class="sem-acompanhados__acoes">
+          <RouterLink to="/clinica/buscar" class="botao botao--primario">
+            Buscar animal
+          </RouterLink>
+          <RouterLink to="/clinica/animais/novo" class="botao botao--secundario">
+            Cadastrar animal
           </RouterLink>
         </div>
       </div>
@@ -265,7 +267,7 @@ function acompanhaDesde(vinculo) {
         v-if="filtradoSemResultado"
         :icone="PawPrint"
         titulo="Nenhum animal com esses filtros"
-        descricao="Há animais sob autorização vigente, mas nenhum corresponde à combinação escolhida. Remova um dos filtros para voltar a vê-los."
+        descricao="Há animais acompanhados, mas nenhum corresponde à combinação escolhida. Remova um dos filtros para voltar a vê-los."
       >
         <button type="button" class="botao botao--primario" @click="limparFiltros">
           Limpar filtros
@@ -603,7 +605,7 @@ function acompanhaDesde(vinculo) {
   color: var(--ink-muted);
 }
 
-/* Linhas 3 e 4: a última passagem e o vencimento, com os rótulos que o
+/* Linhas 3 e 4: a última passagem e o acompanhamento, com os rótulos que o
    conteúdo sozinho não daria — "12/08/2026" não diz de que data se trata. */
 .tabela td[data-rotulo='Última passagem'] {
   order: 5;
@@ -611,7 +613,7 @@ function acompanhaDesde(vinculo) {
   color: var(--ink-muted);
 }
 
-.tabela td[data-rotulo='Autorização'] {
+.tabela td[data-rotulo='Acompanha'] {
   order: 6;
   flex: 1 1 100%;
   color: var(--ink-muted);
@@ -682,9 +684,6 @@ function acompanhaDesde(vinculo) {
 .tabela__nunca {
   color: var(--ink-muted);
 }
-
-/* RN39 — o âmbar do aviso de expiração, na variante de texto que passa em
-   contraste, como na coluna de atraso de V02. */
 
 .tabela__ligacao {
   font-weight: 600;
@@ -764,27 +763,27 @@ function acompanhaDesde(vinculo) {
   font-variant-numeric: tabular-nums;
 }
 
-/* Sem autorização vigente -------------------------------------------------- */
+/* Nenhum animal acompanhado ------------------------------------------------ */
 
-.consentimento {
+.sem-acompanhados {
   padding: var(--space-6);
   background: var(--surface-card);
-  border: 1px solid var(--consent);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
 }
 
-.consentimento__topo {
+.sem-acompanhados__topo {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-.consentimento__icone {
+.sem-acompanhados__icone {
   flex: none;
-  color: var(--consent);
+  color: var(--brand);
 }
 
-.consentimento__titulo {
+.sem-acompanhados__titulo {
   margin: 0;
   font-family: var(--font-display);
   font-size: 22px;
@@ -793,15 +792,14 @@ function acompanhaDesde(vinculo) {
   color: var(--ink);
 }
 
-.consentimento__texto {
+.sem-acompanhados__texto {
   margin: var(--space-3) 0 0;
-  max-width: 75ch;
   font-size: 14px;
   line-height: 20px;
   color: var(--ink);
 }
 
-.consentimento__acoes {
+.sem-acompanhados__acoes {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
@@ -845,17 +843,6 @@ function acompanhaDesde(vinculo) {
 .botao--secundario:hover {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 /* Avisos ------------------------------------------------------------------- */
@@ -1021,7 +1008,7 @@ function acompanhaDesde(vinculo) {
   .tabela td[data-rotulo='Idade'],
   .tabela td[data-rotulo='Situação vacinal'],
   .tabela td[data-rotulo='Última passagem'],
-  .tabela td[data-rotulo='Autorização'],
+  .tabela td[data-rotulo='Acompanha'],
   .tabela td[data-rotulo='Ação'] {
     order: 0;
     font-size: 14px;

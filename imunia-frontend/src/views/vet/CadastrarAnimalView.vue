@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   Dog,
   Eye,
-  KeyRound,
   Stethoscope,
   TriangleAlert,
 } from '@lucide/vue'
@@ -53,8 +52,8 @@ const contexto = ref(null)
 const carregando = ref(true)
 const erroDeContexto = ref('')
 
-/** O 403 do modo consolidação: animal fora do âmbito de autorização (RN48). */
-const semAutorizacao = ref('')
+/** A recusa (403) do modo consolidação — o animal com óbito, por exemplo. */
+const recusa = ref('')
 
 /** O animal do modo consolidação, como o servidor o conhece. */
 const animal = ref(null)
@@ -110,7 +109,6 @@ const enviando = ref(false)
 /** A resposta 409 de RF20a — bloqueante até escolha explícita. */
 const duplicado = ref(null)
 
-const prestador = computed(() => contexto.value?.prestador?.nome ?? 'este prestador')
 const prestadorId = computed(() => contexto.value?.prestador?.id ?? null)
 
 const iconeDaEspecie = computed(() => ((animal.value?.especie ?? form.value.especie) === 'gato' ? Cat : Dog))
@@ -160,7 +158,7 @@ function nascimentoParaCampo(iso, exato) {
 async function carregar() {
   carregando.value = true
   erroDeContexto.value = ''
-  semAutorizacao.value = ''
+  recusa.value = ''
 
   try {
     if (modo.value === 'novo') {
@@ -200,7 +198,7 @@ async function carregar() {
     }
   } catch (excecao) {
     if (excecao instanceof ApiError && excecao.status === 403) {
-      semAutorizacao.value = excecao.message
+      recusa.value = excecao.message
     } else {
       erroDeContexto.value = excecao.message
     }
@@ -210,9 +208,9 @@ async function carregar() {
 }
 
 /**
- * A barreira do CPF — a mesma verificação de V04, pela busca de V03: revela só
- * a existência (RN12) e registra a consulta (RF18b). O formulário só abre com
- * um titular resolvido, porque animal sem tutor não existe no sistema.
+ * A barreira do CPF — a mesma verificação de V04, pela busca de V03: traz o
+ * titular e registra a consulta (RF18b). O formulário só abre com um titular
+ * resolvido, porque animal sem tutor não existe no sistema.
  */
 async function verificar() {
   erroDoCpf.value = ''
@@ -234,12 +232,6 @@ async function verificar() {
 
     if (consulta.tutor) {
       tutorConhecido.value = consulta.tutor.nome
-      etapaDoTutor.value = 'confirmado'
-    } else if (consulta.autorizados?.length) {
-      tutorConhecido.value = consulta.autorizados[0].tutor
-      etapaDoTutor.value = 'confirmado'
-    } else if (consulta.existencia?.tipo === 'tutor') {
-      tutorConhecido.value = ''
       etapaDoTutor.value = 'confirmado'
     } else {
       etapaDoTutor.value = 'sem-cadastro'
@@ -346,8 +338,8 @@ function tratarFalha(excecao) {
 function trocarPrestador(id) {
   contexto.value = { ...contexto.value, prestador: { ...contexto.value.prestador, id } }
 
-  // O âmbito muda com o prestador: o tutor confirmado numa clínica pode estar
-  // fora do âmbito na outra, e a verificação precisa ser refeita.
+  // A verificação registra o acesso em nome do prestador ativo: trocada a
+  // clínica, ela se refaz.
   if (modo.value === 'novo' && etapaDoTutor.value !== 'cpf') verificar()
   if (modo.value === 'consolidar') carregar()
 }
@@ -392,16 +384,15 @@ onMounted(carregar)
       </div>
     </div>
 
-    <!-- P2 do modo consolidação: caracterizar é escrever sobre o cadastro, e
-         isso exige autorização vigente (RN48). O caminho é a ficha, que já
-         sabe pedi-la (V10). -->
-    <div v-else-if="semAutorizacao" class="tela">
-      <section class="sem-autorizacao">
-        <KeyRound :size="24" :stroke-width="1.75" class="sem-autorizacao__icone" />
+    <!-- A recusa do modo consolidação: o servidor diz o porquê, e o caminho
+         é a ficha. -->
+    <div v-else-if="recusa" class="tela">
+      <section class="recusa">
+        <TriangleAlert :size="24" :stroke-width="1.75" class="recusa__icone" />
         <div>
-          <h1 class="sem-autorizacao__titulo">Sem autorização para caracterizar</h1>
-          <p class="sem-autorizacao__texto">{{ semAutorizacao }}</p>
-          <RouterLink :to="`/clinica/animais/${route.params.codigo}`" class="botao botao--consentimento">
+          <h1 class="recusa__titulo">Não é possível caracterizar este animal</h1>
+          <p class="recusa__texto">{{ recusa }}</p>
+          <RouterLink :to="`/clinica/animais/${route.params.codigo}`" class="botao botao--primario">
             Abrir a ficha do animal
           </RouterLink>
         </div>
@@ -458,8 +449,8 @@ onMounted(carregar)
           <div class="aviso-de-registro">
             <Eye :size="20" :stroke-width="1.75" class="aviso-de-registro__icone" />
             <p class="aviso-de-registro__texto">
-              Se o CPF tiver cadastro fora da sua carteira de autorizações, a consulta fica
-              registrada e visível ao tutor.
+              Se o CPF já tiver cadastro e a clínica ainda não acompanhar nenhum animal dele,
+              a consulta fica registrada e visível ao tutor.
             </p>
           </div>
         </section>
@@ -485,10 +476,6 @@ onMounted(carregar)
             <p class="cpf-verificado__rotulo">Tutor do animal</p>
             <p class="cpf-verificado__numero">{{ formatarCpf(cpf) }}</p>
             <p v-if="tutorConhecido" class="cpf-verificado__nome">{{ tutorConhecido }}</p>
-            <p v-else class="cpf-verificado__nota">
-              Cadastro localizado. Nome e animais do tutor aparecem depois que ele autorizar
-              {{ prestador }} — o pedido pode ser feito na ficha, logo após o cadastro.
-            </p>
           </div>
           <button type="button" class="cpf-verificado__trocar" @click="trocarCpf">
             Trocar CPF
@@ -662,19 +649,14 @@ onMounted(carregar)
             <span v-if="duplicado.codigo" class="duplicidade__codigo">{{ duplicado.codigo }}</span>
           </p>
 
-          <p v-if="duplicado.ambito === 'fora_do_ambito'" class="duplicidade__nota">
-            É tudo o que podemos mostrar sem autorização do tutor — e esta revelação ficou
-            registrada, visível a ele. Se for o mesmo animal, use o código com o tutor ou peça a
-            autorização; cadastrar de novo criaria uma duplicidade que depois não se desfaz.
-          </p>
-          <p v-else class="duplicidade__nota">
+          <p class="duplicidade__nota">
             Se for o mesmo animal, abra a ficha dele em vez de criar um segundo cadastro — a
             fusão posterior não é oferecida.
           </p>
 
           <div class="duplicidade__acoes">
             <RouterLink
-              v-if="duplicado.ambito === 'autorizado'"
+              v-if="duplicado.codigo"
               :to="`/clinica/animais/${duplicado.codigo}`"
               class="botao botao--primario"
             >
@@ -855,14 +837,6 @@ onMounted(carregar)
   line-height: 20px;
   font-weight: 600;
   color: var(--ink);
-}
-
-.cpf-verificado__nota {
-  margin: var(--space-1) 0 0;
-  max-width: 60ch;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
 }
 
 .cpf-verificado__trocar {
@@ -1093,25 +1067,25 @@ onMounted(carregar)
   margin: var(--space-4) 0 0;
 }
 
-/* Sem autorização (modo consolidação) ---------------------------------------- */
+/* Recusa (modo consolidação) -------------------------------------------------- */
 
-.sem-autorizacao {
+.recusa {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   max-width: 640px;
   padding: var(--space-6);
   background: var(--surface-sunken);
-  border: 1px dashed var(--consent);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
 }
 
-.sem-autorizacao__icone {
+.recusa__icone {
   flex: none;
-  color: var(--consent);
+  color: var(--ink-muted);
 }
 
-.sem-autorizacao__titulo {
+.recusa__titulo {
   margin: 0;
   font-family: var(--font-display);
   font-size: 22px;
@@ -1120,7 +1094,7 @@ onMounted(carregar)
   color: var(--ink);
 }
 
-.sem-autorizacao__texto {
+.recusa__texto {
   margin: var(--space-2) 0 var(--space-4);
   font-size: 14px;
   line-height: 20px;
@@ -1170,17 +1144,6 @@ onMounted(carregar)
 .botao--secundario:hover:not(:disabled) {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 .aviso {

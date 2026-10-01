@@ -3,15 +3,14 @@
 namespace App\Services;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
 use App\Models\User;
 use App\Support\FiltroDeAcessos;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * O livro de acessos lido pelo lado de quem tem direito a lê-lo (T14, RF53).
@@ -22,18 +21,10 @@ use Illuminate\Support\Collection;
  * caminho que a responde não pode depender de por qual porta o profissional
  * entrou.
  *
- * Duas informações que a tabela não guarda são montadas aqui, e as duas são
- * exigência de RF53:
- *
- * - **sob qual autorização** o acesso aconteceu. Não há coluna para isso, e não
- *   deveria haver: gravá-la congelaria, na linha do log, uma relação que o
- *   próprio tutor pode desfazer depois. A autorização é reconstruída pelo
- *   momento — a que valia para aquele prestador, naquele animal, na hora do
- *   acesso —, e a ausência dela é informação, não lacuna: é o acesso que
- *   aconteceu sem autorização alguma (RF18b, RF52c).
- * - **o que ainda dá para revogar**. A autorização de então pode já ter
- *   expirado, e a de hoje pode ser outra, nascida de renovação. Quem lê a linha
- *   quer encerrar o acesso que existe agora, não o que existia naquele dia.
+ * A clínica atende sem pedir licença ao tutor; a transparência é a contrapartida.
+ * Por isso cada linha diz também se aquela clínica acompanha hoje o animal — o
+ * vínculo de `animal_prestador`, criado pelo cadastro ou pelo atendimento —, e
+ * o recorte traz a relação das clínicas que acompanham.
  */
 class LivroDeAcessosService
 {
@@ -52,7 +43,7 @@ class LivroDeAcessosService
         $animais = $tutor->animais()->orderBy('nome')->get();
         $escolhido = $animais->firstWhere('codigo', $filtro->animal);
 
-        $autorizacoes = $this->autorizacoesDoTutor($tutor);
+        $vinculos = $this->vinculosDoTutor($tutor);
         $registros = $this->registros($tutor, $filtro, $escolhido);
 
         return [
@@ -63,11 +54,10 @@ class LivroDeAcessosService
                 ->values()
                 ->all(),
 
-            // O nome do prestador que T12 mandou destacar. Vem do próprio
-            // recorte e não da lista de acessos: o filtro pode não encontrar
-            // linha alguma, e ainda assim a tela precisa dizer de quem ela
-            // está falando ao oferecer a remoção da etiqueta.
-            'prestador' => $this->prestadorDoFiltro($filtro, $autorizacoes),
+            // O nome do prestador do filtro. Vem à parte da lista de acessos: o
+            // filtro pode não encontrar linha alguma, e ainda assim a tela
+            // precisa dizer de quem está falando ao oferecer a remoção dele.
+            'prestador' => $this->prestadorDoFiltro($tutor, $filtro),
 
             'total' => $registros->count(),
 
@@ -76,11 +66,11 @@ class LivroDeAcessosService
             // positiva, o outro é convite a alargar o período (§5.1).
             'algum_acesso' => $this->algumAcesso($tutor),
 
-            // O apoio do vazio filtrado: há quem pudesse ter acessado e não
-            // acessou. Sem isso, "nenhum acesso" pareceria falha de registro.
-            'vigentes' => $this->vigentesDoRecorte($autorizacoes, $escolhido),
+            // Quem acompanha os animais do recorte — o apoio do vazio filtrado:
+            // há quem pudesse ter acessado e não acessou.
+            'clinicas' => $this->clinicasDoRecorte($vinculos, $escolhido),
 
-            'dias' => $this->porDia($registros, $autorizacoes),
+            'dias' => $this->porDia($registros, $vinculos),
         ];
     }
 
@@ -135,36 +125,33 @@ class LivroDeAcessosService
     }
 
     /**
-     * Todas as autorizações que já alcançaram os animais deste tutor, vigentes
-     * ou não. São poucas — dezenas, na vida de um tutor — e trazê-las de uma vez
-     * evita uma consulta por linha do log para responder às duas perguntas que
-     * cada linha faz: sob qual autorização isto aconteceu, e o que ainda dá para
-     * revogar.
+     * Os vínculos clínica↔animal dos animais deste tutor. São poucos, e trazê-los
+     * de uma vez evita uma consulta por linha do log.
      *
-     * @return EloquentCollection<int, Autorizacao>
+     * @return Collection<int, object{animal_id: int, prestador_id: int}>
      */
-    private function autorizacoesDoTutor(Tutor $tutor): EloquentCollection
+    private function vinculosDoTutor(Tutor $tutor): Collection
     {
-        return Autorizacao::query()
-            ->whereHas('animal', fn (Builder $animal) => $animal->where('tutor_id', $tutor->id))
-            ->with('prestador')
-            ->orderByDesc('concedida_em')
+        return DB::table('animal_prestador')
+            ->join('animais', 'animais.id', '=', 'animal_prestador.animal_id')
+            ->where('animais.tutor_id', $tutor->id)
+            ->select('animal_prestador.animal_id', 'animal_prestador.prestador_id')
             ->get();
     }
 
     /**
      * @param  EloquentCollection<int, RegistroDeAcesso>  $registros
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
+     * @param  Collection<int, object{animal_id: int, prestador_id: int}>  $vinculos
      * @return list<array<string, mixed>>
      */
-    private function porDia(EloquentCollection $registros, EloquentCollection $autorizacoes): array
+    private function porDia(EloquentCollection $registros, Collection $vinculos): array
     {
         return $registros
             ->groupBy(fn (RegistroDeAcesso $registro) => $registro->ocorrido_em->toDateString())
             ->map(fn (Collection $doDia, string $data) => [
                 'data' => $data,
                 'acessos' => $doDia
-                    ->map(fn (RegistroDeAcesso $registro) => $this->linha($registro, $autorizacoes))
+                    ->map(fn (RegistroDeAcesso $registro) => $this->linha($registro, $vinculos))
                     ->values()
                     ->all(),
             ])
@@ -175,14 +162,11 @@ class LivroDeAcessosService
     /**
      * Uma linha da auditoria — o `AccessLogRow` do desenho.
      *
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
+     * @param  Collection<int, object{animal_id: int, prestador_id: int}>  $vinculos
      * @return array<string, mixed>
      */
-    private function linha(RegistroDeAcesso $registro, EloquentCollection $autorizacoes): array
+    private function linha(RegistroDeAcesso $registro, Collection $vinculos): array
     {
-        $noMomento = $this->autorizacaoNoMomento($registro, $autorizacoes);
-        $hoje = $this->autorizacaoVigente($registro, $autorizacoes);
-
         return [
             'id' => $registro->id,
             'ocorrido_em' => $registro->ocorrido_em->toIso8601String(),
@@ -196,75 +180,13 @@ class LivroDeAcessosService
             'descricao' => $this->descrever($registro),
             'resumo' => $this->resumir($registro),
 
-            // RF53 — "sob qual autorização". Nulo quer dizer nenhuma, e é o
-            // fato mais grave que esta tela pode relatar (RF18b): olharam sem
-            // que o tutor tivesse permitido, e por isso ficou registrado.
-            'autorizacao' => $noMomento === null ? null : [
-                'id' => $noMomento->id,
-                'situacao' => $noMomento->situacao(),
-                'concedida_em' => $noMomento->concedida_em->toDateString(),
-                'expira_em' => $noMomento->expira_em->toDateString(),
-            ],
-
-            // RF53b — a revogação acionável da própria linha. Só aparece quando
-            // há acesso a encerrar hoje: oferecê-la sobre autorização já
-            // extinta prometeria ao tutor um efeito que o toque não teria.
-            'revogavel' => $hoje?->id,
+            // A clínica acompanha hoje este animal? Sem animal na linha (a
+            // busca pelo CPF), vale qualquer animal do tutor.
+            'acompanha' => $vinculos->contains(
+                fn (object $vinculo) => $vinculo->prestador_id === $registro->prestador_id
+                    && ($registro->animal_id === null || $vinculo->animal_id === $registro->animal_id),
+            ),
         ];
-    }
-
-    /**
-     * A autorização que valia para aquele prestador, naquele animal, na hora do
-     * acesso.
-     *
-     * A comparação é com o fim do dia de `expira_em` porque o prazo é contado
-     * em dias (RN39): a autorização que expira em 12/11 vale o dia 12 inteiro,
-     * e compará-la com a meia-noite faria o acesso das nove da manhã aparecer
-     * como se não tivesse autorização alguma — acusação séria, e falsa.
-     *
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
-     */
-    private function autorizacaoNoMomento(
-        RegistroDeAcesso $registro,
-        EloquentCollection $autorizacoes,
-    ): ?Autorizacao {
-        if ($registro->animal_id === null) {
-            return null;
-        }
-
-        return $autorizacoes->first(
-            fn (Autorizacao $autorizacao) => $autorizacao->animal_id === $registro->animal_id
-                && $autorizacao->prestador_id === $registro->prestador_id
-                && $autorizacao->concedida_em->lessThanOrEqualTo($registro->ocorrido_em)
-                && $autorizacao->expira_em->copy()->endOfDay()
-                    ->greaterThanOrEqualTo($registro->ocorrido_em)
-                && (
-                    $autorizacao->revogada_em === null
-                    || $autorizacao->revogada_em->greaterThan($registro->ocorrido_em)
-                ),
-        );
-    }
-
-    /**
-     * O que ainda dá para revogar por causa desta linha: a autorização vigente
-     * agora entre o mesmo prestador e o mesmo animal — que pode ser outra,
-     * nascida de renovação (RF40c), e não a de então.
-     *
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
-     */
-    private function autorizacaoVigente(
-        RegistroDeAcesso $registro,
-        EloquentCollection $autorizacoes,
-    ): ?Autorizacao {
-        if ($registro->animal_id === null) {
-            return null;
-        }
-
-        return $autorizacoes->first(
-            fn (Autorizacao $autorizacao) => $autorizacao->animal_id === $registro->animal_id
-                && $autorizacao->prestador_id === $registro->prestador_id
-                && $autorizacao->estaVigente(),
-        );
     }
 
     /**
@@ -272,9 +194,8 @@ class LivroDeAcessosService
      * conhecer o vocabulário do sistema.
      *
      * As buscas e a ficha são fatos diferentes, e o texto os separa: procurar
-     * pelo CPF do tutor revela que existe cadastro; abrir a ficha sem
-     * autorização é um passo além; ler o histórico produzido por outra clínica
-     * é o acesso que RF52 nomeia. Achatar os três em "consultou seus dados"
+     * pelo CPF do tutor ou pelo código do animal é chegar ao cadastro; ler o
+     * histórico produzido por outra clínica é o acesso que RF52 nomeia. Achatar os três em "consultou seus dados"
      * pouparia palavras e apagaria justamente a distinção que o registro existe
      * para preservar.
      */
@@ -283,7 +204,7 @@ class LivroDeAcessosService
         $animal = $registro->animal?->nome;
 
         return match ($registro->natureza) {
-            RegistroDeAcesso::BUSCA_POR_CPF => 'Pesquisou o seu CPF e viu que existe cadastro',
+            RegistroDeAcesso::BUSCA_POR_CPF => 'Pesquisou o seu CPF e encontrou o seu cadastro',
             RegistroDeAcesso::BUSCA_POR_NOME => 'Pesquisou pelo seu nome e viu que existe cadastro',
             RegistroDeAcesso::BUSCA_POR_CODIGO => $animal === null
                 ? 'Pesquisou pelo código de um animal seu'
@@ -291,9 +212,10 @@ class LivroDeAcessosService
             RegistroDeAcesso::BUSCA_POR_MICROCHIP => $animal === null
                 ? 'Pesquisou pelo micro-chip de um animal seu'
                 : "Pesquisou pelo micro-chip de {$animal}",
+            // Natureza que não se grava mais, mas que as linhas antigas trazem.
             RegistroDeAcesso::FICHA_SEM_AUTORIZACAO => $animal === null
-                ? 'Abriu a ficha de um animal seu sem autorização'
-                : "Abriu a ficha de {$animal} sem autorização",
+                ? 'Abriu a ficha de um animal seu'
+                : "Abriu a ficha de {$animal}",
             RegistroDeAcesso::HISTORICO_DE_OUTRO_PRESTADOR => $animal === null
                 ? 'Consultou o histórico produzido por outras clínicas'
                 : "Consultou o histórico de {$animal} produzido por outras clínicas",
@@ -324,7 +246,7 @@ class LivroDeAcessosService
             RegistroDeAcesso::BUSCA_POR_NOME => 'busca pelo seu nome',
             RegistroDeAcesso::BUSCA_POR_CODIGO => 'busca pelo código',
             RegistroDeAcesso::BUSCA_POR_MICROCHIP => 'busca pelo micro-chip',
-            RegistroDeAcesso::FICHA_SEM_AUTORIZACAO => 'ficha, sem autorização',
+            RegistroDeAcesso::FICHA_SEM_AUTORIZACAO => 'ficha do animal',
             RegistroDeAcesso::HISTORICO_DE_OUTRO_PRESTADOR => 'histórico de outras clínicas',
             RegistroDeAcesso::ALERTA_DE_DUPLICIDADE => 'alerta de cadastro parecido',
             RegistroDeAcesso::EXPORTACAO_DE_REGISTRO_ALHEIO => 'exportação em PDF',
@@ -333,47 +255,50 @@ class LivroDeAcessosService
     }
 
     /**
-     * Quem tem acesso vigente ao recorte em vigor. É o que o vazio filtrado diz
-     * ao tutor: a clínica pode ver, e não viu — o silêncio é do prestador, não
-     * do registro.
+     * As clínicas que acompanham os animais do recorte.
      *
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
-     * @return list<array<string, mixed>>
+     * @param  Collection<int, object{animal_id: int, prestador_id: int}>  $vinculos
+     * @return list<array{id: int, nome: string}>
      */
-    private function vigentesDoRecorte(EloquentCollection $autorizacoes, ?Animal $escolhido): array
+    private function clinicasDoRecorte(Collection $vinculos, ?Animal $escolhido): array
     {
-        return $autorizacoes
-            ->filter(fn (Autorizacao $autorizacao) => $autorizacao->estaVigente())
-            ->when(
-                $escolhido !== null,
-                fn (Collection $vigentes) => $vigentes->where('animal_id', $escolhido->id),
-            )
-            ->unique('prestador_id')
-            ->map(fn (Autorizacao $autorizacao) => [
-                'id' => $autorizacao->prestador->id,
-                'nome' => $autorizacao->prestador->nome,
-            ])
-            ->values()
+        $ids = $vinculos
+            ->when($escolhido !== null, fn (Collection $todos) => $todos->where('animal_id', $escolhido->id))
+            ->pluck('prestador_id')
+            ->unique();
+
+        return Prestador::query()
+            ->whereIn('id', $ids)
+            ->orderBy('nome')
+            ->get()
+            ->map(fn (Prestador $prestador) => ['id' => $prestador->id, 'nome' => $prestador->nome])
             ->all();
     }
 
     /**
-     * @param  EloquentCollection<int, Autorizacao>  $autorizacoes
      * @return array<string, mixed>|null
      */
-    private function prestadorDoFiltro(FiltroDeAcessos $filtro, EloquentCollection $autorizacoes): ?array
+    private function prestadorDoFiltro(Tutor $tutor, FiltroDeAcessos $filtro): ?array
     {
         if ($filtro->prestador === null) {
             return null;
         }
 
-        $autorizacao = $autorizacoes->firstWhere('prestador_id', $filtro->prestador);
+        // Só o prestador que já figura no livro deste tutor tem nome a dizer
+        // aqui: T14 não é caminho para descobrir prestadores.
+        $figura = RegistroDeAcesso::query()
+            ->where('tutor_id', $tutor->id)
+            ->where('prestador_id', $filtro->prestador)
+            ->exists()
+            || DB::table('animal_prestador')
+                ->join('animais', 'animais.id', '=', 'animal_prestador.animal_id')
+                ->where('animais.tutor_id', $tutor->id)
+                ->where('animal_prestador.prestador_id', $filtro->prestador)
+                ->exists();
 
-        // Prestador que nunca alcançou animal deste tutor não tem nome a dizer
-        // aqui — e não deve ter: T14 não é caminho para descobrir prestadores.
-        return $autorizacao === null
-            ? null
-            : $this->cartaoDoPrestador($autorizacao->prestador);
+        $prestador = $figura ? Prestador::find($filtro->prestador) : null;
+
+        return $prestador === null ? null : $this->cartaoDoPrestador($prestador);
     }
 
     /**

@@ -396,7 +396,7 @@ function abrirConfirmacao() {
   if (anexos.value.length) {
     acontece.push(
       `${anexos.value.length === 1 ? 'O arquivo anexado passa' : `Os ${anexos.value.length} arquivos anexados passam`} `
-      + `a fazer parte do prontuário, visível a ${animal.value.tutor} e a quem tiver autorização.`,
+      + `a fazer parte do prontuário, visível a ${animal.value.tutor} e às clínicas que acompanham o animal.`,
     )
   }
 

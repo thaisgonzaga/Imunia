@@ -1,9 +1,7 @@
 <script setup>
-import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Dog, KeyRound, PawPrint, UserRound } from '@lucide/vue'
+import { Bell, Dog, Eye, PawPrint, UserRound } from '@lucide/vue'
 import { useSessaoStore } from '@/stores/sessao.js'
-import { useSolicitacoesStore } from '@/stores/solicitacoes.js'
 
 /**
  * Moldura do ambiente do tutor (§5.3 do briefing): cabeçalho de 56 px, abas
@@ -23,21 +21,16 @@ defineProps({
 
 const route = useRoute()
 const sessao = useSessaoStore()
-const solicitacoes = useSolicitacoesStore()
-
-// RF38 — o contador da aba. A consulta é uma só por carregamento do SPA: a
-// store guarda o número, e T13 o corrige quando o tutor responde a um pedido.
-onMounted(() => solicitacoes.carregar())
 
 /**
- * Os quatro destinos são os do briefing, e desde a fatia de T18 os quatro têm
- * tela. O sino do cabeçalho leva a T17 (`/conta/notificacoes/enviadas`), que
- * fica sob a seção "Conta" — é por `familia` que o destaque continua lá.
+ * Quatro destinos. O sino do cabeçalho leva a T17
+ * (`/conta/notificacoes/enviadas`), que fica sob a seção "Conta" — é por
+ * `familia` que o destaque continua lá: a seção não é a rota, e o
+ * `router-link-active` sozinho apagaria o destaque nas telas filhas.
  *
- * `familia` existe porque a seção não é a rota: "Compartilhamento" abrange o
- * diretório, a concessão, as autorizações, os pedidos e a auditoria, e o
- * `router-link-active` sozinho apagaria o destaque em quatro dessas cinco
- * telas — o tutor deixaria de saber em que parte do aplicativo está.
+ * "Acessos" é T14: o tutor não concede nem revoga nada — as clínicas que o
+ * atendem passam a acompanhar o animal sozinhas —, mas continua podendo ver
+ * quem consultou os dados dele e quando.
  */
 const SECOES = [
   {
@@ -55,12 +48,11 @@ const SECOES = [
     familia: ['/animais'],
   },
   {
-    rotulo: 'Compartilhamento',
-    abreviado: 'Compartilhar',
-    destino: '/autorizacoes',
-    icone: KeyRound,
-    familia: ['/autorizacoes', '/solicitacoes', '/prestadores', '/acessos'],
-    contador: true,
+    rotulo: 'Quem acessou',
+    abreviado: 'Acessos',
+    destino: '/acessos',
+    icone: Eye,
+    familia: ['/acessos'],
   },
   {
     rotulo: 'Conta',
@@ -90,17 +82,6 @@ function ativa(secao) {
         >
           <component :is="secao.icone" :size="20" :stroke-width="1.75" />
           {{ secao.rotulo }}
-          <span
-            v-if="secao.contador && solicitacoes.temPendencia"
-            class="tutor-shell__selo tutor-shell__selo--lateral"
-          >
-            <span aria-hidden="true">{{ solicitacoes.pendentes }}</span>
-            <span class="tutor-shell__oculto">
-              {{ solicitacoes.pendentes }}
-              {{ solicitacoes.pendentes === 1 ? 'pedido de acesso' : 'pedidos de acesso' }}
-              aguardando resposta
-            </span>
-          </span>
         </RouterLink>
       </nav>
     </aside>
@@ -142,17 +123,7 @@ function ativa(secao) {
         class="tutor-shell__aba"
         :class="{ 'tutor-shell__aba--ativa': ativa(secao) }"
       >
-        <span class="tutor-shell__aba-icone">
-          <component :is="secao.icone" :size="20" :stroke-width="1.75" />
-          <span v-if="secao.contador && solicitacoes.temPendencia" class="tutor-shell__selo">
-            <span aria-hidden="true">{{ solicitacoes.pendentes }}</span>
-            <span class="tutor-shell__oculto">
-              {{ solicitacoes.pendentes }}
-              {{ solicitacoes.pendentes === 1 ? 'pedido de acesso' : 'pedidos de acesso' }}
-              aguardando resposta
-            </span>
-          </span>
-        </span>
+        <component :is="secao.icone" :size="20" :stroke-width="1.75" />
         <span class="tutor-shell__aba-rotulo">{{ secao.abreviado }}</span>
       </RouterLink>
     </nav>
@@ -260,42 +231,6 @@ function ativa(secao) {
   font-weight: 600;
 }
 
-.tutor-shell__aba-icone {
-  position: relative;
-  display: inline-flex;
-}
-
-/* O selo de pendência (RF38). Índigo de consentimento, como tudo o que fala de
-   autorização, e com o número escrito — um ponto sozinho diria que há algo, e
-   não quantos. */
-.tutor-shell__selo {
-  position: absolute;
-  top: -6px;
-  left: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: var(--radius-pill);
-  background: var(--consent);
-  color: var(--surface-card);
-  font-size: 11px;
-  line-height: 18px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.tutor-shell__oculto {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .tutor-shell__lateral {
   display: none;
 }
@@ -358,13 +293,6 @@ function ativa(secao) {
     background: var(--brand-wash);
     color: var(--brand);
     font-weight: 600;
-  }
-
-  /* Na barra lateral o selo acompanha o rótulo, no fim da linha: há largura
-     para ele, e sobre o ícone de 20 px ficaria apertado contra o texto. */
-  .tutor-shell__selo--lateral {
-    position: static;
-    margin-left: auto;
   }
 
   /* A marca já está na barra lateral; no cabeçalho restam sino e avatar. */

@@ -234,7 +234,11 @@ class BuscaClinicaTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
+        // Código fixo e com algarismo: sem hífen, é o algarismo que distingue o
+        // código de um nome começado por "Im" (`TermoDeBusca`), e um código
+        // sorteado só com letras tornaria o teste intermitente.
         $theo = $this->animalDe('Helena Ramos', 'Théo');
+        $theo->forceFill(['codigo' => 'IM-4B8T-77LX'])->save();
         $this->vincular($theo, $clinica);
 
         $solto = strtolower(str_replace('-', '', $theo->codigo));

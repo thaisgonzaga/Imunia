@@ -396,7 +396,6 @@ carregar()
       :nao-acontece="[
         'Sua senha continua a mesma.',
         'O histórico dos seus animais não muda.',
-        'As autorizações que você concedeu continuam valendo.',
       ]"
       rotulo-confirmar="Trocar e salvar"
       :carregando="salvando"

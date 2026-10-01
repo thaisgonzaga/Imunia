@@ -7,13 +7,13 @@ import { CircleHelp } from '@lucide/vue'
  * nunca como nota de rodapé: o que ele explica é a consequência, e explicar
  * consequência depois de consumada não é explicar.
  *
- * O conteúdo vem por slot porque o texto muda a cada tela — a concessão de
- * autorização, a exportação de PDF e o lançamento pregresso falam de coisas
+ * O conteúdo vem por slot porque o texto muda a cada tela — o cadastro do
+ * animal, a exportação de PDF e o lançamento pregresso falam de coisas
  * diferentes. O que não muda é a forma, e é ela que o componente guarda.
  */
 defineProps({
   // O ícone acompanha o assunto: `circle-help` para o que é incerto (T09),
-  // `key-round` para autorização, `file-check` para exportação.
+  // `stethoscope` para o que é do veterinário, `file-check` para exportação.
   icone: { type: [Object, Function], default: () => CircleHelp },
 })
 </script>

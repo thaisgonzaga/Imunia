@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -61,19 +60,9 @@ class LivroDeAcessosTest extends TestCase
         return $usuario;
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string ...$estados): Autorizacao
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        foreach ($estados as $estado) {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     public function test_a_auditoria_exige_sessao(): void
@@ -149,39 +138,49 @@ class LivroDeAcessosTest extends TestCase
         $resposta->assertJsonPath('algum_acesso', false);
     }
 
-    public function test_a_linha_diz_sob_qual_autorizacao_o_acesso_aconteceu(): void
+    public function test_a_linha_diz_se_a_clinica_acompanha_o_animal(): void
     {
         $helena = $this->helena();
         $theo = $this->animal($helena, 'Théo');
         $vetAmigo = $this->prestador('Clínica Vet Amigo');
         $marcelo = $this->veterinario($vetAmigo);
+        $bichoBom = $this->prestador('Clínica Bicho Bom');
+        $larissa = $this->veterinario($bichoBom, 'Larissa Prado');
 
-        $autorizacao = $this->autorizar($theo, $vetAmigo);
+        $this->vincular($theo, $vetAmigo);
 
-        RegistroDeAcesso::factory()->sobre($theo)->create([
+        RegistroDeAcesso::factory()->sobre($theo)->em(now()->subHour()->toDateTimeString())->create([
             'prestador_id' => $vetAmigo->id,
             'user_id' => $marcelo->id,
+        ]);
+        RegistroDeAcesso::factory()->sobre($theo)->natureza(RegistroDeAcesso::BUSCA_POR_CODIGO)->create([
+            'prestador_id' => $bichoBom->id,
+            'user_id' => $larissa->id,
         ]);
 
         $resposta = $this->actingAs($helena->user)->getJson('/api/acessos')->assertOk();
 
-        // RF53 — "sob qual autorização". E RF53b: há acesso a encerrar hoje, e
-        // a linha o oferece.
-        $resposta->assertJsonPath('dias.0.acessos.0.autorizacao.id', $autorizacao->id);
-        $resposta->assertJsonPath('dias.0.acessos.0.autorizacao.situacao', 'vigente');
-        $resposta->assertJsonPath('dias.0.acessos.0.revogavel', $autorizacao->id);
+        // A mais recente primeiro: a clínica que só pesquisou o código e não
+        // acompanha o Théo.
+        $resposta->assertJsonPath('dias.0.acessos.0.prestador.nome', 'Clínica Bicho Bom');
+        $resposta->assertJsonPath('dias.0.acessos.0.acompanha', false);
+        $resposta->assertJsonPath('dias.0.acessos.1.prestador.nome', 'Clínica Vet Amigo');
+        $resposta->assertJsonPath('dias.0.acessos.1.acompanha', true);
+
+        // O modelo de consentimento saiu: nenhuma linha fala mais dele.
+        $resposta->assertJsonMissingPath('dias.0.acessos.0.autorizacao');
+        $resposta->assertJsonMissingPath('dias.0.acessos.0.revogavel');
     }
 
-    public function test_o_acesso_sem_autorizacao_aparece_como_tal(): void
+    public function test_a_natureza_antiga_de_ficha_continua_legivel(): void
     {
         $helena = $this->helena();
         $theo = $this->animal($helena, 'Théo');
         $bichoBom = $this->prestador('Clínica Bicho Bom');
         $vet = $this->veterinario($bichoBom, 'Larissa Prado');
 
-        // RF18b — abriu a ficha sem autorização alguma. É o fato mais grave que
-        // esta tela relata, e ele não pode sair achatado como se fosse leitura
-        // autorizada.
+        // Linhas gravadas antes da mudança continuam no livro (RF52a) e
+        // precisam se ler sem o vocabulário de autorização, que saiu.
         RegistroDeAcesso::factory()
             ->sobre($theo)
             ->natureza(RegistroDeAcesso::FICHA_SEM_AUTORIZACAO)
@@ -189,64 +188,8 @@ class LivroDeAcessosTest extends TestCase
 
         $resposta = $this->actingAs($helena->user)->getJson('/api/acessos')->assertOk();
 
-        $resposta->assertJsonPath('dias.0.acessos.0.autorizacao', null);
-        $resposta->assertJsonPath('dias.0.acessos.0.revogavel', null);
-        $resposta->assertJsonPath(
-            'dias.0.acessos.0.descricao',
-            'Abriu a ficha de Théo sem autorização',
-        );
-
-        // A forma curta, que é a que cabe na célula da tabela de 1440 px sem
-        // desfazer a leitura vertical da coluna.
-        $resposta->assertJsonPath('dias.0.acessos.0.resumo', 'ficha, sem autorização');
-    }
-
-    public function test_a_autorizacao_ja_encerrada_nao_oferece_revogacao(): void
-    {
-        $helena = $this->helena();
-        $theo = $this->animal($helena, 'Théo');
-        $vetAmigo = $this->prestador('Clínica Vet Amigo');
-        $marcelo = $this->veterinario($vetAmigo);
-
-        $expirada = $this->autorizar($theo, $vetAmigo, 'expirada');
-
-        RegistroDeAcesso::factory()
-            ->sobre($theo)
-            ->em($expirada->concedida_em->copy()->addDay()->toDateTimeString())
-            ->create(['prestador_id' => $vetAmigo->id, 'user_id' => $marcelo->id]);
-
-        $resposta = $this->actingAs($helena->user)
-            ->getJson('/api/acessos?periodo=tudo')
-            ->assertOk();
-
-        // A autorização de então é dita — foi sob ela que o acesso aconteceu —,
-        // mas não há o que revogar hoje: oferecer o botão prometeria ao tutor um
-        // efeito que o toque não teria.
-        $resposta->assertJsonPath('dias.0.acessos.0.autorizacao.id', $expirada->id);
-        $resposta->assertJsonPath('dias.0.acessos.0.revogavel', null);
-    }
-
-    public function test_a_renovacao_e_o_que_se_revoga_e_nao_a_autorizacao_de_entao(): void
-    {
-        $helena = $this->helena();
-        $theo = $this->animal($helena, 'Théo');
-        $vetAmigo = $this->prestador('Clínica Vet Amigo');
-        $marcelo = $this->veterinario($vetAmigo);
-
-        $antiga = $this->autorizar($theo, $vetAmigo, 'expirada');
-        $atual = $this->autorizar($theo, $vetAmigo);
-
-        RegistroDeAcesso::factory()
-            ->sobre($theo)
-            ->em($antiga->concedida_em->copy()->addDay()->toDateTimeString())
-            ->create(['prestador_id' => $vetAmigo->id, 'user_id' => $marcelo->id]);
-
-        $resposta = $this->actingAs($helena->user)
-            ->getJson('/api/acessos?periodo=tudo')
-            ->assertOk();
-
-        $resposta->assertJsonPath('dias.0.acessos.0.autorizacao.id', $antiga->id);
-        $resposta->assertJsonPath('dias.0.acessos.0.revogavel', $atual->id);
+        $resposta->assertJsonPath('dias.0.acessos.0.descricao', 'Abriu a ficha de Théo');
+        $resposta->assertJsonPath('dias.0.acessos.0.resumo', 'ficha do animal');
     }
 
     public function test_a_busca_por_cpf_aparece_sem_animal(): void
@@ -265,7 +208,7 @@ class LivroDeAcessosTest extends TestCase
         $resposta->assertJsonPath('dias.0.acessos.0.animal', null);
         $resposta->assertJsonPath(
             'dias.0.acessos.0.descricao',
-            'Pesquisou o seu CPF e viu que existe cadastro',
+            'Pesquisou o seu CPF e encontrou o seu cadastro',
         );
     }
 
@@ -357,7 +300,7 @@ class LivroDeAcessosTest extends TestCase
             ->assertJsonPath('filtro.periodo', '12m');
     }
 
-    public function test_o_filtro_por_prestador_chega_nomeado_de_t12(): void
+    public function test_o_filtro_por_prestador_chega_nomeado(): void
     {
         $helena = $this->helena();
         $theo = $this->animal($helena, 'Théo');
@@ -366,8 +309,7 @@ class LivroDeAcessosTest extends TestCase
         $marcelo = $this->veterinario($vetAmigo);
         $outroVet = $this->veterinario($serra, 'Larissa Prado');
 
-        $this->autorizar($theo, $vetAmigo);
-        $this->autorizar($theo, $serra);
+        $this->vincular($theo, $vetAmigo);
 
         RegistroDeAcesso::factory()->sobre($theo)->create([
             'prestador_id' => $vetAmigo->id,
@@ -395,22 +337,22 @@ class LivroDeAcessosTest extends TestCase
         $helena = $this->helena();
         $estranho = $this->prestador('Clínica Que Nunca Atendeu');
 
-        // T14 não é caminho para descobrir prestadores: sem autorização alguma
-        // sobre animal deste tutor, o identificador não vira nome.
+        // T14 não é caminho para descobrir prestadores: sem vínculo nem acesso
+        // a animal deste tutor, o identificador não vira nome.
         $this->actingAs($helena->user)
             ->getJson("/api/acessos?prestador={$estranho->id}")
             ->assertOk()
             ->assertJsonPath('prestador', null);
     }
 
-    public function test_a_tela_recebe_os_animais_e_quem_tem_acesso_vigente(): void
+    public function test_a_tela_recebe_os_animais_e_as_clinicas_que_acompanham(): void
     {
         $helena = $this->helena();
         $theo = $this->animal($helena, 'Théo');
         $nina = $this->animal($helena, 'Nina', 'gato');
         $vetAmigo = $this->prestador('Clínica Vet Amigo');
 
-        $this->autorizar($nina, $vetAmigo);
+        $this->vincular($nina, $vetAmigo);
 
         $resposta = $this->actingAs($helena->user)
             ->getJson("/api/acessos?animal={$nina->codigo}")
@@ -420,15 +362,15 @@ class LivroDeAcessosTest extends TestCase
         $resposta->assertJsonCount(2, 'animais');
         $resposta->assertJsonCount(3, 'periodos');
 
-        // O apoio do vazio filtrado: a clínica pode ver e não viu — o silêncio
-        // é do prestador, não do registro.
-        $resposta->assertJsonPath('vigentes.0.nome', 'Clínica Vet Amigo');
+        // O apoio do vazio filtrado: a clínica acompanha e não acessou — o
+        // silêncio é do prestador, não do registro.
+        $resposta->assertJsonPath('clinicas.0.nome', 'Clínica Vet Amigo');
         $resposta->assertJsonPath('total', 0);
 
         $semAcesso = $this->actingAs($helena->user)
             ->getJson("/api/acessos?animal={$theo->codigo}")
             ->assertOk();
 
-        $semAcesso->assertJsonPath('vigentes', []);
+        $semAcesso->assertJsonPath('clinicas', []);
     }
 }

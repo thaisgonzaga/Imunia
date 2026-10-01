@@ -11,11 +11,7 @@ use Illuminate\Http\JsonResponse;
 /**
  * T14 — quem acessou meus dados (RF53).
  *
- * Uma leitura e nenhum ato. A revogação que a tela oferece em cada linha
- * (RF53b) é a de T12, e chamá-la de lá é a resposta certa: o efeito é o mesmo,
- * o texto que o tutor lê antes de confirmar é o mesmo (RF39d), e um segundo
- * caminho de revogação seria um segundo lugar onde esquecer de comunicar o
- * prestador.
+ * Uma leitura e nenhum ato.
  *
  * Não há aqui nada que escreva no livro. Não deve haver: RF52a diz que o log é
  * imutável e não editável por papel algum, e o titular dos dados não é exceção
@@ -28,7 +24,7 @@ class LivroDeAcessosController extends Controller
 
     /**
      * RF53a — prestador, profissional, data e hora, sob o recorte que a tela
-     * pediu: por animal, por período e, quando se chega de T12, por prestador.
+     * pediu: por animal, por período e, opcionalmente, por prestador.
      */
     public function index(ConsultarAcessosRequest $request): JsonResponse
     {

@@ -8,8 +8,8 @@ import {
   CircleCheck,
   ClockAlert,
   Dog,
+  PawPrint,
   FileCheck,
-  KeyRound,
   TriangleAlert,
   X,
 } from '@lucide/vue'
@@ -28,9 +28,9 @@ import { emNumeros } from '@/lib/datas.js'
  * diria o que fazer sem dizer o que já foi feito, e a equipe ligaria duas vezes
  * para o mesmo tutor — ou nenhuma, por supor que alguém já ligou.
  *
- * O âmbito é o mesmo de V01 e não é escolha desta tela: prestador ativo e
- * autorização vigente (RN48). Quando não há autorização alguma, a tela explica
- * a regra em vez de exibir uma lista vazia que pareceria defeito.
+ * O âmbito é o mesmo de V01 e não é escolha desta tela: os animais que o
+ * prestador ativo acompanha. Quando ainda não há nenhum, a tela explica a regra
+ * em vez de exibir uma lista vazia que pareceria defeito.
  */
 const consulta = ref(null)
 const carregando = ref(true)
@@ -196,23 +196,25 @@ function iconeDaEspecie(especie) {
       </div>
     </div>
 
-    <!-- RN48 — a lista vazia por falta de autorização precisa dizer que está
-         funcionando. Sem a explicação, a regra parece defeito. -->
+    <!-- O vazio da carteira precisa dizer que está funcionando: os animais
+         entram aqui quando a clínica os cadastra ou atende. (O estado ainda
+         se chama `sem_autorizacoes` na resposta.) -->
     <div v-else-if="consulta.estado === 'sem_autorizacoes'" class="pendencias pendencias--estreito">
-      <div class="consentimento">
-        <div class="consentimento__topo">
-          <KeyRound :size="24" :stroke-width="1.75" class="consentimento__icone" />
-          <h1 class="consentimento__titulo">Nenhuma autorização vigente neste prestador</h1>
+      <div class="sem-acompanhados">
+        <div class="sem-acompanhados__topo">
+          <PawPrint :size="24" :stroke-width="1.75" class="sem-acompanhados__icone" />
+          <h1 class="sem-acompanhados__titulo">Nenhum animal acompanhado ainda</h1>
         </div>
-        <p class="consentimento__texto">
-          A rechamada abrange somente animais sob autorização vigente para
-          {{ consulta.prestador.nome }}. Sem nenhuma, não há pendência a apurar — e isso
-          não é uma falha do sistema.
+        <p class="sem-acompanhados__texto">
+          A rechamada de {{ consulta.prestador.nome }} percorre os animais que você cadastra
+          ou atende. Quando houver algum, as doses vencidas e próximas aparecem aqui.
         </p>
-        <div class="consentimento__acoes">
-          <RouterLink to="/clinica/buscar" class="botao botao--consentimento">
-            <KeyRound :size="16" :stroke-width="1.75" />
-            Buscar e solicitar autorização
+        <div class="sem-acompanhados__acoes">
+          <RouterLink to="/clinica/buscar" class="botao botao--primario">
+            Buscar animal
+          </RouterLink>
+          <RouterLink to="/clinica/animais/novo" class="botao botao--secundario">
+            Cadastrar animal
           </RouterLink>
         </div>
       </div>
@@ -306,7 +308,7 @@ function iconeDaEspecie(especie) {
         class="vazio-positivo"
         :icone="CircleCheck"
         titulo="Nenhuma dose vencida ou próxima do vencimento no período"
-        :descricao="`Os ${consulta.animais_no_ambito} animais sob autorização vigente em ${consulta.prestador.nome} estão com o calendário em dia para os próximos ${filtros.dias} dias.`"
+        :descricao="`Os ${consulta.animais_no_ambito} animais acompanhados por ${consulta.prestador.nome} estão com o calendário em dia para os próximos ${filtros.dias} dias.`"
       >
         <button
           v-if="filtros.dias < 90"
@@ -871,27 +873,27 @@ function iconeDaEspecie(especie) {
   font-variant-numeric: tabular-nums;
 }
 
-/* Sem autorização vigente -------------------------------------------------- */
+/* Nenhum animal acompanhado ------------------------------------------------ */
 
-.consentimento {
+.sem-acompanhados {
   padding: var(--space-6);
   background: var(--surface-card);
-  border: 1px solid var(--consent);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-md);
 }
 
-.consentimento__topo {
+.sem-acompanhados__topo {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
 
-.consentimento__icone {
+.sem-acompanhados__icone {
   flex: none;
-  color: var(--consent);
+  color: var(--brand);
 }
 
-.consentimento__titulo {
+.sem-acompanhados__titulo {
   margin: 0;
   font-family: var(--font-display);
   font-size: 22px;
@@ -900,15 +902,14 @@ function iconeDaEspecie(especie) {
   color: var(--ink);
 }
 
-.consentimento__texto {
+.sem-acompanhados__texto {
   margin: var(--space-3) 0 0;
-  max-width: 75ch;
   font-size: 14px;
   line-height: 20px;
   color: var(--ink);
 }
 
-.consentimento__acoes {
+.sem-acompanhados__acoes {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
@@ -957,17 +958,6 @@ function iconeDaEspecie(especie) {
 .botao--secundario:hover {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 /* Avisos ------------------------------------------------------------------- */

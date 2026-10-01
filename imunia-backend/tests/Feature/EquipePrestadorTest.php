@@ -3,13 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Convite;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
 use App\Models\User;
-use App\Notifications\AutorizacaoRevogada;
 use App\Notifications\ConviteDeAtivacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -571,64 +569,6 @@ class EquipePrestadorTest extends TestCase
         $this->actingAs($this->administradora($clinica))
             ->deleteJson('/api/prestador/equipe/'.$vinculoAlheio)
             ->assertNotFound();
-    }
-
-    /**
-     * RF10a — o desligamento também vale para a caixa de entrada. O aviso de
-     * revogação nomeia o animal, e quem saiu não tem mais o que fazer com ele.
-     */
-    public function test_o_ex_veterinario_nao_recebe_mais_aviso_de_revogacao(): void
-    {
-        $clinica = $this->clinica();
-        $administradora = $this->administradora($clinica);
-        $larissa = $this->veterinario($clinica, 'Larissa Nogueira', '20981');
-
-        $tutor = Tutor::factory()->create();
-        $animal = Animal::factory()->create(['tutor_id' => $tutor->id]);
-        $autorizacao = Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
-
-        $this->actingAs($administradora)
-            ->deleteJson('/api/prestador/equipe/'.$this->vinculoDe($administradora, $larissa))
-            ->assertOk();
-
-        Notification::fake();
-
-        $this->actingAs($tutor->user)
-            ->deleteJson('/api/autorizacoes/'.$autorizacao->id)
-            ->assertOk();
-
-        Notification::assertNotSentTo($larissa, AutorizacaoRevogada::class);
-    }
-
-    /**
-     * RN08 — o aviso nomeia o animal, e o papel administrativo não alcança dado
-     * clínico. Na caixa de entrada tanto quanto na tela.
-     */
-    public function test_o_administrador_nao_recebe_aviso_que_nomeia_animal(): void
-    {
-        $clinica = $this->clinica();
-        $administradora = $this->administradora($clinica);
-        $this->veterinario($clinica, 'Larissa Nogueira', '20981');
-
-        $tutor = Tutor::factory()->create();
-        $animal = Animal::factory()->create(['tutor_id' => $tutor->id]);
-        $autorizacao = Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
-
-        Notification::fake();
-
-        $this->actingAs($tutor->user)
-            ->deleteJson('/api/autorizacoes/'.$autorizacao->id)
-            ->assertOk();
-
-        Notification::assertNotSentTo($administradora, AutorizacaoRevogada::class);
     }
 
     // ------------------------------------------------------------- concessão

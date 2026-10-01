@@ -46,7 +46,7 @@ class RegistroDeVacinacaoController extends Controller
         [$profissional, $prestador] = $this->contextoClinico($request);
         $this->crmvExigido($profissional, $prestador);
 
-        $animal = $this->animalAutorizado($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         return response()->json([
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
@@ -66,7 +66,7 @@ class RegistroDeVacinacaoController extends Controller
         [$profissional, $prestador] = $this->contextoClinico($request);
         $this->crmvExigido($profissional, $prestador);
 
-        $animal = $this->animalAutorizado($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         $imunobiologico = Imunobiologico::query()
             ->where('chave', $request->string('imunobiologico')->value())
@@ -115,7 +115,7 @@ class RegistroDeVacinacaoController extends Controller
      * Código inexistente é 404; o animal existente entra na carteira do
      * prestador (`AlcancaAnimal`) e só o óbito impede o registro.
      */
-    private function animalAutorizado(string $codigo, Prestador $prestador): Animal
+    private function animalDoAtendimento(string $codigo, Prestador $prestador): Animal
     {
         $animal = $this->animalAlcancado($codigo, $prestador);
 

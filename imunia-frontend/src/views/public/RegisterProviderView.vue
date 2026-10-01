@@ -33,7 +33,7 @@ const ufOptions = ESTADOS.map((estado) => ({ value: estado.sigla, label: `${esta
 const ARGUMENTOS = [
   'Calendário vacinal calculado a cada dose registrada',
   'Cada registro leva o profissional e o CRMV de quem aplicou',
-  'Histórico de outra clínica, mediante autorização do tutor',
+  'O histórico completo do animal, de qualquer clínica',
 ]
 
 const step = ref(1)
@@ -350,8 +350,8 @@ function corrigirCnpj() {
             <div class="auth-notice auth-notice--neutro">
               <Building2 :size="20" />
               <p class="auth-notice__text">
-                Nome, tipo, município e contato aparecem no diretório público, onde os tutores encontram
-                a clínica para autorizar. Endereço completo e CNPJ não são publicados.
+                Nome, tipo e município aparecem para o tutor junto de cada registro e de cada
+                consulta da clínica. Endereço completo e CNPJ não são publicados.
               </p>
             </div>
 

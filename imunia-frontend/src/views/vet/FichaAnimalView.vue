@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   CalendarClock,
   Cat,
-  ChevronLeft,
   CircleHelp,
   ClockAlert,
   Dog,
@@ -13,7 +12,6 @@ import {
   FilePenLine,
   FileText,
   History,
-  Hourglass,
   KeyRound,
   Mail,
   Moon,
@@ -31,7 +29,6 @@ import ProvenanceChip from '@/components/tutor/ProvenanceChip.vue'
 import VaccineRail from '@/components/tutor/VaccineRail.vue'
 import BatchSeal from '@/components/tutor/BatchSeal.vue'
 import TimelineEntry from '@/components/tutor/TimelineEntry.vue'
-import SolicitarAutorizacaoModal from '@/components/vet/SolicitarAutorizacaoModal.vue'
 import RegistrarObitoModal from '@/components/vet/RegistrarObitoModal.vue'
 import ExportarDocumentoModal from '@/components/tutor/ExportarDocumentoModal.vue'
 import { apiGet } from '@/lib/api.js'
@@ -51,10 +48,10 @@ import { procedenciaNoAmbienteClinico } from '@/lib/procedencia.js'
  *    fatos: o profissional lê que a visualização ficou registrada antes de ler
  *    o que foi registrado.
  * 2. **Alerta clínico fica acima de alerta administrativo**, sempre. Uma dose
- *    atrasada e um prazo de autorização não disputam a mesma altura de tela.
- * 3. **A ausência de autorização é um estado de tela, não um erro** (P2). A
- *    ficha sem autorização é desenhada com o mesmo cuidado da cheia: espécie,
- *    nome e código, a explicação do porquê e um caminho único.
+ *    atrasada e um cadastro preliminar não disputam a mesma altura de tela.
+ *
+ * O atendimento não depende do tutor: qualquer ficha aberta pelo código chega
+ * completa, e abri-la já põe o animal entre os que a clínica acompanha.
  */
 const route = useRoute()
 const router = useRouter()
@@ -85,10 +82,7 @@ function abrirAba(chave) {
   router.replace({ query: { ...route.query, aba: chave === 'resumo' ? undefined : chave } })
 }
 
-const acesso = computed(() => ficha.value?.acesso ?? null)
-const autorizado = computed(() => acesso.value === 'completo')
 const animal = computed(() => ficha.value?.animal ?? null)
-const autorizacao = computed(() => ficha.value?.autorizacao ?? null)
 const prestador = computed(() => ficha.value?.prestador?.nome ?? null)
 const alertas = computed(() => ficha.value?.alertas ?? { clinicos: [], administrativos: [] })
 const resumo = computed(() => ficha.value?.resumo ?? null)
@@ -99,34 +93,11 @@ const inativo = computed(() => Boolean(animal.value?.obito))
 
 const icone = computed(() => (animal.value?.especie === 'gato' ? Cat : Dog))
 
-/** V10 — o modal do pedido, aberto sobre o estado P2 desta tela. */
-const solicitando = ref(false)
-
-/** T15 pela clínica — o modal de exportação, sobre a ficha autorizada. */
+/** T15 pela clínica — o modal de exportação, sobre a ficha. */
 const exportarAberto = ref(false)
 
-/** V12 — o modal de óbito, sobre a ficha autorizada. */
+/** V12 — o modal de óbito, sobre a ficha. */
 const registrandoObito = ref(false)
-
-/** O desfecho do pedido feito nesta visita, que vira a etiqueta de espera. */
-const solicitacao = ref(null)
-
-const alvoDaSolicitacao = computed(() => (animal.value
-  ? {
-      tipo: 'animal',
-      termo: animal.value.codigo,
-      nome: animal.value.nome,
-      especie: animal.value.especie,
-    }
-  : null))
-
-/**
- * A pendência que troca o botão pela etiqueta: a que a ficha já trouxe, ou a
- * que acabou de nascer no modal.
- */
-const solicitacaoPendente = computed(
-  () => solicitacao.value ?? ficha.value?.solicitacao_pendente ?? null,
-)
 
 /**
  * A linha de metadados do cabeçalho: espécie, idade e quem o trouxe.
@@ -157,19 +128,12 @@ const tarjaPreliminar = computed(() =>
   alertas.value.administrativos.find((alerta) => alerta.chave === 'cadastro-preliminar'),
 )
 
-const tarjaAutorizacao = computed(() =>
-  alertas.value.administrativos.find((alerta) => alerta.chave === 'autorizacao-a-expirar'),
-)
-
 /**
- * Os alertas que sobram para o painel lateral. Preliminar e autorização a
- * expirar já viraram tarja no topo, e repeti-los ao lado seria dizer duas vezes
- * a mesma coisa na mesma tela.
+ * Os alertas que sobram para o painel lateral. O preliminar já virou tarja no
+ * topo, e repeti-lo ao lado seria dizer duas vezes a mesma coisa na mesma tela.
  */
 const alertasAdministrativos = computed(() =>
-  alertas.value.administrativos.filter(
-    (alerta) => !['cadastro-preliminar', 'autorizacao-a-expirar'].includes(alerta.chave),
-  ),
+  alertas.value.administrativos.filter((alerta) => alerta.chave !== 'cadastro-preliminar'),
 )
 
 const temAlertas = computed(
@@ -319,36 +283,22 @@ async function carregar() {
 
   try {
     ficha.value = await apiGet(`/api/clinica/animais/${route.params.codigo}?${parametros()}`)
-    solicitacao.value = null
-
-    // V10 — `/clinica/autorizacoes/nova?animal=X` redireciona para cá com
-    // `?solicitar=1`: o modal abre na chegada, e o parâmetro sai do endereço
-    // para que recarregar ou voltar não reabra um pedido já decidido. Com
-    // pedido pendente o modal não abre — a etiqueta já responde.
-    if (route.query.solicitar) {
-      solicitando.value = ficha.value.acesso === 'sem_autorizacao'
-        && !ficha.value.solicitacao_pendente
-
-      router.replace({ query: { ...route.query, solicitar: undefined } })
-    }
 
     // T15 — `/clinica/animais/:codigo/exportar` redireciona para cá com
-    // `?exportar=1`, como o endereço antigo do tutor: o modal abre na chegada.
-    // Só com autorização vigente — sem ela não há histórico a exportar, e a
-    // tela já explica o porquê — e o parâmetro sai do endereço, como acima.
+    // `?exportar=1`, como o endereço antigo do tutor: o modal abre na chegada,
+    // e o parâmetro sai do endereço para que recarregar ou voltar não o reabra.
     if (route.query.exportar) {
-      exportarAberto.value = ficha.value.acesso === 'completo'
+      exportarAberto.value = true
 
       router.replace({ query: { ...route.query, exportar: undefined } })
     }
 
     // V12 — `/clinica/animais/:codigo/obito` redireciona para cá com
-    // `?obito=1`: o modal abre na chegada, também só com autorização vigente.
-    // Para o animal que já tem óbito o modal abre do mesmo jeito — em estado
+    // `?obito=1`: o modal abre na chegada. Para o animal que já tem óbito o modal abre do mesmo jeito — em estado
     // "já registrado", que informa a data e o autor em vez de oferecer
     // formulário — e o parâmetro sai do endereço, como acima.
     if (route.query.obito) {
-      registrandoObito.value = ficha.value.acesso === 'completo'
+      registrandoObito.value = true
 
       router.replace({ query: { ...route.query, obito: undefined } })
     }
@@ -489,87 +439,6 @@ watch(() => route.params.codigo, carregar)
       </div>
     </div>
 
-    <!-- Estado P2: sem autorização vigente. Espécie, nome e código, a razão da
-         ausência e um caminho único — pedir a autorização a quem pode dá-la. -->
-    <div v-else-if="!autorizado" class="ficha ficha--estreita">
-      <RouterLink to="/clinica/buscar" class="voltar">
-        <ChevronLeft :size="16" :stroke-width="1.75" />
-        Voltar à busca
-      </RouterLink>
-
-      <section class="sem-autorizacao">
-        <header class="sem-autorizacao__topo">
-          <KeyRound :size="24" :stroke-width="1.75" class="sem-autorizacao__icone" />
-          <h1 class="sem-autorizacao__titulo">Sem autorização vigente para este animal</h1>
-        </header>
-
-        <div class="sem-autorizacao__corpo">
-          <h2 class="rotulo">O que a clínica pode ver agora</h2>
-          <dl class="identificacao-minima">
-            <div class="identificacao-minima__item">
-              <dt class="identificacao-minima__rotulo">Nome</dt>
-              <dd class="identificacao-minima__valor">{{ animal.nome }}</dd>
-            </div>
-            <div class="identificacao-minima__item">
-              <dt class="identificacao-minima__rotulo">Espécie</dt>
-              <dd class="identificacao-minima__valor identificacao-minima__valor--especie">
-                <component :is="icone" :size="16" :stroke-width="1.75" />
-                {{ descreverEspecie(animal.especie) }}
-              </dd>
-            </div>
-            <div class="identificacao-minima__item">
-              <dt class="identificacao-minima__rotulo">Código</dt>
-              <dd class="identificacao-minima__valor identificacao-minima__valor--codigo">
-                {{ animal.codigo }}
-              </dd>
-            </div>
-          </dl>
-
-          <p class="sem-autorizacao__texto">
-            Vacinas, atendimentos, anexos e os dados do tutor aparecem depois que ele autorizar
-            {{ prestador }}. Você pode registrar um atendimento agora: o que você registrar fica no
-            prontuário desta clínica.
-          </p>
-
-          <!-- V10 — o pedido é modal sobre este estado. Pendente, o botão
-               vira etiqueta de espera: pedir de novo não apressaria ninguém. -->
-          <p v-if="solicitacaoPendente" class="etiqueta-de-espera">
-            <Hourglass :size="16" :stroke-width="1.75" />
-            Solicitação enviada · aguardando o tutor até
-            {{ emNumeros(solicitacaoPendente.expira_em) }}
-          </p>
-
-          <div class="sem-autorizacao__acoes">
-            <button
-              v-if="!solicitacaoPendente"
-              type="button"
-              class="botao botao--consentimento"
-              @click="solicitando = true"
-            >
-              <KeyRound :size="16" :stroke-width="1.75" />
-              Solicitar autorização ao tutor
-            </button>
-            <RouterLink
-              :to="comContexto(`/clinica/animais/${animal.codigo}/atender`)"
-              class="botao botao--secundario"
-            >
-              Registrar atendimento
-            </RouterLink>
-          </div>
-        </div>
-
-        <!-- RF18b e RF52 — a consulta ficou registrada, e o profissional fica
-             sabendo disso na mesma tela em que ela aconteceu. -->
-        <footer class="sem-autorizacao__registro">
-          <Eye :size="20" :stroke-width="1.75" class="sem-autorizacao__registro-icone" />
-          <p class="sem-autorizacao__registro-texto">
-            Esta consulta ficou registrada: o tutor verá que {{ prestador }} abriu a ficha de
-            {{ animal.nome }}, com data e hora.
-          </p>
-        </footer>
-      </section>
-    </div>
-
     <div v-else class="ficha">
       <!-- Tarjas, na ordem em que mudam a leitura do resto da tela. -->
       <div v-if="inativo" class="tarja tarja--obito">
@@ -584,20 +453,10 @@ watch(() => route.params.codigo, carregar)
         <UserRound :size="16" :stroke-width="1.75" class="tarja__icone" />
         <p class="tarja__texto">{{ tarjaPreliminar.texto }}</p>
         <!-- Com contexto, como toda ligação que sai da ficha: a caracterização
-             exige autorização vigente do prestador ativo, não do primeiro
-             vínculo do profissional. -->
+             fica em nome do prestador ativo, não do primeiro vínculo do
+             profissional. -->
         <RouterLink :to="comContexto(tarjaPreliminar.acao.destino)" class="botao botao--consentimento botao--sm">
           {{ tarjaPreliminar.acao.rotulo }}
-        </RouterLink>
-      </div>
-
-      <div v-if="tarjaAutorizacao" class="tarja tarja--autorizacao">
-        <ClockAlert :size="16" :stroke-width="1.75" class="tarja__icone" />
-        <p class="tarja__texto">
-          {{ tarjaAutorizacao.texto }} {{ tarjaAutorizacao.nota }}
-        </p>
-        <RouterLink :to="tarjaAutorizacao.acao.destino" class="botao botao--secundario botao--sm">
-          {{ tarjaAutorizacao.acao.rotulo }}
         </RouterLink>
       </div>
 
@@ -620,10 +479,6 @@ watch(() => route.params.codigo, carregar)
             <span v-if="inativo" class="selo selo--obito">
               <Moon :size="14" :stroke-width="1.75" />
               Óbito em {{ emNumeros(animal.obito.em) }}
-            </span>
-            <span v-else-if="autorizacao" class="selo selo--autorizacao">
-              <KeyRound :size="14" :stroke-width="1.75" />
-              Autorizado até {{ emNumeros(autorizacao.expira_em) }}
             </span>
           </div>
           <p class="cabecalho__meta">{{ descricao }}</p>
@@ -1015,7 +870,7 @@ watch(() => route.params.codigo, carregar)
               v-else
               :icone="History"
               titulo="Nenhum registro no histórico"
-              descricao="Quando houver vacinação ou atendimento registrado, de qualquer prestador autorizado, tudo aparece aqui em ordem cronológica."
+              descricao="Quando houver vacinação ou atendimento registrado, de qualquer prestador, tudo aparece aqui em ordem cronológica."
             />
           </template>
 
@@ -1047,7 +902,7 @@ watch(() => route.params.codigo, carregar)
                     </p>
                   </div>
 
-                  <!-- RF32c — o arquivo sai pela rota que confere a autorização
+                  <!-- RF32c — o arquivo sai pela rota que confere o acesso
                        a cada pedido, nunca por endereço do armazenamento. -->
                   <a
                     v-if="anexo.disponivel"
@@ -1134,15 +989,6 @@ watch(() => route.params.codigo, carregar)
       </div>
     </div>
 
-    <SolicitarAutorizacaoModal
-      :aberto="solicitando"
-      :prestador="prestador ?? 'este prestador'"
-      :prestador-id="prestadorAtivo"
-      :alvo="alvoDaSolicitacao"
-      @fechar="solicitando = false"
-      @enviada="solicitacao = $event"
-    />
-
     <!-- V12 — registrar óbito (RF22). A ficha recarrega no registro, e não no
          fechamento: quando o modal se despedir, a tarja, o selo e a supressão
          das ações já estarão atrás dele. -->
@@ -1158,7 +1004,7 @@ watch(() => route.params.codigo, carregar)
          entradas vêm da própria ficha: a contagem do modal não repete a
          leitura, e a rota de T07 nem responderia ao veterinário. -->
     <ExportarDocumentoModal
-      v-if="exportarAberto && autorizado"
+      v-if="exportarAberto"
       :animal="animal"
       :conteudo-inicial="aba === 'carteira' ? 'carteira' : 'historico'"
       contexto="clinica"
@@ -1173,12 +1019,6 @@ watch(() => route.params.codigo, carregar)
 .ficha {
   max-width: 1280px;
   margin: 0 auto;
-}
-
-/* Como `.painel--estreito`: o estado sem autorização é um cartão só, e a
-   coluna inteira (voltar + cartão) se centraliza na área de conteúdo. */
-.ficha--estreita {
-  max-width: 640px;
 }
 
 /* Tarjas ------------------------------------------------------------------- */
@@ -1218,12 +1058,6 @@ watch(() => route.params.codigo, carregar)
   background: var(--consent-wash);
   border: 1px solid var(--consent);
   color: var(--consent);
-}
-
-.tarja--autorizacao {
-  background: var(--surface-card);
-  border: 1px solid var(--status-due);
-  color: var(--status-due-text);
 }
 
 /* Cabeçalho ---------------------------------------------------------------- */
@@ -1290,8 +1124,8 @@ watch(() => route.params.codigo, carregar)
 /* Entre 768 e 1279 px o cabeçalho enxuga, como o frame de 1024 do desenho: nome
    e ações disputam a linha, e o código monoespaçado a levaria a quebrar,
    passando dos 96 px. Ele não se perde — está na aba Resumo, que é onde se
-   confere identificador caractere a caractere. O selo fica: prazo de
-   autorização e óbito são estado, e estado não desaparece com a largura. */
+   confere identificador caractere a caractere. O selo fica: óbito é estado, e
+   estado não desaparece com a largura. */
 @media (min-width: 768px) and (max-width: 1279px) {
   .cabecalho__codigo {
     display: none;
@@ -1321,16 +1155,6 @@ watch(() => route.params.codigo, carregar)
   border-radius: var(--radius-pill);
   font-size: 12px;
   font-weight: 600;
-}
-
-.selo--autorizacao {
-  background: var(--consent-wash);
-  color: var(--consent);
-}
-
-.selo--obito {
-  background: var(--surface-sunken);
-  color: var(--ink-muted);
 }
 
 /* Abas --------------------------------------------------------------------- */
@@ -1834,143 +1658,6 @@ watch(() => route.params.codigo, carregar)
   margin: var(--space-2) 0 0;
 }
 
-/* Estado sem autorização --------------------------------------------------- */
-
-.voltar {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin: 0 0 var(--space-4);
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  color: var(--brand-bright);
-}
-
-.sem-autorizacao {
-  background: var(--surface-card);
-  border: 1px solid var(--consent);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.sem-autorizacao__topo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  background: var(--consent-wash);
-  border-bottom: 1px solid var(--consent);
-}
-
-.sem-autorizacao__icone {
-  flex: none;
-  color: var(--consent);
-}
-
-.sem-autorizacao__titulo {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.sem-autorizacao__corpo {
-  padding: var(--space-6);
-}
-
-.identificacao-minima {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-4);
-  margin: var(--space-3) 0 0;
-  padding: var(--space-4);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-sm);
-}
-
-.identificacao-minima__rotulo {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--ink-faint);
-}
-
-.identificacao-minima__valor {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink);
-}
-
-.identificacao-minima__valor--especie {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ink);
-}
-
-.identificacao-minima__valor--codigo {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 500;
-}
-
-.sem-autorizacao__texto {
-  margin: var(--space-4) 0 0;
-  max-width: 75ch;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink);
-}
-
-/* A etiqueta de espera (V10): no lugar do botão, o oposto do convite — o
-   pedido já foi feito e a vez agora é do tutor. */
-.etiqueta-de-espera {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--consent-wash);
-  border: 1px solid var(--consent);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 600;
-  color: var(--consent);
-}
-
-.sem-autorizacao__acoes {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin: var(--space-6) 0 0;
-}
-
-.sem-autorizacao__registro {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  border-top: 1px solid var(--border-hairline);
-}
-
-.sem-autorizacao__registro-icone {
-  flex: none;
-  color: var(--consent);
-}
-
-.sem-autorizacao__registro-texto {
-  margin: 0;
-  max-width: 75ch;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink-muted);
-}
-
 /* Barra inferior ----------------------------------------------------------- */
 
 /* A moldura já reserva 56 px para a barra de abas do celular; a de ações da
@@ -2212,16 +1899,14 @@ watch(() => route.params.codigo, carregar)
 
 /* §8.3 — em `base` o cabeçalho cai para 64 px e guarda apenas o que identifica
    o animal: retrato, nome e código. Espécie, idade e tutor continuam a um toque
-   de distância, na aba Resumo, e o prazo da autorização só interessa nesta
-   largura quando está acabando — e aí ele é tarja, não selo. */
+   de distância, na aba Resumo. */
 @media (max-width: 767px) {
   .cabecalho {
     min-height: 64px;
     padding: var(--space-2) var(--space-4);
   }
 
-  .cabecalho__meta,
-  .selo--autorizacao {
+  .cabecalho__meta {
     display: none;
   }
 
@@ -2267,8 +1952,7 @@ watch(() => route.params.codigo, carregar)
     bottom: 0;
   }
 
-  .dados,
-  .identificacao-minima {
+  .dados {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -2347,8 +2031,8 @@ watch(() => route.params.codigo, carregar)
 }
 
 /* §8.3 — o rótulo por extenso só na largura de referência do ambiente do
-   veterinário. Abaixo dela as ações roubam do cabeçalho o espaço de que o selo
-   de autorização precisa, e o cabeçalho passaria dos 96 px. */
+   veterinário. Abaixo dela as ações roubam do cabeçalho o espaço de que o nome
+   e o selo precisam, e o cabeçalho passaria dos 96 px. */
 @media (min-width: 1440px) {
   .botao__rotulo-longo {
     display: inline;

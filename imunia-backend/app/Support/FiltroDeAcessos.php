@@ -5,8 +5,8 @@ namespace App\Support;
 use Illuminate\Support\Carbon;
 
 /**
- * O recorte da auditoria de acessos (T14, RF53): qual animal, que período e —
- * quando o tutor chegou de T12 — qual prestador.
+ * O recorte da auditoria de acessos (T14, RF53): qual animal, que período e,
+ * opcionalmente, qual prestador.
  *
  * Os três nascem juntos aqui, e não soltos no serviço, porque a tela precisa
  * devolvê-los ao tutor tal como estão em vigor: o desenho de T14 desenha cada
@@ -33,7 +33,7 @@ final class FiltroDeAcessos
         /** Código do animal (`IM-XXXX-XXXX`); nulo quando o tutor vê todos. */
         public readonly ?string $animal,
         public readonly string $periodo,
-        /** Prestador que T12 pediu para destacar; nulo na entrada direta. */
+        /** Prestador a destacar; nulo na entrada direta. */
         public readonly ?int $prestador,
     ) {}
 

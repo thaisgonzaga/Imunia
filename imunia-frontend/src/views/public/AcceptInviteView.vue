@@ -151,7 +151,7 @@ async function solicitarNovoConvite() {
         </template>
       </p>
       <p class="auth-text auth-text--muted">
-        Peça um convite novo à clínica, ou crie sua conta direto — depois você autoriza quem quiser.
+        Peça um convite novo à clínica, ou crie sua conta direto.
       </p>
 
       <div v-if="reenviado" class="auth-notice auth-notice--consentimento" role="status">

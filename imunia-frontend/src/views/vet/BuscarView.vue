@@ -3,11 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Cat,
-  CircleHelp,
   Dog,
   Eye,
-  Hourglass,
-  KeyRound,
   PawPrint,
   QrCode,
   TriangleAlert,
@@ -15,10 +12,8 @@ import {
 import VetShell from '@/components/vet/VetShell.vue'
 import StatusPill from '@/components/base/StatusPill.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
-import SolicitarAutorizacaoModal from '@/components/vet/SolicitarAutorizacaoModal.vue'
 import { apiGet } from '@/lib/api.js'
-import { descreverAnimal, descreverEspecie } from '@/lib/animais.js'
-import { emNumeros } from '@/lib/datas.js'
+import { descreverAnimal } from '@/lib/animais.js'
 import {
   CODIGO,
   CPF,
@@ -31,17 +26,11 @@ import {
 /**
  * V03 — buscar animal ou tutor (RF51, RF18, RF13).
  *
- * A tela de maior risco do sistema, e a única cujo desenho existe para *não*
- * mostrar. O resultado sem autorização é estado normal e frequente, desenhado
- * para parecer acabado e intencional: nada de nome, contato, iniciais, máscara
- * parcial ou contagem de animais (RN12). Só a existência do cadastro e um
- * caminho — pedir a autorização a quem pode dá-la.
- *
- * Daí as duas seções terem desenhos deliberadamente diferentes: a primeira traz
- * cartões completos sobre fundo claro; a segunda, um cartão em `--surface-sunken`
- * com borda tracejada em `--consent`, a cor que neste sistema significa sempre a
- * mesma coisa — quem pode ver o quê. O profissional aprende a diferença sem que
- * ninguém lhe explique.
+ * O atendimento não depende do tutor: a busca por chave exata (CPF, código ou
+ * micro-chip) traz o cadastro inteiro, de qualquer clínica, e a busca por nome
+ * percorre os animais que esta clínica já acompanha. O cartão diz quando o
+ * animal ainda não é acompanhado aqui — abrir a ficha dele fica registrado e
+ * visível ao tutor (RF18b), e o animal passa a ser acompanhado.
  */
 const route = useRoute()
 const router = useRouter()
@@ -60,8 +49,11 @@ const resultados = ref(null)
 
 const estado = computed(() => consulta.value?.estado ?? 'inicial')
 const inicial = computed(() => estado.value === 'inicial')
-const autorizados = computed(() => consulta.value?.autorizados ?? [])
-const existencia = computed(() => consulta.value?.existencia ?? null)
+// A chave ainda se chama `autorizados` na resposta; o conteúdo é o de todos os
+// animais encontrados, acompanhados ou não por esta clínica.
+const encontrados = computed(() => consulta.value?.autorizados ?? [])
+/** Pelo CPF, o titular encontrado — com ou sem animal. */
+const tutor = computed(() => consulta.value?.tutor ?? null)
 const prestador = computed(() => consulta.value?.prestador?.nome ?? 'este prestador')
 
 /** O tipo detectado do que está sendo digitado — o rótulo ao lado do campo. */
@@ -75,14 +67,10 @@ const termoRespondido = computed(() =>
 )
 
 /**
- * Só a busca por CPF exibe a seção "sob sua autorização" vazia: ali o vazio é
- * uma afirmação sobre um tutor determinado — "nenhum animal *deste tutor*" —,
- * e é informação. Para as demais chaves, seção vazia não diria nada que a
- * segunda seção já não diga.
+ * O CPF da resposta, só dígitos, para seguir ao cadastro do animal. Viaja no
+ * estado da navegação, como em V04, e nunca no endereço.
  */
-const mostrarSecaoAutorizada = computed(
-  () => autorizados.value.length > 0 || tipoRespondido.value === CPF,
-)
+const cpfRespondido = computed(() => (consulta.value?.termo ?? '').replace(/\D/g, ''))
 
 const CABECALHOS = {
   [CPF]: 'Resultados para o CPF',
@@ -117,78 +105,6 @@ const vazio = computed(
     },
 )
 
-/**
- * O que o cartão da segunda seção diz, por tipo de correspondência.
- *
- * O nome do prestador entra sem artigo — "autorizar Clínica Vet Amigo" —, como
- * já faz V02. O desenho o traz com artigo porque supõe um nome feminino, e o
- * mesmo profissional tem vínculo com "Hospital Veterinário Central", onde a
- * frase sairia errada.
- */
-const CONSENTIMENTO = {
-  tutor: {
-    titulo: 'Existe um cadastro com este CPF.',
-    // RF13a e RF13b — é tudo. Nome, contato e relação de animais permanecem
-    // ocultos até a concessão, e a frase precisa dizer isso sem rodeios, para
-    // que a ausência não seja lida como falha da tela.
-    detalhe: (nome) =>
-      `É tudo o que podemos mostrar sem autorização do tutor. Nome, contato e animais aparecem somente depois que ele autorizar ${nome}.`,
-    registro: (nome) =>
-      `Esta consulta ficou registrada. O tutor verá que ${nome} pesquisou por este CPF, com data e hora.`,
-  },
-  animal: {
-    titulo: 'Existe histórico disponível mediante autorização do tutor.',
-    detalhe: (nome) =>
-      `Vacinas, atendimentos, anexos e os dados do tutor aparecem somente depois que ele autorizar ${nome}.`,
-    registro: (nome) =>
-      `Esta consulta ficou registrada. O tutor verá que ${nome} pesquisou por este código, com data e hora.`,
-  },
-  outro: {
-    titulo: 'Existe outro cadastro que corresponde a esta busca.',
-    detalhe: () => 'Sem autorização do tutor, não mostramos de quem é nem quantos animais tem.',
-    registro: () => 'Esta consulta ficou registrada.',
-  },
-}
-
-const consentimento = computed(() => CONSENTIMENTO[existencia.value?.tipo] ?? null)
-
-/** V10 — o modal do pedido, aberto sobre esta tela. */
-const solicitando = ref(false)
-
-/** O desfecho do pedido feito nesta visita, que vira a etiqueta de espera. */
-const solicitacao = ref(null)
-
-/**
- * O que o modal vai pedir. Pelo cartão coletivo ("outro") não há a quem pedir
- * — a correspondência é um conjunto indeterminado de titulares —, e é por isso
- * que ele não devolve alvo: o caminho ali é refinar a busca para uma chave
- * exata.
- */
-const alvoDaSolicitacao = computed(() => {
-  const termo = consulta.value?.termo ?? ''
-
-  if (existencia.value?.tipo === 'tutor') return { tipo: 'cpf', termo }
-
-  if (existencia.value?.tipo === 'animal') {
-    return {
-      tipo: 'animal',
-      termo,
-      nome: existencia.value.nome,
-      especie: existencia.value.especie,
-    }
-  }
-
-  return null
-})
-
-/**
- * A pendência que troca o botão pela etiqueta: a que a busca já trouxe, ou a
- * que acabou de nascer no modal.
- */
-const solicitacaoPendente = computed(
-  () => solicitacao.value ?? existencia.value?.solicitacao_pendente ?? null,
-)
-
 function contar(quantidade) {
   return `${quantidade} ${quantidade === 1 ? 'resultado' : 'resultados'}`
 }
@@ -221,9 +137,6 @@ async function carregar(termoDaVez = '', { abrindo = false } = {}) {
 
   try {
     consulta.value = await apiGet(`/api/clinica/buscar?${parametros(termoDaVez)}`)
-    // O pedido feito era sobre o resultado anterior; o novo traz a própria
-    // pendência, quando houver.
-    solicitacao.value = null
   } catch (excecao) {
     erro.value = excecao.message
   } finally {
@@ -478,9 +391,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
         <div class="aviso-de-registro">
           <Eye :size="20" :stroke-width="1.75" class="aviso-de-registro__icone" />
           <p class="aviso-de-registro__texto">
-            Buscas por CPF ou código de animal fora da sua carteira de autorizações ficam
-            registradas e visíveis ao tutor. O resultado, nesses casos, confirma apenas que o
-            cadastro existe.
+            Buscas por CPF, código ou micro-chip de animal que a clínica ainda não acompanha
+            ficam registradas e visíveis ao tutor. A busca por nome percorre só os animais que
+            a clínica já acompanha.
           </p>
         </div>
 
@@ -560,16 +473,21 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
           </div>
 
           <template v-else>
-            <!-- Primeira seção: o que o prestador pode ver (RN48). -->
-            <section v-if="mostrarSecaoAutorizada" class="secao">
+            <section class="secao">
+              <!-- Pelo CPF a resposta traz o titular, com ou sem animal: é o
+                   que permite seguir ao cadastro do primeiro. -->
+              <p v-if="tutor" class="secao__tutor">
+                Tutor: <strong>{{ tutor.nome }}</strong>
+              </p>
+
               <div class="secao__cabecalho">
-                <h2 class="secao__rotulo">Sob sua autorização</h2>
-                <span class="secao__contagem">{{ contar(autorizados.length) }}</span>
+                <h2 class="secao__rotulo">Animais</h2>
+                <span class="secao__contagem">{{ contar(encontrados.length) }}</span>
               </div>
 
-              <div v-if="autorizados.length" class="cartoes">
+              <div v-if="encontrados.length" class="cartoes">
                 <RouterLink
-                  v-for="animal in autorizados"
+                  v-for="animal in encontrados"
                   :key="animal.codigo"
                   :to="`/clinica/animais/${animal.codigo}`"
                   class="cartao-animal"
@@ -584,6 +502,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
                       {{ descreverAnimal(animal) }} · {{ animal.tutor }}
                     </span>
                     <span class="cartao-animal__codigo">{{ animal.codigo }}</span>
+                    <span v-if="!animal.vinculado" class="cartao-animal__vinculo">
+                      ainda não acompanhado por {{ prestador }}
+                    </span>
                   </span>
                   <StatusPill
                     v-if="animal.situacao"
@@ -596,98 +517,18 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
                 </RouterLink>
               </div>
 
-              <p v-else class="secao__vazio">
-                Nenhum animal deste tutor está sob autorização vigente para {{ prestador }}.
+              <p v-else-if="tutor" class="secao__vazio">
+                {{ tutor.nome }} ainda não tem animal cadastrado no Imunia.
+                <RouterLink :to="{ path: '/clinica/animais/novo', state: { cpf: cpfRespondido } }">
+                  Cadastrar o animal
+                </RouterLink>
               </p>
             </section>
-
-            <!-- Segunda seção: o que ele não pode ver, e por quê (RN12). -->
-            <section v-if="existencia" class="secao">
-              <div class="secao__cabecalho">
-                <h2 class="secao__rotulo secao__rotulo--consentimento">
-                  Existe cadastro na plataforma
-                </h2>
-                <span class="secao__contagem">{{ contar(1) }}</span>
-              </div>
-
-              <div class="consentimento">
-                <div v-if="existencia.tipo === 'animal'" class="consentimento__animal">
-                  <component
-                    :is="iconeDaEspecie(existencia.especie)"
-                    :size="24"
-                    :stroke-width="1.75"
-                    class="consentimento__animal-icone"
-                  />
-                  <div>
-                    <p class="consentimento__animal-nome">{{ existencia.nome }}</p>
-                    <p class="consentimento__animal-especie">{{ descreverEspecie(existencia.especie) }}</p>
-                  </div>
-                </div>
-
-                <div class="consentimento__topo">
-                  <KeyRound
-                    :size="existencia.tipo === 'animal' ? 20 : 24"
-                    :stroke-width="1.75"
-                    class="consentimento__icone"
-                  />
-                  <p class="consentimento__titulo" :class="{ 'consentimento__titulo--miudo': existencia.tipo === 'animal' }">
-                    {{ consentimento.titulo }}
-                  </p>
-                </div>
-
-                <p class="consentimento__detalhe">{{ consentimento.detalhe(prestador) }}</p>
-
-                <!-- V10 — o pedido é modal sobre esta tela: o contexto que o
-                     abriu permanece atrás dele. Pendente, o botão vira
-                     etiqueta — informação, não ação, porque pedir de novo não
-                     apressaria ninguém. -->
-                <p v-if="solicitacaoPendente" class="consentimento__etiqueta">
-                  <Hourglass :size="16" :stroke-width="1.75" />
-                  Solicitação enviada · aguardando o tutor até
-                  {{ emNumeros(solicitacaoPendente.expira_em) }}
-                </p>
-                <button
-                  v-else-if="alvoDaSolicitacao"
-                  type="button"
-                  class="botao botao--consentimento"
-                  data-resultado
-                  @click="solicitando = true"
-                >
-                  <KeyRound :size="16" :stroke-width="1.75" />
-                  Solicitar autorização ao tutor
-                </button>
-                <p v-else class="consentimento__detalhe">
-                  Para solicitar autorização, busque pelo CPF do tutor, pelo código do animal ou
-                  pelo micro-chip.
-                </p>
-
-                <p class="consentimento__registro">
-                  <Eye :size="16" :stroke-width="1.75" class="consentimento__registro-icone" />
-                  {{ consentimento.registro(prestador) }}
-                </p>
-              </div>
-            </section>
-
-            <div v-if="existencia?.tipo === 'tutor'" class="ajuda">
-              <CircleHelp :size="20" :stroke-width="1.75" class="ajuda__icone" />
-              <p class="ajuda__texto">
-                Se o tutor está no balcão, ele pode autorizar em quatro toques pelo aplicativo. A
-                confirmação vai para o e-mail dele e o código não passa pelo nosso sistema aqui.
-              </p>
-            </div>
           </template>
         </div>
       </template>
     </div>
 
-    <SolicitarAutorizacaoModal
-      :aberto="solicitando"
-      :prestador="prestador"
-      :prestador-id="consulta?.prestador?.id"
-      :alvo="alvoDaSolicitacao"
-      @fechar="solicitando = false"
-      @enviada="solicitacao = $event"
-    />
   </VetShell>
 </template>
 
@@ -1044,11 +885,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
   color: var(--ink-muted);
 }
 
-/* O índigo aparece só onde o assunto é quem pode ver o quê (§4 do briefing). */
-.secao__rotulo--consentimento {
-  color: var(--consent);
-}
-
 .secao__contagem {
   font-size: 14px;
   line-height: 20px;
@@ -1130,139 +966,25 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
   color: var(--ink-faint);
 }
 
-/* Cartão de consentimento — o desenho deliberadamente diferente -------------
-   Fundo rebaixado e borda tracejada: o cartão parece propositalmente incompleto
-   porque é isso que ele é. O que falta nele não é dado que não veio; é dado que
-   não pode vir sem autorização. */
-
-.consentimento {
-  max-width: 520px;
-  margin: var(--space-3) 0 0;
-  padding: var(--space-6);
-  background: var(--surface-sunken);
-  border: 1px dashed var(--consent);
-  border-radius: var(--radius-md);
-}
-
-.consentimento__animal {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-3);
-}
-
-.consentimento__animal-icone {
-  flex: none;
-  color: var(--ink-muted);
-}
-
-.consentimento__animal-nome {
-  margin: 0;
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.consentimento__animal-especie {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink-muted);
-}
-
-.consentimento__topo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.consentimento__icone {
-  flex: none;
-  color: var(--consent);
-}
-
-.consentimento__titulo {
-  margin: 0;
-  max-width: 70ch;
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-/* Quando o nome do animal já é o título do cartão, a frase da autorização vira
-   texto de corpo: dois títulos disputariam a mesma pergunta. */
-.consentimento__titulo--miudo {
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 400;
-}
-
-.consentimento__detalhe {
-  margin: var(--space-2) 0 0;
-  max-width: 70ch;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink-muted);
-}
-
-/* A etiqueta de espera (V10): o mesmo lugar do botão, o oposto do convite —
-   o pedido já foi feito e a vez agora é do tutor. */
-.consentimento__etiqueta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--consent-wash);
-  border: 1px solid var(--consent);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 600;
-  color: var(--consent);
-}
-
-.consentimento__registro {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--border-strong);
+/* Discreto de propósito: não é impedimento, só o aviso de que abrir a ficha
+   fica registrado para o tutor. */
+.cartao-animal__vinculo {
+  display: block;
   font-size: 12px;
   line-height: 16px;
   color: var(--ink-muted);
 }
 
-.consentimento__registro-icone {
-  flex: none;
-  color: var(--consent);
-}
-
-.ajuda {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  max-width: 75ch;
-  margin: var(--space-6) 0 0;
-  padding: var(--space-4);
-  background: var(--surface-card);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-sm);
-}
-
-.ajuda__icone {
-  flex: none;
-  color: var(--ink-muted);
-}
-
-.ajuda__texto {
-  margin: 0;
+.secao__tutor {
+  margin: 0 0 var(--space-4);
   font-size: 14px;
   line-height: 20px;
   color: var(--ink-muted);
+}
+
+.secao__tutor strong {
+  font-weight: 600;
+  color: var(--ink);
 }
 
 /* Como os estados de coluna única do painel, o bloco se centra na área de
@@ -1309,18 +1031,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
 .botao--secundario:hover {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  margin: var(--space-4) 0 0;
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 .aviso {

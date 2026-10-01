@@ -4,11 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Notificacao;
 use App\Models\Prestador;
-use App\Models\SolicitacaoAcesso;
 use App\Models\Tutor;
 use App\Models\User;
 use App\Models\Vacinacao;
@@ -29,9 +27,9 @@ use Illuminate\Support\Str;
  * histórico do Théo permanece intocado — aquelas datas são citadas nos
  * documentos e sustentam T05 a T08.
  *
- * Semeia também o segundo vínculo do Dr. Marcelo, com o Hospital Bicho Bom, onde
- * ele tem registro próprio e nenhuma autorização vigente: é o estado de RN48
- * desenhado em V01, e sem ele não haveria como vê-lo funcionando.
+ * Semeia também o segundo vínculo do Dr. Marcelo, com o Hospital Bicho Bom, que
+ * acompanha um animal só: um contexto pequeno, para o alternador de prestador
+ * ter entre o que alternar.
  */
 class CenarioClinicaSeeder extends Seeder
 {
@@ -42,44 +40,27 @@ class CenarioClinicaSeeder extends Seeder
         $clinica = Prestador::where('cnpj', '11222333000181')->firstOrFail();
         $marcelo = User::where('email', 'marcelo.andrade@vetamigo.example.com')->firstOrFail();
 
-        // RF36 — o cenário canônico: Helena autoriza a clínica a acompanhar o
-        // Théo. É esta linha que faz o painel do Dr. Marcelo enxergar o cão de
-        // que ele já cuidava; sem ela, o histórico dele não é assunto da clínica.
+        // O cenário canônico: a clínica acompanha o Théo, de quem o Dr. Marcelo
+        // já cuidava. É o vínculo que o traz ao painel.
         $theo = Animal::where('nome', 'Théo')->firstOrFail();
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
-        // A Nina entra pelos dois estados que nenhum outro animal do cenário
-        // produz e que V06 precisa desenhar: cadastro ainda preliminar (RN17 —
-        // Helena a cadastrou, nenhum veterinário a caracterizou) e autorização
-        // prestes a expirar (RN39), que é o que faz aparecer a tarja âmbar com
-        // o pedido de renovação ao tutor.
+        // A Nina entra pelo estado que nenhum outro animal do cenário produz e
+        // que V06 precisa desenhar: cadastro ainda preliminar (RN17 — Helena a
+        // cadastrou, nenhum veterinário a caracterizou).
         $nina = Animal::where('nome', 'Nina')->firstOrFail();
-        Autorizacao::firstOrCreate(
-            ['animal_id' => $nina->id, 'prestador_id' => $clinica->id],
-            [
-                'concedida_por_user_id' => $nina->tutor->user_id,
-                'concedida_em' => now()->subDays(Autorizacao::PRAZO_DIAS - 9),
-                'expira_em' => now()->addDays(9),
-            ],
-        );
+        $clinica->vincular($nina);
 
         $this->plantelDaClinica($clinica, $marcelo);
-        $this->hospitalSemAutorizacao($marcelo);
+        $this->segundoContextoDoMarcelo($marcelo);
         $this->registroDeOutroPrestador($theo);
         $this->profissionalAutonoma();
 
-        // Depende do Pet Center criado logo acima: é a autorização revogada
-        // dele que dá a T12 o cartão esmaecido de "revogada por você".
-        $this->autorizacoesEncerradas($theo);
-
-        // Depende de todos os prestadores acima: são eles que pedem.
-        $this->pedidosDeAcesso($theo, $nina, $marcelo);
-
         $this->command?->info(sprintf(
-            'Cenário da clínica pronto: %s / %s — %d animais autorizados na %s.',
+            'Cenário da clínica pronto: %s / %s — %d animais acompanhados na %s.',
             $marcelo->email,
             self::SENHA,
-            Animal::query()->sobAutorizacaoVigenteDe($clinica)->count(),
+            Animal::query()->vinculadoA($clinica)->count(),
             $clinica->nome,
         ));
     }
@@ -176,11 +157,9 @@ class CenarioClinicaSeeder extends Seeder
             'obito_registrado_por_user_id' => $marcelo->id,
         ])->save();
 
-        // RF36 — cada tutor autorizou a clínica a acompanhar o seu animal. É a
-        // linha que os traz para o painel, e sem ela nenhum deles apareceria,
-        // por mais registros que a clínica tivesse produzido (RN48).
+        // A carteira da clínica (RN48): é o vínculo que os traz para o painel.
         foreach ([$mel, $bidu, $frida, $kiko, $amendoim, $zeca, $pipoca, $tobias] as $animal) {
-            $this->autorizar($animal, $clinica);
+            $clinica->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
         }
 
         // A coluna de V02 que decide a rechamada (RF49): quem já foi avisado, e
@@ -243,7 +222,7 @@ class CenarioClinicaSeeder extends Seeder
 
     /**
      * O atendimento que o Théo recebeu em outra clínica, e que a Clínica Vet
-     * Amigo passa a enxergar por força da autorização da Helena (RF35).
+     * Amigo enxerga porque o histórico do animal é um só (RF35).
      *
      * É o caso central de V06 e o que o cenário não tinha: sem registro de
      * prestador distinto do ativo, o aviso de RF52b — "sua visualização é
@@ -300,14 +279,11 @@ class CenarioClinicaSeeder extends Seeder
     }
 
     /**
-     * A profissional autônoma do diretório (T10). Existe no cenário por um
-     * motivo só, e ele é de tela: dos três tipos que RF07 admite, o autônomo é
-     * o único que nenhum outro seeder produz, e é dele que sai o rótulo
-     * "Atendimento domiciliar" — sem ele, RF07a fica sem demonstração.
-     *
-     * Sem vínculo e sem registro clínico algum — mas com a autorização da Nina
-     * a doze dias do fim, que é o cartão âmbar de T12 tal como desenhado: a
-     * renovação em um toque precisa de algo que esteja prestes a cair.
+     * A profissional autônoma. Existe no cenário por um motivo só: dos três
+     * tipos que RF07 admite, o autônomo é o único que nenhum outro seeder
+     * produz, e é dele que sai o rótulo "Atendimento domiciliar" — sem ele,
+     * RF07a fica sem demonstração. Acompanha a Nina, que também é atendida em
+     * casa.
      */
     private function profissionalAutonoma(): void
     {
@@ -326,173 +302,14 @@ class CenarioClinicaSeeder extends Seeder
             ],
         );
 
-        $nina = Animal::where('nome', 'Nina')->firstOrFail();
-
-        Autorizacao::firstOrCreate(
-            ['animal_id' => $nina->id, 'prestador_id' => $larissa->id],
-            [
-                'concedida_por_user_id' => $nina->tutor->user_id,
-                'concedida_em' => now()->subDays(Autorizacao::PRAZO_DIAS - 12),
-                'expira_em' => now()->addDays(12),
-            ],
-        );
+        $larissa->vincular(Animal::where('nome', 'Nina')->firstOrFail());
     }
 
     /**
-     * As duas autorizações que já terminaram, e que só T12 mostra: RF41b manda
-     * conservar consultável o que se encerrou, e sem elas a aba "Encerradas"
-     * seria um vazio que não demonstra requisito nenhum.
-     *
-     * As duas terminaram por motivos diferentes de propósito. A da São Bento
-     * caiu sozinha, pelo prazo (RN39); a do Pet Center foi encerrada pela
-     * Helena — e é a que prova RN40, porque o atendimento que eles registraram
-     * para o Théo continua no histórico dele depois da revogação.
+     * O segundo vínculo do Dr. Marcelo: o Hospital Bicho Bom, que acompanha só a
+     * Amora, vacinada lá há quatro meses.
      */
-    private function autorizacoesEncerradas(Animal $theo): void
-    {
-        $saoBento = Prestador::firstOrCreate(
-            ['cnpj' => '19284637000185'],
-            [
-                'tipo' => 'clinica',
-                'nome' => 'Clínica São Bento',
-                'telefone' => '(31) 3891-2260',
-                'endereco' => 'Praça Silviano Brandão, 22',
-                'municipio' => 'Viçosa',
-                'uf' => 'MG',
-                'responsavel_tecnico_nome' => 'Otávio Bento',
-                'responsavel_tecnico_crmv' => '15903',
-                'responsavel_tecnico_crmv_uf' => 'MG',
-            ],
-        );
-
-        Autorizacao::firstOrCreate(
-            ['animal_id' => $theo->id, 'prestador_id' => $saoBento->id],
-            [
-                'concedida_por_user_id' => $theo->tutor->user_id,
-                'concedida_em' => now()->subDays(Autorizacao::PRAZO_DIAS + 77),
-                'expira_em' => now()->subDays(77),
-            ],
-        );
-
-        $petCenter = Prestador::where('cnpj', '04731582000137')->firstOrFail();
-
-        Autorizacao::firstOrCreate(
-            ['animal_id' => $theo->id, 'prestador_id' => $petCenter->id],
-            [
-                'concedida_por_user_id' => $theo->tutor->user_id,
-                'concedida_em' => now()->subDays(210),
-                'expira_em' => now()->subDays(210)->addDays(Autorizacao::PRAZO_DIAS),
-                'revogada_em' => now()->subDays(151),
-            ],
-        );
-    }
-
-    /**
-     * Os pedidos de acesso que a Helena tem para responder (T13, RF38).
-     *
-     * Os três estados da tela, e cada um de um prestador diferente do cenário,
-     * porque o que distingue os cartões não é o texto e sim o que resta a fazer:
-     *
-     * - **Pendente.** O Hospital Bicho Bom pediu para acompanhar o Théo. É o
-     *   único que cobra resposta, o que alimenta o contador da aba, e o caso
-     *   canônico de RF38a — o hospital já pediu e continua sem ver nada.
-     * - **Caducado.** A Clínica São Bento pediu de novo depois que a
-     *   autorização dela expirou, e ninguém respondeu no prazo (RF38b). Fica
-     *   esmaecido: saber que alguém pediu continua sendo informação da titular.
-     * - **Recusado.** O Pet Center pediu o acesso à Nina, e a Helena disse não —
-     *   coerente com o fato de ela já ter revogado o acesso deles ao Théo.
-     */
-    private function pedidosDeAcesso(Animal $theo, Animal $nina, User $marcelo): void
-    {
-        $hospital = Prestador::where('cnpj', '35820914000183')->firstOrFail();
-
-        $this->pedir($theo, $hospital, $marcelo, solicitadoHa: 2);
-
-        $saoBento = Prestador::where('cnpj', '19284637000185')->firstOrFail();
-        $otavio = $this->fundadorDaSaoBento($saoBento);
-
-        $this->pedir($theo, $saoBento, $otavio, solicitadoHa: 12);
-
-        $petCenter = Prestador::where('cnpj', '04731582000137')->firstOrFail();
-        $beatriz = User::where('email', 'beatriz.salles@petcenter.example.com')->firstOrFail();
-
-        $this->pedir($nina, $petCenter, $beatriz, solicitadoHa: 40, recusadoHa: 38);
-    }
-
-    /**
-     * O Dr. Otávio é o responsável técnico e o fundador da São Bento — a conta
-     * que o cadastro de P03 teria criado. Daí as duas linhas no pivô,
-     * `admin_prestador` e `veterinario`, como faz `PrestadorController::store()`.
-     * Nascido só para assinar o pedido de acesso, ele ficava sem papel algum, e
-     * o login caía em E01: a `rota_inicial` de quem não tem papel é a do tutor.
-     *
-     * `attach`, e não `syncWithoutDetaching`: a sincronização casa as linhas
-     * pelo prestador e sobrescreveria o papel da primeira com o da segunda.
-     */
-    private function fundadorDaSaoBento(Prestador $saoBento): User
-    {
-        $otavio = User::firstOrCreate(
-            ['email' => 'otavio.bento@saobento.example.com'],
-            ['name' => 'Otávio Bento', 'password' => self::SENHA],
-        );
-
-        $otavio->forceFill([
-            'email_verified_at' => $otavio->email_verified_at ?? now(),
-            'ativado_em' => $otavio->ativado_em ?? now(),
-        ])->save();
-
-        $vinculos = [
-            'admin_prestador' => [],
-            'veterinario' => [
-                'crmv' => $saoBento->responsavel_tecnico_crmv,
-                'crmv_uf' => $saoBento->responsavel_tecnico_crmv_uf,
-            ],
-        ];
-
-        foreach ($vinculos as $papel => $inscricao) {
-            $jaVinculado = $otavio->prestadores()
-                ->wherePivot('prestador_id', $saoBento->id)
-                ->wherePivot('papel', $papel)
-                ->exists();
-
-            if (! $jaVinculado) {
-                $otavio->prestadores()->attach($saoBento->id, ['papel' => $papel, ...$inscricao]);
-            }
-        }
-
-        return $otavio;
-    }
-
-    /**
-     * Um pedido de acesso, datado a partir de hoje como todo o resto deste
-     * seeder: a tela mostra prazo restante, e um pedido com data fixa deixaria
-     * de ter prazo algum uma semana depois de escrito.
-     */
-    private function pedir(
-        Animal $animal,
-        Prestador $prestador,
-        User $solicitante,
-        int $solicitadoHa,
-        ?int $recusadoHa = null,
-    ): void {
-        SolicitacaoAcesso::firstOrCreate(
-            ['animal_id' => $animal->id, 'prestador_id' => $prestador->id],
-            [
-                'solicitada_por_user_id' => $solicitante->id,
-                'solicitada_em' => now()->subDays($solicitadoHa),
-                'expira_em' => now()->subDays($solicitadoHa)->addDays(SolicitacaoAcesso::PRAZO_DIAS),
-                'recusada_em' => $recusadoHa === null ? null : now()->subDays($recusadoHa),
-            ],
-        );
-    }
-
-    /**
-     * O segundo vínculo do Dr. Marcelo. O hospital tem registro próprio — que
-     * continua sob a guarda dele, como manda RN40 — e nenhuma autorização
-     * vigente: a autorização da Amora expirou e ninguém renovou (RN39). O painel
-     * neste contexto não é um painel quebrado, é um painel sem âmbito.
-     */
-    private function hospitalSemAutorizacao(User $marcelo): void
+    private function segundoContextoDoMarcelo(User $marcelo): void
     {
         $hospital = Prestador::firstOrCreate(
             ['cnpj' => '35820914000183'],
@@ -517,15 +334,7 @@ class CenarioClinicaSeeder extends Seeder
 
         $amora = $this->animal('Amora', 'cao', 'femea', $hoje->subYears(5), 'Beatriz Salles', '64510238762');
         $this->dose($amora, $hospital, 'antirrabica', $hoje->subMonths(4), 1, $marcelo);
-
-        Autorizacao::firstOrCreate(
-            ['animal_id' => $amora->id, 'prestador_id' => $hospital->id],
-            [
-                'concedida_por_user_id' => $amora->tutor->user_id,
-                'concedida_em' => $hoje->subMonths(5),
-                'expira_em' => $hoje->subMonths(2),
-            ],
-        );
+        $hospital->vincular($amora);
     }
 
     /**
@@ -589,18 +398,6 @@ class CenarioClinicaSeeder extends Seeder
         ])->save();
 
         return $animal;
-    }
-
-    private function autorizar(Animal $animal, Prestador $prestador): Autorizacao
-    {
-        return Autorizacao::firstOrCreate(
-            ['animal_id' => $animal->id, 'prestador_id' => $prestador->id],
-            [
-                'concedida_por_user_id' => $animal->tutor->user_id,
-                'concedida_em' => now()->subDays(20),
-                'expira_em' => now()->subDays(20)->addDays(Autorizacao::PRAZO_DIAS),
-            ],
-        );
     }
 
     /**

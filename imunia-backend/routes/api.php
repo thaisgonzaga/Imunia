@@ -9,14 +9,12 @@ use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\PapelDeTutorController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\SessionController;
-use App\Http\Controllers\AutorizacaoController;
 use App\Http\Controllers\BuscaClinicaController;
 use App\Http\Controllers\CadastroDeAnimalController;
 use App\Http\Controllers\CadastroDeTutorController;
 use App\Http\Controllers\CarteiraVacinacaoController;
 use App\Http\Controllers\CatalogoImunobiologicosController;
 use App\Http\Controllers\DadosPrestadorController;
-use App\Http\Controllers\DiretorioPrestadoresController;
 use App\Http\Controllers\EquipePrestadorController;
 use App\Http\Controllers\EscolhaDeAnimalController;
 use App\Http\Controllers\ExportacaoController;
@@ -26,11 +24,9 @@ use App\Http\Controllers\HistoricoConsolidadoController;
 use App\Http\Controllers\HistoricoDeNotificacoesController;
 use App\Http\Controllers\HistoricoPregressoController;
 use App\Http\Controllers\LivroDeAcessosController;
-use App\Http\Controllers\MinhasAutorizacoesController;
 use App\Http\Controllers\PainelPrestadorController;
 use App\Http\Controllers\PainelTutorController;
 use App\Http\Controllers\PainelVeterinarioController;
-use App\Http\Controllers\PedidoDeAutorizacaoController;
 use App\Http\Controllers\PendenciasVacinaisController;
 use App\Http\Controllers\PrestadorController;
 use App\Http\Controllers\ProtocolosVacinaisController;
@@ -39,7 +35,6 @@ use App\Http\Controllers\RegistroDeAtendimentoController;
 use App\Http\Controllers\RegistroDeObitoController;
 use App\Http\Controllers\RegistroDeVacinacaoController;
 use App\Http\Controllers\RegistrosDaClinicaController;
-use App\Http\Controllers\SolicitacoesAcessoController;
 use App\Http\Controllers\TutorController;
 use App\Http\Controllers\VacinasPrestadorController;
 use App\Http\Controllers\VerificacaoDocumentoController;
@@ -115,15 +110,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // já registra a revelação de existência. Com o mesmo limite de frequência
     // do convite de equipe, porque o sucesso dispara e-mail.
     Route::post('/clinica/tutores', [CadastroDeTutorController::class, 'store'])
-        ->middleware('throttle:6,1');
-
-    // V10 — solicitar autorização ao tutor (RF38). A única escrita do ambiente
-    // clínico sobre cadastro que não é seu, e ela não escreve acesso: escreve
-    // um pedido, que só vira acesso pelo fluxo de T11, com código (RF37). O
-    // alvo viaja como termo — o mesmo vocabulário de V03 —, porque a busca não
-    // entrega id de cadastro alheio (RN12). Com limite de frequência, porque o
-    // sucesso dispara e-mail ao tutor.
-    Route::post('/clinica/solicitacoes', [PedidoDeAutorizacaoController::class, 'store'])
         ->middleware('throttle:6,1');
 
     // V07a e V08a — escolher o animal antes de registrar. Divide com V03 a
@@ -238,45 +224,8 @@ Route::middleware('auth:sanctum')->group(function () {
         [ExportacaoPelaClinicaController::class, 'documento'],
     );
 
-    // T10 — diretório de prestadores (RF11). Mesmo caminho do cadastro público
-    // de prestador (P04), verbo diferente e propósito oposto: aquele cria o
-    // estabelecimento sem sessão alguma, este lista para o tutor autenticado o
-    // que há de público a respeito dos já cadastrados (RF11a).
-    Route::get('/prestadores', [DiretorioPrestadoresController::class, 'index']);
-
-    // T11 — conceder autorização (RF36, RF37). Três rotas para os três atos do
-    // fluxo: o que a tela precisa saber, o pedido do código e a confirmação
-    // que efetivamente concede. Nada é autorizado antes da última.
-    Route::get('/autorizacoes/nova', [AutorizacaoController::class, 'opcoes']);
-    Route::post('/autorizacoes/confirmacoes', [AutorizacaoController::class, 'store']);
-    Route::post('/autorizacoes/confirmacoes/{confirmacao}', [AutorizacaoController::class, 'confirmar']);
-    Route::post(
-        '/autorizacoes/confirmacoes/{confirmacao}/reenviar',
-        [AutorizacaoController::class, 'reenviar'],
-    );
-
-    // T12 — minhas autorizações (RF41). A relação e os dois atos que ela
-    // oferece: revogar (RF39) e renovar (RF40c). Nenhum deles pede código —
-    // desfazer não pode custar mais do que fazer, e a renovação repousa sobre o
-    // consentimento já manifestado uma vez.
-    Route::get('/autorizacoes', [MinhasAutorizacoesController::class, 'index']);
-    Route::delete('/autorizacoes/{autorizacao}', [MinhasAutorizacoesController::class, 'destroy']);
-    Route::post('/autorizacoes/{autorizacao}/renovar', [MinhasAutorizacoesController::class, 'renovar']);
-
-    // T13 — solicitações de acesso (RF38). Nenhuma rota daqui concede coisa
-    // alguma: o "Autorizar" da tela vai para o fluxo de T11, com código, e o
-    // que este controlador oferece é a leitura dos pedidos e a recusa deles.
-    // O contador tem rota própria porque a moldura do tutor o consulta em toda
-    // entrada no ambiente.
-    Route::get('/solicitacoes', [SolicitacoesAcessoController::class, 'index']);
-    Route::get('/solicitacoes/pendentes', [SolicitacoesAcessoController::class, 'pendentes']);
-    Route::post('/solicitacoes/{solicitacao}/recusar', [SolicitacoesAcessoController::class, 'recusar']);
-
     // T14 — quem acessou meus dados (RF53). Só leitura: o log é imutável
     // (RF52a), e o titular dos dados não é exceção à regra — é a razão dela.
-    // A revogação que cada linha oferece (RF53b) é a rota de T12, e não uma
-    // segunda: o efeito é o mesmo e o texto que o tutor lê antes de confirmar
-    // também tem de ser (RF39d).
     Route::get('/acessos', [LivroDeAcessosController::class, 'index']);
 
     // T17 — histórico de notificações (RF45). O destino do sino do cabeçalho

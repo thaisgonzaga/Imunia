@@ -5,7 +5,7 @@ import {
   CircleCheck,
   ClockAlert,
   FileCheck,
-  KeyRound,
+  Eye,
   Lock,
   PawPrint,
   UserRoundCheck,
@@ -69,11 +69,11 @@ const diferenciais = [
       'Cada aplicação registra fabricante, lote, validade e o CRMV de quem aplicou. O PDF gerado pode ser conferido por qualquer pessoa, sem conta no Imunia.',
   },
   {
-    icone: KeyRound,
+    icone: Eye,
     tom: 'consentimento',
-    titulo: 'Autorização do tutor',
+    titulo: 'Toda consulta registrada',
     texto:
-      'Nenhuma clínica vê o histórico sem autorização, e toda consulta fica registrada para o tutor. A autorização é revogável a qualquer momento, sem justificativa.',
+      'O veterinário atende sem esperar ninguém, e cada consulta ao histórico fica registrada para o tutor ver: qual clínica, qual profissional, quando e o quê.',
   },
 ]
 </script>

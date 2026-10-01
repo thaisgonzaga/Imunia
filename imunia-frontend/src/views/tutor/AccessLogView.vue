@@ -1,15 +1,13 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CircleCheck, Eye, History, KeyRound, TriangleAlert, X } from '@lucide/vue'
+import { CircleCheck, Dog, Eye, History, TriangleAlert, X } from '@lucide/vue'
 import TutorShell from '@/components/tutor/TutorShell.vue'
 import AccessLogRow from '@/components/tutor/AccessLogRow.vue'
-import ConfirmDialog from '@/components/base/ConfirmDialog.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
-import { apiDelete, apiGet } from '@/lib/api.js'
+import { apiGet } from '@/lib/api.js'
 import { porDiaDaSemana } from '@/lib/datas.js'
 import { enumerarNomes } from '@/lib/animais.js'
-import { REVOGACAO_EM_REPOUSO, textoDaRevogacao } from '@/lib/revogacao.js'
 
 /**
  * T14 — quem acessou meus dados (RF53).
@@ -23,9 +21,9 @@ import { REVOGACAO_EM_REPOUSO, textoDaRevogacao } from '@/lib/revogacao.js'
  * partes do sistema a concordar sobre onde termina um dia, concordância que o
  * fuso desfaz na primeira madrugada.
  *
- * O recorte viaja na URL, como em T10: é o que faz o "Ver acessos" de cada
- * cartão de T12 chegar aqui já filtrado, e o que faz o botão de voltar do
- * navegador desfazer um filtro em vez de sair da tela.
+ * O recorte viaja na URL (`?animal=`, `?periodo=`, `?prestador=`): é o que
+ * permite chegar aqui já filtrado, e o que faz o botão de voltar do navegador
+ * desfazer um filtro em vez de sair da tela.
  */
 const route = useRoute()
 const router = useRouter()
@@ -33,11 +31,6 @@ const router = useRouter()
 const dados = ref(null)
 const carregando = ref(true)
 const erro = ref('')
-
-const emRevogacao = ref(null)
-const executando = ref(false)
-const feito = ref('')
-const erroDaAcao = ref('')
 
 const filtro = computed(() => ({
   animal: typeof route.query.animal === 'string' ? route.query.animal : '',
@@ -71,7 +64,7 @@ watch(() => route.query, carregar, { immediate: true })
 /**
  * `replace`, e não `push`: trocar de recorte não é um passo do percurso do
  * tutor, e empilhá-lo faria o botão de voltar percorrer cada combinação de
- * filtro antes de devolver a pessoa a T12.
+ * filtro antes de devolver a pessoa à tela de onde veio.
  */
 function recortar(mudancas) {
   const query = { ...route.query, ...mudancas }
@@ -125,71 +118,32 @@ const tituloDoVazioFiltrado = computed(() => {
 })
 
 /**
- * E explica o silêncio: há quem pudesse ter acessado e não acessou. Sem isso,
- * a ausência de linhas pareceria falha de registro — leitura que destruiria a
- * confiança que esta tela existe para construir.
+ * E explica o silêncio: há quem pudesse ter acessado e não acessou — as
+ * clínicas que acompanham o animal do recorte. Sem isso, a ausência de linhas
+ * pareceria falha de registro — leitura que destruiria a confiança que esta
+ * tela existe para construir.
  */
 const apoioDoVazioFiltrado = computed(() => {
-  const vigentes = dados.value?.vigentes ?? []
+  const clinicas = dados.value?.clinicas ?? []
   const sobre = animalEscolhido.value === null
     ? 'os seus animais'
     : animalEscolhido.value.nome
 
-  if (vigentes.length === 0) {
-    return `Nenhuma clínica tem autorização vigente sobre ${sobre} no momento.`
+  if (clinicas.length === 0) {
+    return `Nenhuma clínica acompanha ${sobre} no momento.`
   }
 
-  const nomes = enumerarNomes(vigentes.map((prestador) => prestador.nome))
-  const verbo = vigentes.length === 1 ? 'está vigente, mas ela não abriu' : 'estão vigentes, mas elas não abriram'
+  const nomes = enumerarNomes(clinicas.map((clinica) => clinica.nome))
+  const verbo = clinicas.length === 1 ? 'acompanha' : 'acompanham'
+  const abriu = clinicas.length === 1 ? 'não abriu' : 'não abriram'
 
-  return `A autorização de ${nomes} ${verbo} o histórico de ${sobre} neste período.`
+  return `${nomes} ${verbo} ${sobre}, mas ${abriu} o histórico neste período.`
 })
 
 const temRecorte = computed(
   () => filtro.value.animal !== '' || filtro.value.prestador !== '' || filtro.value.periodo === '30d',
 )
 
-// Revogação (RF39, acionável desta tela por RF53b) ---------------------------
-
-function pedirRevogacao(acesso) {
-  erroDaAcao.value = ''
-  feito.value = ''
-  emRevogacao.value = acesso
-}
-
-const revogando = computed(() => emRevogacao.value !== null)
-
-/**
- * O mesmo diálogo de T12, e não um parecido: o texto do que a revogação
- * alcança e do que não alcança é requisito (RF39d), e mantê-lo num lugar só é
- * o que impede que as duas telas passem a dizer coisas diferentes sobre o
- * mesmo ato.
- */
-const dialogo = computed(() => {
-  if (emRevogacao.value === null) return REVOGACAO_EM_REPOUSO
-
-  const acesso = emRevogacao.value
-
-  return textoDaRevogacao(acesso.prestador.nome, acesso.animal?.nome ?? 'seus animais')
-})
-
-async function revogar() {
-  const acesso = emRevogacao.value
-  executando.value = true
-  erroDaAcao.value = ''
-
-  try {
-    const resposta = await apiDelete(`/api/autorizacoes/${acesso.revogavel}`)
-    emRevogacao.value = null
-    feito.value = resposta.message
-    await carregar()
-  } catch (excecao) {
-    emRevogacao.value = null
-    erroDaAcao.value = excecao.message
-  } finally {
-    executando.value = false
-  }
-}
 </script>
 
 <template>
@@ -210,7 +164,7 @@ async function revogar() {
       <div class="explicacao">
         <Eye :size="20" :stroke-width="1.75" class="explicacao__icone" />
         <p class="explicacao__texto">
-          Toda vez que uma clínica autorizada abre o histórico de um animal seu, o Imunia
+          Toda vez que uma clínica abre o histórico de um animal seu, o Imunia
           registra quem foi, quando e o que foi consultado. Esta lista é sua e não pode ser
           apagada por nenhum prestador.
         </p>
@@ -271,7 +225,7 @@ async function revogar() {
           </button>
         </div>
 
-        <!-- Chegou de T12 pelo "Ver acessos" de um cartão: a etiqueta diz de
+        <!-- Chegou já recortado por clínica (`?prestador=`): a etiqueta diz de
              quem a tela está falando, e sai com um toque. -->
         <button
           v-if="dados?.prestador"
@@ -284,19 +238,6 @@ async function revogar() {
         </button>
 
         <p class="filtros__contagem" aria-live="polite">{{ contagem }}</p>
-      </div>
-
-      <p v-if="feito" class="aviso aviso--feito" role="status">
-        <CircleCheck :size="20" :stroke-width="1.75" class="aviso__icone" />
-        {{ feito }}
-      </p>
-
-      <div v-if="erroDaAcao" class="aviso aviso--erro" role="alert">
-        <TriangleAlert :size="20" :stroke-width="1.75" class="aviso__icone" />
-        <div>
-          <p class="aviso__titulo">Não conseguimos concluir a ação.</p>
-          <p class="aviso__texto">{{ erroDaAcao }}</p>
-        </div>
       </div>
 
       <div v-if="carregando" class="acessos__lista" aria-busy="true" aria-live="polite">
@@ -325,12 +266,12 @@ async function revogar() {
         v-else-if="nunca"
         :icone="CircleCheck"
         titulo="Ninguém acessou o histórico dos seus animais ainda"
-        descricao="Está tudo em ordem. Assim que uma clínica autorizada abrir a carteira ou o histórico de um animal seu, o acesso aparece aqui com data, hora e o nome do profissional."
+        descricao="Está tudo em ordem. Assim que uma clínica abrir a carteira ou o histórico de um animal seu, o acesso aparece aqui com data, hora e o nome do profissional."
         class="acessos__vazio"
       >
-        <RouterLink to="/autorizacoes" class="botao botao--secundario">
-          <KeyRound :size="20" :stroke-width="1.75" />
-          Ver minhas autorizações
+        <RouterLink to="/animais" class="botao botao--secundario">
+          <Dog :size="20" :stroke-width="1.75" />
+          Ver meus animais
         </RouterLink>
       </EmptyState>
 
@@ -367,25 +308,12 @@ async function revogar() {
               v-for="acesso in dia.acessos"
               :key="acesso.id"
               :acesso="acesso"
-              @revogar="pedirRevogacao"
             />
           </div>
         </section>
       </div>
     </div>
 
-    <ConfirmDialog
-      :aberto="revogando"
-      :titulo="dialogo.titulo"
-      :acontece="dialogo.acontece"
-      :nao-acontece="dialogo.naoAcontece"
-      rotulo-confirmar="Revogar acesso"
-      rotulo-cancelar="Manter acesso"
-      variante-confirmar="destrutiva"
-      :carregando="executando"
-      @confirmar="revogar"
-      @cancelar="emRevogacao = null"
-    />
   </TutorShell>
 </template>
 
@@ -562,7 +490,7 @@ async function revogar() {
   color: var(--consent);
 }
 
-/* Avisos e botões — mesmo vocabulário de T12. ------------------------------ */
+/* Avisos e botões --------------------------------------------------------- */
 
 .aviso {
   display: flex;
@@ -579,15 +507,6 @@ async function revogar() {
 .aviso__icone {
   flex: none;
   margin-top: 2px;
-}
-
-.aviso--feito {
-  background: var(--brand-wash);
-  border: 1px solid var(--brand);
-}
-
-.aviso--feito .aviso__icone {
-  color: var(--brand);
 }
 
 .aviso--erro {

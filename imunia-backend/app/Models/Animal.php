@@ -120,35 +120,6 @@ class Animal extends Model
     }
 
     /**
-     * Autorizações de acesso concedidas pelo tutor sobre este animal (RF36) —
-     * todas elas, inclusive as expiradas e as revogadas, porque RN41 manda
-     * conservá-las. Quem quer saber quem pode ver o histórico agora filtra por
-     * `vigente()`, e o escopo abaixo é o caminho curto para isso.
-     *
-     * @return HasMany<Autorizacao, Animal>
-     */
-    public function autorizacoes(): HasMany
-    {
-        return $this->hasMany(Autorizacao::class);
-    }
-
-    /**
-     * RN48 — o âmbito de toda consulta agregada do prestador. Fica aqui, e não
-     * repetido em cada consulta do painel, porque esquecer este filtro em um só
-     * lugar já é expor o histórico de um animal que ninguém autorizou.
-     *
-     * @param  Builder<Animal>  $consulta
-     */
-    #[Scope]
-    protected function sobAutorizacaoVigenteDe(Builder $consulta, Prestador $prestador): void
-    {
-        $consulta->whereHas(
-            'autorizacoes',
-            fn (Builder $autorizacoes) => $autorizacoes->where('prestador_id', $prestador->id)->vigente(),
-        );
-    }
-
-    /**
      * Os prestadores que acompanham este animal — vínculo criado pelo próprio
      * trabalho clínico (cadastro, ficha aberta por identificador, registro), e
      * não por concessão do tutor.

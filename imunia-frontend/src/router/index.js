@@ -116,8 +116,8 @@ const router = createRouter({
     {
       // T17 — histórico de notificações (RF45), destino do sino do cabeçalho
       // do tutor. Diferente de `/conta`, tem área: o briefing a abre também ao
-      // veterinário (RF45a), mas o âmbito dele é outro — autorização vigente,
-      // não titularidade — e é fatia própria. Até lá, quem não é tutor recebe
+      // veterinário (RF45a), mas o âmbito dele é outro — o vínculo da clínica
+      // com o animal, não titularidade — e é fatia própria. Até lá, quem não é tutor recebe
       // E01 com a frase certa, e não uma tela que se monta para ouvir 403.
       path: '/conta/notificacoes/enviadas',
       name: 'tutor-notification-history',
@@ -140,48 +140,10 @@ const router = createRouter({
       meta: { requerAutenticacao: true, area: 'tutor' },
     },
     {
-      // T10 — diretório de prestadores (RF11). Ponto de partida da autorização,
-      // e por isso destino do atalho de T01 e do "Autorizar uma clínica" de
-      // T12. O filtro viaja na query (`?nome=`, `?municipio=`, `?uf=`) para que
-      // voltar de T11 devolva a mesma lista.
-      path: '/prestadores',
-      name: 'tutor-providers-directory',
-      component: () => import('@/views/tutor/ProvidersDirectoryView.vue'),
-      meta: { requerAutenticacao: true, area: 'tutor' },
-    },
-    {
-      // T12 — minhas autorizações (RF41), com revogação (RF39) e renovação
-      // (RF40c). Destino da seção "Compartilhamento" da moldura do tutor, e de
-      // volta de T10 e T11 com `?prestador=`, que destaca a autorização que o
-      // tutor veio ver ou acabou de conceder.
-      path: '/autorizacoes',
-      name: 'tutor-authorizations',
-      component: () => import('@/views/tutor/AuthorizationsView.vue'),
-      meta: { requerAutenticacao: true, area: 'tutor' },
-    },
-    {
-      // T11 — conceder autorização (RF36, RF37). Chega de T10 com
-      // `?prestador=`, que resolve o primeiro passo e mantém a concessão dentro
-      // dos quatro passos contados da tela inicial (RNF14).
-      path: '/autorizacoes/nova',
-      name: 'tutor-grant-authorization',
-      component: () => import('@/views/tutor/GrantAuthorizationView.vue'),
-      meta: { requerAutenticacao: true, area: 'tutor' },
-    },
-    {
-      // T13 — solicitações de acesso (RF38). O "Autorizar" daqui sai para T11
-      // com `?prestador=` e `?animal=`, que resolvem os dois primeiros passos e
-      // levam o tutor direto à confirmação por código.
-      path: '/solicitacoes',
-      name: 'tutor-access-requests',
-      component: () => import('@/views/tutor/AccessRequestsView.vue'),
-      meta: { requerAutenticacao: true, area: 'tutor' },
-    },
-    {
       // T14 — quem acessou meus dados (RF53). O recorte viaja na query
-      // (`?animal=`, `?periodo=`, `?prestador=`) porque é assim que o "Ver
-      // acessos" de cada cartão de T12 chega aqui já filtrado, e porque o botão
-      // de voltar do navegador deve desfazer um filtro em vez de sair da tela.
+      // (`?animal=`, `?periodo=`, `?prestador=`) porque o nome da clínica numa
+      // linha leva a ela já filtrada, e porque o botão de voltar do navegador
+      // deve desfazer um filtro em vez de sair da tela.
       path: '/acessos',
       name: 'tutor-access-log',
       component: () => import('@/views/tutor/AccessLogView.vue'),
@@ -291,8 +253,8 @@ const router = createRouter({
       // Relação de registros da clínica — o destino "Registros" da barra
       // lateral (§5.3), sem código de tela no briefing, como `/clinica/
       // animais` e pelo mesmo motivo. O âmbito é o inverso do daquela: decide
-      // a autoria (RN40 — a revogação não alcança o que o próprio prestador
-      // produziu), não a autorização vigente.
+      // a autoria (RN40 — o que o próprio prestador produziu), não o vínculo
+      // com o animal.
       path: '/clinica/registros',
       name: 'vet-clinical-records',
       component: () => import('@/views/vet/RegistrosView.vue'),
@@ -329,18 +291,6 @@ const router = createRouter({
       meta: { requerAutenticacao: true, area: 'clinica' },
     },
     {
-      // V10 — o pedido de autorização (RF38) é modal sobre a tela de origem,
-      // não tela própria. O endereço circulou nos botões de V03, V04, V06 e
-      // V07a antes de a fatia existir, e um endereço que já circulou não pode
-      // virar "página não existe" (mesmo raciocínio de `/animais/:codigo/
-      // exportar`): com `?animal=`, leva à ficha com o modal aberto; sem
-      // contexto, leva à busca, que é onde o pedido nasce.
-      path: '/clinica/autorizacoes/nova',
-      redirect: (para) => (para.query.animal
-        ? { path: `/clinica/animais/${para.query.animal}`, query: { solicitar: '1' } }
-        : { path: '/clinica/buscar' }),
-    },
-    {
       // V05 — cadastrar animal no atendimento (RF16, RF19, RF20). Declarada
       // antes de `/clinica/animais/:codigo`, como `/animais/novo` do tutor e
       // pelo mesmo motivo: a rota dinâmica leria "novo" como código.
@@ -362,8 +312,7 @@ const router = createRouter({
       // V07a e V08a — escolher o animal antes de registrar. A ação viaja no
       // caminho, e não em `?registrar=`, porque ela decide a pergunta da tela e
       // a rota de destino: é matéria do endereço, não filtro dele. As duas são
-      // uma tela só — o âmbito, o atalho e a recusa por falta de autorização
-      // não mudam entre vacinar e atender.
+      // uma tela só — o âmbito e o atalho não mudam entre vacinar e atender.
       path: '/clinica/registrar/:acao(vacinacao|atendimento)',
       name: 'vet-choose-animal',
       component: () => import('@/views/vet/EscolherAnimalView.vue'),

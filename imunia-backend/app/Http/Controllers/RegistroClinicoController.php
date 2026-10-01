@@ -44,7 +44,7 @@ class RegistroClinicoController extends Controller
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
 
-        $animal = $this->animalAutorizado($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         /** @var Atendimento|null $registro */
         $registro = $animal->atendimentos()->find($atendimento);
@@ -62,7 +62,7 @@ class RegistroClinicoController extends Controller
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
 
-        $animal = $this->animalAutorizado($codigo, $prestador);
+        $animal = $this->animalDoAtendimento($codigo, $prestador);
 
         /** @var Vacinacao|null $registro */
         $registro = $animal->vacinacoes()->find($vacinacao);
@@ -127,7 +127,7 @@ class RegistroClinicoController extends Controller
         ], 201);
     }
 
-    private function animalAutorizado(string $codigo, Prestador $prestador): Animal
+    private function animalDoAtendimento(string $codigo, Prestador $prestador): Animal
     {
         return $this->animalAlcancado($codigo, $prestador);
     }

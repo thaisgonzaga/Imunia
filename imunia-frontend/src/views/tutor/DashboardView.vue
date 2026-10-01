@@ -24,8 +24,6 @@ import { useSessaoStore } from '@/stores/sessao.js'
  * pergunta que traz Helena ao sistema: o que está pendente para os meus
  * animais? Daí a ordem dos blocos, que é fixa e não negociável — pendência,
  * animais, retornos —, e daí também não haver aqui nenhuma ação destrutiva.
- * Autorizar clínica não mora aqui: é a seção Compartilhamento inteira, e um
- * atalho no painel duplicaria a porta de entrada dela.
  */
 const sessao = useSessaoStore()
 

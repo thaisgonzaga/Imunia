@@ -3,22 +3,11 @@ defineProps({
   current: { type: Number, required: true },
   total: { type: Number, required: true },
   label: { type: String, required: true },
-
-  /**
-   * O índigo de consentimento é o eixo visual do bloco de autorizações e não
-   * aparece em nenhuma outra parte do sistema (§3 do briefing). O passo a passo
-   * de T11 o carrega; o de P04, que é cadastro comum, continua na cor da marca.
-   */
-  tom: {
-    type: String,
-    default: 'marca',
-    validator: (valor) => ['marca', 'consentimento'].includes(valor),
-  },
 })
 </script>
 
 <template>
-  <div class="step-indicator" :class="`step-indicator--${tom}`">
+  <div class="step-indicator">
     <span class="step-indicator__label">
       Passo {{ current }} de {{ total }}<span class="step-indicator__nome"> · {{ label }}</span>
     </span>
@@ -68,19 +57,6 @@ defineProps({
 
 .step-indicator__segment--filled {
   background: var(--brand);
-}
-
-.step-indicator--consentimento {
-  background: var(--consent-wash);
-  border-bottom-color: var(--consent);
-}
-
-.step-indicator--consentimento .step-indicator__label {
-  color: var(--consent);
-}
-
-.step-indicator--consentimento .step-indicator__segment--filled {
-  background: var(--consent);
 }
 
 @media (max-width: 767px) {

@@ -18,11 +18,9 @@ import { useSessaoStore } from '@/stores/sessao.js'
  *    tela é a tradução dessa recusa para linguagem de gente — e o atalho que
  *    evita desenhar uma tela inteira que só saberia falhar.
  *
- * 2. Não é a tela de "sem autorização do tutor". Essa é o estado P2, que já vive
- *    dentro de V03 e de V06: com identificação mínima do animal, explicação e o
- *    caminho de solicitar acesso. Ausência de autorização é estado de tela, não
- *    erro — e mandar o veterinário para uma parede quando ele podia estar
- *    pedindo autorização seria trocar um caminho por um beco.
+ * 2. Não é a tela de "animal fora da carteira". O atendimento não depende do
+ *    tutor: a clínica alcança qualquer animal pelo código, e não há parede
+ *    entre o veterinário e a ficha que ele precisa abrir.
  */
 const route = useRoute()
 const sessao = useSessaoStore()

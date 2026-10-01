@@ -113,7 +113,7 @@ class CadastroDeAnimalController extends Controller
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
 
-        $animal = $this->animalAutorizado($prestador, $codigo);
+        $animal = $this->animalDoAtendimento($prestador, $codigo);
 
         return response()->json([
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
@@ -154,7 +154,7 @@ class CadastroDeAnimalController extends Controller
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
 
-        $animal = $this->animalAutorizado($prestador, $codigo);
+        $animal = $this->animalDoAtendimento($prestador, $codigo);
 
         $this->recusarMicrochipAlheio($animal->tutor, $request->validated('microchip'), $animal);
 
@@ -264,7 +264,7 @@ class CadastroDeAnimalController extends Controller
      * O código inexistente é 404; o existente entra na carteira do prestador
      * que o caracteriza (`AlcancaAnimal`).
      */
-    private function animalAutorizado(Prestador $prestador, string $codigo): Animal
+    private function animalDoAtendimento(Prestador $prestador, string $codigo): Animal
     {
         return $this->animalAlcancado($codigo, $prestador);
     }

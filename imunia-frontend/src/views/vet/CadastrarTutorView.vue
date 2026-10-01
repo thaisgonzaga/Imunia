@@ -1,12 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import {
   Cat,
   CircleCheck,
   Dog,
   Eye,
-  Hourglass,
-  KeyRound,
   Mail,
   TriangleAlert,
 } from '@lucide/vue'
@@ -14,10 +12,8 @@ import VetShell from '@/components/vet/VetShell.vue'
 import AppInput from '@/components/base/AppInput.vue'
 import AppButton from '@/components/base/AppButton.vue'
 import StatusPill from '@/components/base/StatusPill.vue'
-import SolicitarAutorizacaoModal from '@/components/vet/SolicitarAutorizacaoModal.vue'
 import { ApiError, apiGet, apiPost } from '@/lib/api.js'
 import { descreverAnimal } from '@/lib/animais.js'
-import { emNumeros } from '@/lib/datas.js'
 import { cpfValido, formatarCpf, somenteDigitos } from '@/lib/masks.js'
 
 /**
@@ -28,16 +24,16 @@ import { cpfValido, formatarCpf, somenteDigitos } from '@/lib/masks.js'
  * oculto —, porque um formulário visível sugere que o caminho normal é
  * preenchê-lo, e o caminho normal começa por saber se ele deve existir.
  *
- * A verificação é a própria busca de V03: mesma rota, mesma regra de revelar só
- * a existência (RN12), mesmo registro no livro de acessos (RF18b). O que muda é
- * o que a tela faz com cada resposta — "nenhum cadastro" abre o formulário;
- * "existe cadastro" é o estado crítico, e dele não sai dado algum do tutor.
+ * A verificação é a própria busca de V03: mesma rota, mesmo registro no livro
+ * de acessos (RF18b). O que muda é o que a tela faz com cada resposta —
+ * "nenhum cadastro" abre o formulário; "já cadastrado" mostra o tutor e os
+ * animais dele e segue para o animal, sem esperar nada do tutor.
  */
 const contexto = ref(null)
 const carregando = ref(true)
 const erroDeContexto = ref('')
 
-/** cpf → formulario | existente | vinculado → sucesso */
+/** cpf → formulario → sucesso | cpf → vinculado */
 const etapa = ref('cpf')
 
 const cpf = ref('')
@@ -49,28 +45,14 @@ const errosDeCampo = ref({})
 const erroDeEnvio = ref('')
 const enviando = ref(false)
 
-/** Animais do tutor já sob autorização vigente, quando a verificação os achou. */
-const autorizados = ref([])
+/** Os animais do tutor já cadastrado, quando a verificação o achou. */
+const animaisDoTutor = ref([])
 
-/** O cartão de existência da verificação — traz a pendência de V10, se houver. */
-const existencia = ref(null)
-
-/** V10 — o modal do pedido, aberto sobre o estado "existe cadastro". */
-const solicitando = ref(false)
-
-/** O desfecho do pedido feito nesta visita, que vira a etiqueta de espera. */
-const solicitacao = ref(null)
-
-const alvoDaSolicitacao = computed(() => ({ tipo: 'cpf', termo: somenteDigitos(cpf.value) }))
-
-const solicitacaoPendente = computed(
-  () => solicitacao.value ?? existencia.value?.solicitacao_pendente ?? null,
-)
+/** O nome do tutor já cadastrado, quando a verificação o achou. */
+const tutorExistente = ref(null)
 
 /** A resposta do cadastro — e-mail do convite e prazo, para o estado de sucesso. */
 const criado = ref(null)
-
-const prestador = computed(() => contexto.value?.prestador?.nome ?? 'este prestador')
 
 function iconeDaEspecie(especie) {
   return especie === 'gato' ? Cat : Dog
@@ -116,14 +98,11 @@ async function verificar() {
     if (contexto.value?.prestador) busca.set('prestador', contexto.value.prestador.id)
 
     const consulta = await apiGet(`/api/clinica/buscar?${busca}`)
-    existencia.value = consulta.existencia ?? null
-    solicitacao.value = null
 
-    if (consulta.autorizados?.length || consulta.tutor) {
-      autorizados.value = consulta.autorizados ?? []
+    if (consulta.tutor || consulta.autorizados?.length) {
+      animaisDoTutor.value = consulta.autorizados ?? []
+      tutorExistente.value = consulta.tutor?.nome ?? null
       etapa.value = 'vinculado'
-    } else if (consulta.existencia?.tipo === 'tutor') {
-      etapa.value = 'existente'
     } else {
       etapa.value = 'formulario'
     }
@@ -154,7 +133,8 @@ async function cadastrar() {
     // RF12b — alguém cadastrou este CPF entre a verificação e o envio: o
     // cadastro que já existe vale, e o atendimento segue para o animal.
     if (resposta.situacao === 'cpf_existente') {
-      autorizados.value = []
+      animaisDoTutor.value = []
+      tutorExistente.value = resposta.tutor?.nome ?? null
       etapa.value = 'vinculado'
       return
     }
@@ -166,11 +146,10 @@ async function cadastrar() {
       errosDeCampo.value = excecao.errors
     }
 
-    // RF12b — a janela entre a verificação e o envio: alguém cadastrou este
-    // CPF nesse meio-tempo. A resposta é a mesma da verificação, e a tela
-    // volta ao estado que teria mostrado.
+    // RF12b — a mesma janela, se o servidor responder com conflito em vez de
+    // devolver o cadastro: refazer a verificação traz o tutor e os animais.
     if (excecao instanceof ApiError && excecao.status === 409) {
-      etapa.value = 'existente'
+      await verificar()
     } else {
       erroDeEnvio.value = excecao.message
     }
@@ -182,9 +161,8 @@ async function cadastrar() {
 /** Volta à barreira do CPF, mantendo o que foi digitado no formulário. */
 function trocarCpf() {
   etapa.value = 'cpf'
-  autorizados.value = []
-  existencia.value = null
-  solicitacao.value = null
+  animaisDoTutor.value = []
+  tutorExistente.value = null
   erroDeEnvio.value = ''
   errosDeCampo.value = {}
 }
@@ -202,10 +180,10 @@ function trocarPrestador(id) {
 
   contexto.value = { ...contexto.value, prestador: vinculo }
 
-  // O âmbito de autorização é do prestador: o que era "existe cadastro" numa
-  // clínica pode ser "já autorizado" na outra. O CPF novo, não — o cadastro é
-  // global, e o formulário aberto continua valendo.
-  if (etapa.value === 'existente' || etapa.value === 'vinculado') verificar()
+  // A verificação registra o acesso em nome do prestador ativo: trocada a
+  // clínica, ela se refaz. O CPF novo, não — o cadastro é global, e o
+  // formulário aberto continua valendo.
+  if (etapa.value === 'vinculado') verificar()
 }
 
 onMounted(carregar)
@@ -306,8 +284,8 @@ onMounted(carregar)
         <div v-if="etapa === 'cpf'" class="aviso-de-registro">
           <Eye :size="20" :stroke-width="1.75" class="aviso-de-registro__icone" />
           <p class="aviso-de-registro__texto">
-            Se o CPF já tiver cadastro fora da sua carteira de autorizações, a
-            consulta fica registrada e visível ao tutor.
+            Se o CPF já tiver cadastro e a clínica ainda não acompanhar nenhum
+            animal dele, a consulta fica registrada e visível ao tutor.
           </p>
         </div>
 
@@ -322,53 +300,22 @@ onMounted(carregar)
           </button>
         </div>
 
-        <!-- Estado crítico — existe cadastro, e é tudo o que a tela diz (RF13). -->
-        <section v-if="etapa === 'existente'" class="secao-existente">
-          <div class="consentimento">
-            <div class="consentimento__topo">
-              <KeyRound :size="24" :stroke-width="1.75" class="consentimento__icone" />
-              <p class="consentimento__titulo">
-                Já existe um cadastro com este CPF na plataforma.
-              </p>
-            </div>
-            <p class="consentimento__detalhe">
-              Para vincular este tutor ao atendimento e ver o histórico dos
-              animais dele, solicite a autorização. Nome, contato e animais
-              aparecem somente depois que ele autorizar {{ prestador }}.
-            </p>
-            <!-- V10 — o pedido é modal sobre esta tela: o CPF verificado
-                 permanece atrás dele. Pendente, o botão vira etiqueta. -->
-            <p v-if="solicitacaoPendente" class="consentimento__etiqueta">
-              <Hourglass :size="16" :stroke-width="1.75" />
-              Solicitação enviada · aguardando o tutor até
-              {{ emNumeros(solicitacaoPendente.expira_em) }}
-            </p>
-            <button
-              v-else
-              type="button"
-              class="botao botao--consentimento"
-              @click="solicitando = true"
-            >
-              <KeyRound :size="16" :stroke-width="1.75" />
-              Solicitar autorização ao tutor
-            </button>
-            <p class="consentimento__registro">
-              <Eye :size="16" :stroke-width="1.75" class="consentimento__registro-icone" />
-              Esta consulta ficou registrada. O tutor verá que {{ prestador }}
-              pesquisou por este CPF, com data e hora.
-            </p>
-          </div>
-        </section>
-
-        <!-- Já autorizado: o tutor não é novo nem está fora do âmbito. -->
-        <section v-else-if="etapa === 'vinculado'" class="secao-vinculado">
+        <!-- Já cadastrado: não há o que cadastrar, e o atendimento segue para o
+             animal sem esperar nada do tutor. -->
+        <section v-if="etapa === 'vinculado'" class="secao-vinculado">
           <p class="secao-vinculado__texto">
-            Este tutor já está cadastrado no Imunia. Abra a ficha de um animal abaixo ou
-            <RouterLink :to="{ path: '/clinica/animais/novo', state: { cpf: somenteDigitos(cpf) } }">cadastre um novo animal</RouterLink>.
+            <template v-if="tutorExistente"><strong>{{ tutorExistente }}</strong> já está</template>
+            <template v-else>Este tutor já está</template>
+            cadastrado no Imunia.
+            <template v-if="animaisDoTutor.length">
+              Abra a ficha de um animal abaixo ou
+              <RouterLink :to="{ path: '/clinica/animais/novo', state: { cpf: somenteDigitos(cpf) } }">cadastre um novo animal</RouterLink>.
+            </template>
+            <RouterLink v-else :to="{ path: '/clinica/animais/novo', state: { cpf: somenteDigitos(cpf) } }">Cadastre o primeiro animal dele</RouterLink><template v-if="!animaisDoTutor.length">.</template>
           </p>
           <div class="cartoes">
             <RouterLink
-              v-for="animal in autorizados"
+              v-for="animal in animaisDoTutor"
               :key="animal.codigo"
               :to="`/clinica/animais/${animal.codigo}`"
               class="cartao-animal"
@@ -443,14 +390,6 @@ onMounted(carregar)
       </template>
     </div>
 
-    <SolicitarAutorizacaoModal
-      :aberto="solicitando"
-      :prestador="prestador"
-      :prestador-id="contexto?.prestador?.id"
-      :alvo="alvoDaSolicitacao"
-      @fechar="solicitando = false"
-      @enviada="solicitacao = $event"
-    />
   </VetShell>
 </template>
 
@@ -595,83 +534,11 @@ onMounted(carregar)
   background: var(--surface-sunken);
 }
 
-/* Estado crítico — o mesmo desenho de consentimento de V03 ------------------ */
+/* Já cadastrado ------------------------------------------------------------ */
 
-.secao-existente,
 .secao-vinculado {
   margin: var(--space-6) 0 0;
 }
-
-.consentimento {
-  padding: var(--space-6);
-  background: var(--surface-sunken);
-  border: 1px dashed var(--consent);
-  border-radius: var(--radius-md);
-}
-
-.consentimento__topo {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.consentimento__icone {
-  flex: none;
-  color: var(--consent);
-}
-
-.consentimento__titulo {
-  margin: 0;
-  max-width: 70ch;
-  font-size: 18px;
-  line-height: 24px;
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.consentimento__detalhe {
-  margin: var(--space-2) 0 0;
-  max-width: 70ch;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink-muted);
-}
-
-/* A etiqueta de espera (V10): o mesmo lugar do botão, o oposto do convite —
-   o pedido já foi feito e a vez agora é do tutor. */
-.consentimento__etiqueta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--consent-wash);
-  border: 1px solid var(--consent);
-  border-radius: var(--radius-pill);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 600;
-  color: var(--consent);
-}
-
-.consentimento__registro {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--border-strong);
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--ink-muted);
-}
-
-.consentimento__registro-icone {
-  flex: none;
-  color: var(--consent);
-}
-
-/* Já autorizado ------------------------------------------------------------- */
 
 .secao-vinculado__texto {
   margin: 0 0 var(--space-3);
@@ -896,18 +763,6 @@ onMounted(carregar)
 .botao--secundario:hover {
   background: var(--surface-sunken);
   color: var(--ink);
-}
-
-.botao--consentimento {
-  margin: var(--space-4) 0 0;
-  background: var(--consent);
-  border: 1px solid var(--consent);
-  color: var(--surface-card);
-}
-
-.botao--consentimento:hover {
-  background: #32427A;
-  color: var(--surface-card);
 }
 
 .aviso {

@@ -23,7 +23,7 @@ const props = defineProps({
   rotuloConfirmar: { type: String, required: true },
   rotuloCancelar: { type: String, default: 'Voltar e revisar' },
   // Nem toda ação irreversível é destrutiva: lançar histórico pregresso (T09)
-  // cria um registro, revogar uma autorização (T12) encerra um acesso. A cor
+  // cria um registro, remover um membro da equipe encerra um acesso. A cor
   // acompanha o que a ação faz, e não o fato de ela não ter volta.
   varianteConfirmar: { type: String, default: 'primary' },
   carregando: { type: Boolean, default: false },

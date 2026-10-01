@@ -17,9 +17,9 @@ class RegistroDeAcessoFactory extends Factory
     protected $model = RegistroDeAcesso::class;
 
     /**
-     * O caso central de RF52: uma clínica autorizada leu, no histórico de um
-     * animal, registro que outra produziu. É a linha que T14 mostra por inteiro
-     * — com prestador, profissional e a autorização sob a qual aconteceu.
+     * O caso central de RF52: uma clínica leu, no histórico de um animal,
+     * registro que outra produziu. É a linha que T14 mostra por inteiro — com
+     * prestador, profissional, data e hora.
      *
      * @return array<string, mixed>
      */

@@ -40,7 +40,7 @@ const cpfTocado = ref(false)
 const ARGUMENTOS = [
   'Cadastro do animal em poucos campos',
   'Lembrete por e-mail antes de cada dose',
-  'Você autoriza e revoga clínicas quando quiser',
+  'Você vê quem consultou o histórico, e quando',
 ]
 
 const form = reactive({
@@ -320,7 +320,7 @@ function revisarDados() {
 
       <p class="auth-reassurance">
         <Lock :size="16" />
-        Ninguém vê os dados dos seus animais até você autorizar.
+        Toda consulta aos dados dos seus animais fica registrada para você.
       </p>
 
       <div class="auth-footer">

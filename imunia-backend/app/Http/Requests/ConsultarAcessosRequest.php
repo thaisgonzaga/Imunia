@@ -14,10 +14,9 @@ use Illuminate\Foundation\Http\FormRequest;
  * nada, ou que recai no padrão. As regras existem para limitar o que chega à
  * consulta, não para conversar com quem digitou.
  *
- * A tolerância importa mais aqui do que ali por causa de quem monta a URL:
- * T12 liga para `/acessos?prestador=…&animal=…` a partir de cada cartão, e uma
- * autorização revogada há tempo pode apontar para um recorte que já não tem
- * linha alguma. A resposta certa é a lista vazia, não a tela de erro.
+ * A tolerância importa mais aqui do que ali por causa de quem monta a URL: um
+ * endereço guardado pode apontar para um recorte que já não tem linha alguma.
+ * A resposta certa é a lista vazia, não a tela de erro.
  */
 class ConsultarAcessosRequest extends FormRequest
 {

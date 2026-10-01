@@ -300,9 +300,6 @@ function destinoDe(entrada) {
             <RouterLink :to="`/animais/${animal.codigo}/pregresso/novo`" class="botao botao--primario">
               Lançar histórico pregresso
             </RouterLink>
-            <RouterLink to="/prestadores" class="botao botao--secundario">
-              Encontrar uma clínica
-            </RouterLink>
           </div>
         </EmptyState>
 

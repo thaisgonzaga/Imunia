@@ -97,8 +97,7 @@ async function reenviar() {
       </div>
       <h1 class="auth-title">E-mail confirmado</h1>
       <p class="auth-text">
-        Pronto. Agora você recebe os lembretes das próximas doses e pode autorizar clínicas a ver
-        o histórico dos seus animais.
+        Pronto. Agora você recebe os lembretes das próximas doses dos seus animais.
       </p>
 
       <RouterLink to="/entrar" class="auth-link-button auth-link-button--primary">
@@ -177,8 +176,7 @@ async function reenviar() {
       <div class="auth-notice auth-notice--neutro">
         <ClockAlert :size="20" />
         <p class="auth-notice__text">
-          Sem o endereço confirmado, não conseguimos avisar você sobre as próximas doses — e você
-          também não consegue autorizar clínicas.
+          Sem o endereço confirmado, não conseguimos avisar você sobre as próximas doses.
         </p>
       </div>
 

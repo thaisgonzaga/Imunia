@@ -17,8 +17,8 @@ import { apiGet, apiPost } from '@/lib/api.js'
  * recusaria com a mesma frase, mas botão que leva à recusa é convite a ela.
  *
  * RF46 nomeia dois atores, e o modal serve aos dois: sobre V06 ele emite pela
- * porta clínica (`contexto="clinica"`), cujo âmbito é a autorização vigente do
- * prestador ativo — o contexto viaja em `prestadorId`, porque a emissão e o
+ * porta clínica (`contexto="clinica"`), cujo âmbito é o prestador ativo — o
+ * contexto viaja em `prestadorId`, porque a emissão e o
  * download recaem no primeiro vínculo do profissional sem ele. A ficha já traz
  * o histórico inteiro, e `entradas` poupa a segunda leitura do mesmo dado —
  * que aqui não seria só desperdício: a rota de contagem de T07 é do tutor, e
@@ -105,7 +105,7 @@ async function gerar() {
   erroDeGeracao.value = ''
 
   try {
-    // A porta clínica reverifica o âmbito (autorização vigente, não
+    // A porta clínica reverifica o âmbito (prestador ativo, não
     // titularidade) e presta as contas de RN49; o corpo do pedido é o mesmo.
     const destino = props.contexto === 'clinica'
       ? `/api/clinica/animais/${props.animal.codigo}/exportacoes`

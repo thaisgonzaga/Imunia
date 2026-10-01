@@ -21,14 +21,14 @@ import { procedenciaNoAmbienteClinico } from '@/lib/procedencia.js'
  * duas versões, e oferecer a correção a quem pode fazê-la.
  *
  * Não é T06 nem T08 com outra moldura. Aquelas telas partem da titularidade do
- * tutor e respondem 403 a quem escreveu o prontuário; esta parte da autorização
- * vigente do prestador ativo, grava o acesso ao registro alheio (RN49) e é a
+ * tutor e respondem 403 a quem escreveu o prontuário; esta parte do prestador
+ * ativo, grava o acesso ao registro alheio (RN49) e é a
  * única do sistema que oferece "Retificar".
  *
  * **A ação não aparece para quem não pode** (RNF09, RN27). Não desabilitada,
  * não com explicação: ausente. Quem decide é o servidor, que devolve
  * `pode_retificar` — e recusa o `POST` de todo modo, porque uma tela não é
- * lugar onde se guarda regra de autorização.
+ * lugar onde se guarda regra de permissão.
  */
 const route = useRoute()
 const router = useRouter()

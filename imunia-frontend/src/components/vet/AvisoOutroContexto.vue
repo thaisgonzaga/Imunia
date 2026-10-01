@@ -3,10 +3,10 @@ import { computed } from 'vue'
 import { PawPrint } from '@lucide/vue'
 
 /**
- * O aviso de plantel em outro contexto: "Há 1 animal sob autorização vigente
- * em Clínica X — Trocar para lá". É a versão em palavras do selo do alternador,
- * para quem não repara em selo — nasceu do animal recém-autorizado à clínica
- * que ficou invisível para o veterinário no contexto do consultório.
+ * O aviso de plantel em outro contexto: "Há 1 animal acompanhado em Clínica X
+ * — Trocar para lá". É a versão em palavras do selo do alternador, para quem
+ * não repara em selo — nasceu do animal acompanhado por uma clínica que ficou
+ * invisível para o veterinário no contexto do consultório.
  *
  * Fala só de contagem, nunca de nome ou código de animal: o que está em outro
  * contexto continua fora do âmbito ativo até a troca (RN48). E veste a cor da
@@ -30,8 +30,8 @@ const outros = computed(() =>
 
 function frase(vinculo) {
   return vinculo.animais === 1
-    ? '1 animal sob autorização vigente'
-    : `${vinculo.animais} animais sob autorização vigente`
+    ? '1 animal acompanhado'
+    : `${vinculo.animais} animais acompanhados`
 }
 </script>
 

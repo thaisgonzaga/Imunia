@@ -62,7 +62,7 @@ watch(
 /**
  * Os quatro destinos do briefing, todos construídos. "Registros" foi o último
  * a ganhar tela: é o livro de produção da clínica, e o único destino da barra
- * cujo âmbito é a autoria (RN40), não a autorização vigente.
+ * cujo âmbito é a autoria (RN40), não o acompanhamento do animal.
  */
 const SECOES = [
   { rotulo: 'Painel', destino: '/clinica/painel', icone: Stethoscope },

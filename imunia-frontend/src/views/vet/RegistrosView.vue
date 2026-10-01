@@ -24,10 +24,8 @@ import { emNumeros } from '@/lib/datas.js'
  * assinou cada um.
  *
  * O âmbito é o inverso do da relação de animais, e a inversão é a tela: lá
- * decide a autorização vigente (RN48 — quem a clínica pode acompanhar); aqui
- * decide a autoria (RN40 — o que a clínica produziu e guarda). A linha do
- * animal cuja autorização venceu ou foi revogada continua no livro — some o
- * endereço dela, não ela, e é a nota sob a tabela que explica a diferença.
+ * decide o acompanhamento (quem a clínica cadastrou ou atendeu); aqui decide a
+ * autoria (RN40 — o que a clínica produziu e guarda).
  */
 const consulta = ref(null)
 const carregando = ref(true)
@@ -162,7 +160,7 @@ function iconeDaEspecie(especie) {
       </div>
     </div>
 
-    <!-- O livro vazio não é defeito nem falta de autorização: registro clínico
+    <!-- O livro vazio não é defeito: registro clínico
          nasce do atendimento e da aplicação, e é para lá que o vazio aponta. -->
     <div v-else-if="consulta.estado === 'sem_registros'" class="registros registros--estreito">
       <EmptyState
@@ -390,13 +388,6 @@ function iconeDaEspecie(especie) {
   line-height: 34px;
   font-weight: 600;
   color: var(--ink);
-}
-
-/* Ausência é informação, e a nota que a explica também é (--ink-muted passa no
-   contraste; decisoes.md §9.1). */
-
-.registros__guarda strong {
-  font-weight: 600;
 }
 
 /* Barra de filtros --------------------------------------------------------- */
