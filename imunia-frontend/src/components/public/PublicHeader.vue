@@ -1,7 +1,7 @@
 <script setup>
 /**
  * Cabeçalho das telas públicas (P01 e, adiante, P09). Abaixo de 768 px resta
- * apenas "Entrar": o convite a criar conta já está no herói, e dois alvos
+ * apenas "Entrar": o convite a cadastrar a clínica já está no herói, e dois alvos
  * disputando a mesma faixa de 56 px encolheriam ambos abaixo dos 44 px
  * exigidos em celular.
  */
@@ -13,7 +13,7 @@
       <RouterLink to="/" class="public-header__brand">Imunia</RouterLink>
       <nav class="public-header__actions">
         <RouterLink to="/entrar" class="public-header__link">Entrar</RouterLink>
-        <RouterLink to="/criar-conta" class="public-header__cta">Criar conta</RouterLink>
+        <RouterLink to="/cadastrar-prestador" class="public-header__cta">Cadastrar clínica</RouterLink>
       </nav>
     </div>
   </header>
@@ -30,7 +30,7 @@
 }
 
 /* Mesma faixa do herói e do rodapé, para que a marca comece na coluna do
-   título e o "Criar conta" termine na borda do trilho. */
+   título e o "Cadastrar clínica" termine na borda do trilho. */
 .public-header__inner {
   display: flex;
   align-items: center;

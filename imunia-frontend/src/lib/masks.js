@@ -107,7 +107,7 @@ export function formatarMesAno(valor) {
 }
 
 /**
- * A data aproximada de T09 e de T03 (RF29, RN25): `aaaa`, ou `mm/aaaa` quando
+ * A data aproximada de T09 e de T04a (RF29, RN25): `aaaa`, ou `mm/aaaa` quando
  * o tutor lembra o mês. O campo aceita os dois, e é isso que o distingue de
  * `formatarMesAno` — ali a barra pode entrar sempre, aqui ela só pode entrar
  * quando o que está sendo escrito não pode mais ser um ano.

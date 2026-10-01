@@ -22,8 +22,9 @@ import { useSessaoStore } from '@/stores/sessao.js'
  * do trabalho.
  *
  * Quem entra por uma porta cujo papel a conta não tem não é recusado: a
- * credencial estava certa, e o que falta é um cadastro que ela mesma cria dali
- * — sem segunda conta e sem segundo endereço.
+ * credencial estava certa, e a tela explica por onde o papel que falta chega —
+ * o de tutor, por convite da clínica que cadastra o animal; o de veterinário,
+ * pelo vínculo com um estabelecimento. Nunca por uma segunda conta.
  */
 const route = useRoute()
 const router = useRouter()
@@ -48,11 +49,14 @@ const PORTAS = {
     ],
     tituloDoFormulario: 'Entrar como tutor',
     legenda: 'Para quem cuida dos próprios animais.',
-    cabecalhoRotulo: 'Criar conta',
-    cabecalhoDestino: '/criar-conta',
-    rodapePergunta: 'Ainda não tem conta?',
-    rodapeRotulo: 'Criar conta de tutor',
-    rodapeDestino: '/criar-conta',
+    // O tutor não cria conta: o acesso chega por convite, quando uma clínica
+    // cadastra o animal no e-mail dele. Por isso nem cabeçalho nem rodapé
+    // oferecem cadastro — só dizem de onde o acesso vem.
+    cabecalhoRotulo: '',
+    cabecalhoDestino: '',
+    rodapePergunta: 'Ainda não tem acesso? Ele chega por convite da clínica que cadastrar seu animal.',
+    rodapeRotulo: '',
+    rodapeDestino: '',
     outraPortaRotulo: 'Entrar como veterinário',
     outraPortaDestino: '/entrar/veterinario',
   },
@@ -89,11 +93,11 @@ const PORTAS = {
     ],
     tituloDoFormulario: 'Entrar',
     legenda: '',
-    cabecalhoRotulo: 'Criar conta',
-    cabecalhoDestino: '/criar-conta',
-    rodapePergunta: 'Ainda não tem conta?',
-    rodapeRotulo: 'Criar conta de tutor',
-    rodapeDestino: '/criar-conta',
+    cabecalhoRotulo: 'Cadastrar estabelecimento',
+    cabecalhoDestino: '/cadastrar-prestador',
+    rodapePergunta: 'Tutor? O acesso chega por convite da clínica.',
+    rodapeRotulo: '',
+    rodapeDestino: '',
     outraPortaRotulo: '',
     outraPortaDestino: '',
   },
@@ -102,21 +106,25 @@ const PORTAS = {
 const textos = computed(() => PORTAS[porta.value] ?? PORTAS[''])
 
 /**
- * O que oferecer a quem entrou pela porta certa com a conta certa e o papel
- * que falta. Não é erro nem recusa: é o cadastro que ainda não existe, e que
- * cabe na mesma conta.
+ * O que dizer a quem entrou pela porta certa com a conta certa e o papel que
+ * falta. Não é erro nem recusa: é explicar por onde esse papel chega à mesma
+ * conta. O de tutor não tem ação — ninguém se faz tutor sozinho; a clínica que
+ * cadastra o animal neste e-mail é quem o abre.
  */
 const PAPEL_AUSENTE = {
   tutor: {
-    titulo: 'Esta conta ainda não tem cadastro de tutor',
+    sobrescrito: 'Acesso por convite',
+    titulo: 'Esta conta ainda não tem acesso de tutor',
     detalhe:
-      'Seu acesso está correto. Para ver a carteira dos seus próprios animais, falta criar o cadastro de tutor — '
-      + 'no mesmo e-mail e na mesma senha, sem segunda conta.',
-    acaoRotulo: 'Criar meu cadastro de tutor',
-    acaoDestino: '/conta/tutor',
+      'Seu acesso está correto. O acesso de tutor chega por convite: quando uma clínica que usa o Imunia '
+      + 'cadastra um animal neste mesmo e-mail, a carteira dele aparece aqui — sem segunda conta e sem '
+      + 'segunda senha.',
+    acaoRotulo: '',
+    acaoDestino: '',
     nota: '',
   },
   veterinario: {
+    sobrescrito: 'Falta um passo',
     titulo: 'Esta conta ainda não atende em nenhum estabelecimento',
     detalhe:
       'Seu acesso está correto. O ambiente clínico se abre pelo vínculo com um estabelecimento, e o '
@@ -240,20 +248,26 @@ function seguirComOPapelQueTenho() {
     </template>
 
     <!-- Entrou, mas por uma porta cujo papel a conta ainda não tem. A sessão
-         está aberta: daqui sai o cadastro que falta, ou o ambiente que já é
-         seu. -->
+         está aberta: daqui sai o cadastro que falta (quando cabe à pessoa
+         fazê-lo), ou o ambiente que já é seu. -->
     <template v-else-if="ofertaDePapel">
       <p class="auth-eyebrow auth-eyebrow--marca">
         <UserRoundPlus :size="16" />
-        Falta um passo
+        {{ ofertaDePapel.sobrescrito }}
       </p>
       <h1 class="auth-title">{{ ofertaDePapel.titulo }}</h1>
       <p class="auth-text">{{ ofertaDePapel.detalhe }}</p>
 
-      <RouterLink :to="ofertaDePapel.acaoDestino" class="auth-link-button auth-link-button--primary">
+      <RouterLink
+        v-if="ofertaDePapel.acaoRotulo" :to="ofertaDePapel.acaoDestino"
+        class="auth-link-button auth-link-button--primary"
+      >
         {{ ofertaDePapel.acaoRotulo }}
       </RouterLink>
-      <AppButton class="auth-submit" variant="secondary" @click="seguirComOPapelQueTenho">
+      <AppButton
+        class="auth-submit" :variant="ofertaDePapel.acaoRotulo ? 'secondary' : 'primary'"
+        @click="seguirComOPapelQueTenho"
+      >
         Continuar no meu ambiente de sempre
       </AppButton>
 
@@ -327,7 +341,8 @@ function seguirComOPapelQueTenho() {
       <div class="auth-footer">
         <RouterLink to="/recuperar-senha" class="auth-link">Esqueci minha senha</RouterLink>
         <span class="auth-footer__text">
-          {{ textos.rodapePergunta }} <RouterLink :to="textos.rodapeDestino">{{ textos.rodapeRotulo }}</RouterLink>
+          {{ textos.rodapePergunta }}
+          <RouterLink v-if="textos.rodapeRotulo" :to="textos.rodapeDestino">{{ textos.rodapeRotulo }}</RouterLink>
         </span>
       </div>
     </template>

@@ -8,8 +8,9 @@ import { apiGet } from '@/lib/api.js'
 
 /**
  * T02 — relação de animais do tutor (RF16). Objetivo único: listar quem está
- * sob a titularidade de Helena e abrir caminho para o cadastro de um novo
- * (T03). Nenhum deslize de exclusão mora aqui — o tutor não exclui animal.
+ * sob a titularidade de Helena. O tutor não cadastra animal — quem cadastra é
+ * a clínica —, e nenhum deslize de exclusão mora aqui: o tutor não exclui
+ * animal.
  */
 const animais = ref([])
 const carregando = ref(true)
@@ -61,7 +62,6 @@ const animaisFiltrados = computed(() => {
           </p>
         </div>
 
-        <RouterLink to="/animais/novo" class="botao botao--primario">Cadastrar animal</RouterLink>
       </div>
 
       <!-- Carregando: esqueleto na forma exata da grade que substitui. -->
@@ -90,11 +90,9 @@ const animaisFiltrados = computed(() => {
       <EmptyState
         v-else-if="animais.length === 0"
         :icone="PawPrint"
-        titulo="Você ainda não cadastrou nenhum animal"
-        descricao="Cadastre seu cão ou gato para acompanhar as vacinas e receber lembretes das próximas doses."
-      >
-        <RouterLink to="/animais/novo" class="botao botao--primario">Cadastrar animal</RouterLink>
-      </EmptyState>
+        titulo="Nenhum animal por aqui ainda"
+        descricao="Seus animais aparecem aqui quando uma clínica que usa o Imunia os cadastrar. A partir daí, você acompanha as vacinas e recebe lembretes das próximas doses."
+      />
 
       <template v-else>
         <div v-if="mostrarFiltro" class="animais__filtro" role="group" aria-label="Filtrar por espécie">
@@ -174,10 +172,6 @@ const animaisFiltrados = computed(() => {
   font-size: 16px;
   line-height: 24px;
   color: var(--ink-muted);
-}
-
-.animais__cabecalho .botao {
-  width: 100%;
 }
 
 .animais__filtro {
@@ -268,18 +262,6 @@ const animaisFiltrados = computed(() => {
   cursor: pointer;
 }
 
-.botao--primario {
-  background: var(--brand);
-  border: 1px solid var(--brand);
-  color: var(--surface-card);
-}
-
-.botao--primario:hover {
-  background: var(--brand-hover);
-  border-color: var(--brand-hover);
-  color: var(--surface-card);
-}
-
 .botao--secundario {
   background: var(--surface-card);
   border: 1px solid var(--border-strong);
@@ -352,10 +334,6 @@ const animaisFiltrados = computed(() => {
     flex-direction: row;
     align-items: flex-end;
     justify-content: space-between;
-  }
-
-  .animais__cabecalho .botao {
-    width: auto;
   }
 
   .animais__grade {

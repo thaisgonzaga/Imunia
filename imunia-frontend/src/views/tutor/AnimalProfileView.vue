@@ -62,14 +62,7 @@ watch(() => route.params.codigo, carregar)
 
 const icone = computed(() => (animal.value?.especie === 'gato' ? Cat : Dog))
 
-/**
- * Chegada vinda de T03, logo depois do cadastro. O que muda é o destaque do
- * código único: é a única informação da tela que o tutor ainda não viu, e é a
- * que ele vai precisar ditar no balcão da clínica (RF17).
- */
-const recemCadastrado = computed(() => route.query.novo === '1')
-
-// Volta de T04a. A confirmação é a mesma de sempre — discreta e sem ação —,
+// Volta de T04a. A confirmação é discreta e sem ação,
 // mas o que mudou já está na tela: quem salvou vê o cadastro novo, não um
 // aviso dizendo que ele mudou.
 const recemEditado = computed(() => route.query.salvo === '1')
@@ -186,16 +179,6 @@ onUnmounted(() => {
       </div>
 
       <div v-else class="perfil__conteudo">
-        <!-- Confirmação do cadastro recém-feito (T03). Discreta e sem ação:
-             quem chegou aqui já fez o que queria fazer. -->
-        <div v-if="recemCadastrado" class="confirmacao" role="status">
-          <Check :size="20" :stroke-width="1.75" class="confirmacao__icone" />
-          <p class="confirmacao__texto">
-            {{ animal.nome }} está cadastrado. O código abaixo é como uma clínica encontra
-            {{ animal.nome }} sem precisar dos seus dados.
-          </p>
-        </div>
-
         <div v-if="recemEditado" class="confirmacao" role="status">
           <Check :size="20" :stroke-width="1.75" class="confirmacao__icone" />
           <p class="confirmacao__texto">Cadastro de {{ animal.nome }} atualizado.</p>
@@ -237,7 +220,7 @@ onUnmounted(() => {
 
         <div class="perfil__grade">
           <div class="perfil__coluna">
-            <section class="cartao" :class="{ 'cartao--destacado': recemCadastrado }">
+            <section class="cartao">
               <h2 class="cartao__rotulo">Código do animal</h2>
               <p class="perfil__codigo">{{ animal.codigo }}</p>
               <p class="cartao__nota">É por este código que uma clínica encontra {{ animal.nome }} sem precisar dos seus dados.</p>
@@ -524,10 +507,6 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 16px;
   color: var(--ink-faint);
-}
-
-.cartao--destacado {
-  border-color: var(--brand);
 }
 
 /* Caracterização preenchida (RF19) ------------------------------------------- */

@@ -34,8 +34,7 @@ class UpdateAnimalRequest extends FormRequest
     public ?Animal $animal = null;
 
     /**
-     * A mesma lista de `StoreAnimalRequest`, e pela mesma razão. `codigo` está
-     * nela porque RF17b não abre exceção para a edição: o identificador não
+     * O que só o veterinário escreve (RN18). `codigo` está nela porque RF17b não abre exceção para a edição: o identificador não
      * muda em circunstância alguma prevista no sistema.
      */
     private const PRIVATIVOS_DO_VETERINARIO = [

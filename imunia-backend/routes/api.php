@@ -6,7 +6,6 @@ use App\Http\Controllers\AtendimentoController;
 use App\Http\Controllers\Auth\ContaController;
 use App\Http\Controllers\Auth\ConviteController;
 use App\Http\Controllers\Auth\EmailVerificationController;
-use App\Http\Controllers\Auth\PapelDeTutorController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\SessionController;
 use App\Http\Controllers\BuscaClinicaController;
@@ -35,13 +34,11 @@ use App\Http\Controllers\RegistroDeAtendimentoController;
 use App\Http\Controllers\RegistroDeObitoController;
 use App\Http\Controllers\RegistroDeVacinacaoController;
 use App\Http\Controllers\RegistrosDaClinicaController;
-use App\Http\Controllers\TutorController;
 use App\Http\Controllers\VacinasPrestadorController;
 use App\Http\Controllers\VerificacaoDocumentoController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/prestadores', [PrestadorController::class, 'store']);
-Route::post('/tutores', [TutorController::class, 'store']);
 
 // P09 — verificação pública do documento exportado (RF47). Única rota aberta
 // do sistema, ressalva expressa de RN01.
@@ -58,14 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conta', [ContaController::class, 'show']);
     Route::post('/conta', [ContaController::class, 'update']);
     Route::post('/conta/senha', [ContaController::class, 'atualizarSenha']);
-
-    // O papel de tutor acrescentado a uma conta que já existe (RF12, RN05) —
-    // o caminho do veterinário que também cuida dos próprios animais. Vive em
-    // `/conta` porque é da conta que se trata: não há prestador algum no
-    // assunto. Com limite de frequência, porque o CPF é único na plataforma e
-    // sem ele a rota responderia, a qualquer conta, se um CPF tem cadastro.
-    Route::post('/conta/tutor', [PapelDeTutorController::class, 'store'])
-        ->middleware('throttle:6,1');
 
     // T01 — painel do tutor (RF50). Sob autenticação, como tudo o que não seja
     // a verificação pública de documento (RN01).
@@ -234,10 +223,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // T02 — relação de animais do tutor (RF16).
     Route::get('/animais', [AnimalController::class, 'index']);
-
-    // T03 — cadastrar animal (RF16, RF17, RF20a). A única escrita do tutor
-    // sobre o próprio animal: identificação, e nada de caracterização (RN18).
-    Route::post('/animais', [AnimalController::class, 'store']);
 
     // T04 — perfil do animal (RF16, RF17, RF19).
     Route::get('/animais/{codigo}', [AnimalController::class, 'show']);

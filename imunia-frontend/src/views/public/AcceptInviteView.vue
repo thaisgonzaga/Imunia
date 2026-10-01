@@ -151,7 +151,7 @@ async function solicitarNovoConvite() {
         </template>
       </p>
       <p class="auth-text auth-text--muted">
-        Peça um convite novo à clínica, ou crie sua conta direto.
+        Peça um convite novo à clínica. Se você já tem conta, entre com o seu e-mail.
       </p>
 
       <div v-if="reenviado" class="auth-notice auth-notice--consentimento" role="status">
@@ -168,7 +168,7 @@ async function solicitarNovoConvite() {
         Solicitar novo convite
       </AppButton>
 
-      <RouterLink to="/criar-conta" class="auth-link">Criar conta por conta própria</RouterLink>
+      <RouterLink to="/entrar" class="auth-link">Voltar para entrar</RouterLink>
     </AuthCard>
 
     <AuthCard v-else-if="situacao === 'aceito'">
@@ -191,13 +191,12 @@ async function solicitarNovoConvite() {
       <h1 class="auth-title">Não encontramos este convite</h1>
       <p class="auth-text">
         A ligação pode ter sido copiada pela metade. Abra o convite direto pela mensagem que
-        você recebeu, ou crie sua conta por conta própria.
+        você recebeu. Se não encontrar a mensagem, peça à clínica que envie um convite novo.
       </p>
 
-      <RouterLink to="/criar-conta" class="auth-link-button auth-link-button--primary">
-        Criar conta de tutor
+      <RouterLink to="/entrar" class="auth-link-button auth-link-button--primary">
+        Voltar para entrar
       </RouterLink>
-      <RouterLink to="/entrar" class="auth-link">Voltar para entrar</RouterLink>
     </AuthCard>
 
     <!-- Convite válido: 480 px, para caber o cabeçalho de quem convidou. -->

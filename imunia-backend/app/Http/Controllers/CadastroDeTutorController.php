@@ -44,18 +44,22 @@ class CadastroDeTutorController extends Controller
         }
 
         // Depois do CPF, de propósito: com cadastro existente, o fluxo segue
-        // para o animal e o e-mail digitado nem chega a importar. A recusa confirma que
-        // o endereço tem conta, mas não de quem nem de que papel — e quem a lê
-        // é um profissional autenticado com o titular à sua frente, não o
-        // visitante anônimo de quem o autocadastro se defende.
-        if (User::query()->where('email', $dados['email'])->exists()) {
+        // para o animal e o e-mail digitado nem chega a importar.
+        $contaExistente = User::query()->where('email', $dados['email'])->first();
+
+        // RN05 — um e-mail, uma conta, os papéis que a pessoa tiver. O endereço
+        // que já é de outro tutor é recusado: são dois CPFs para uma conta. O de
+        // quem ainda não é tutor — o veterinário que também tem animais, por
+        // exemplo — ganha o papel na própria conta, sem convite: ela já tem
+        // senha, e o aviso do animal novo chega pelo caminho de sempre.
+        if ($contaExistente?->tutor()->exists()) {
             throw ValidationException::withMessages([
-                'email' => 'Já existe uma conta com este e-mail na plataforma. Confira o endereço com o tutor.',
+                'email' => 'Este e-mail já é de outro tutor na plataforma. Confira o endereço com o tutor.',
             ]);
         }
 
-        $tutor = DB::transaction(function () use ($dados) {
-            $usuario = User::create([
+        $tutor = DB::transaction(function () use ($dados, $contaExistente) {
+            $usuario = $contaExistente ?? User::create([
                 'name' => $dados['nome'],
                 'email' => $dados['email'],
                 // Inacessível de propósito, como em A03: a senha real é
@@ -63,15 +67,13 @@ class CadastroDeTutorController extends Controller
                 'password' => Str::random(64),
             ]);
 
-            $tutor = Tutor::create([
+            return Tutor::create([
                 'user_id' => $usuario->id,
                 'nome' => $dados['nome'],
                 'cpf' => $dados['cpf'],
                 // Sem aceite de termos: quem os aceita é o titular, na
                 // ativação. O veterinário não pode consentir por ele.
             ]);
-
-            return $tutor;
         });
 
         // Nenhum e-mail sai aqui: o convite vai com o primeiro animal

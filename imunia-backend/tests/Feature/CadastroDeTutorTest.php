@@ -168,12 +168,13 @@ class CadastroDeTutorTest extends TestCase
         $this->assertSame(0, RegistroDeAcesso::query()->count());
     }
 
-    public function test_email_em_uso_recusa_sem_criar_nada(): void
+    public function test_email_de_outro_tutor_recusa_sem_criar_nada(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        User::factory()->create(['email' => 'helena@example.com']);
+        $outra = User::factory()->create(['email' => 'helena@example.com']);
+        Tutor::factory()->for($outra)->create();
 
         $response = $this->actingAs($marcelo)->postJson(
             '/api/clinica/tutores',
@@ -182,8 +183,36 @@ class CadastroDeTutorTest extends TestCase
 
         $response->assertStatus(422)->assertJsonValidationErrors(['email']);
 
-        $this->assertSame(0, Tutor::query()->count());
+        $this->assertSame(1, Tutor::query()->count());
         $this->assertSame(0, Convite::query()->count());
+    }
+
+    public function test_email_de_conta_sem_papel_de_tutor_ganha_o_papel_na_mesma_conta(): void
+    {
+        // RN05 — o veterinário que também tem animais: uma conta, dois papéis.
+        // Sem o autocadastro, é por aqui que ele vira tutor.
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $larissa = $this->marcelo($this->clinica('Hospital Veterinário Central'));
+        $larissa->forceFill(['email' => 'larissa@example.com', 'ativado_em' => now()])->save();
+
+        $this->actingAs($marcelo)
+            ->postJson('/api/clinica/tutores', $this->dados([
+                'nome' => 'Larissa Prado',
+                'email' => 'larissa@example.com',
+            ]))
+            ->assertStatus(201)
+            ->assertJsonPath('tutor.nome', 'Larissa Prado');
+
+        $this->assertSame(1, User::query()->where('email', 'larissa@example.com')->count());
+
+        $tutor = Tutor::query()->where('cpf', self::CPF_VALIDO)->sole();
+        $this->assertSame($larissa->id, $tutor->user_id);
+
+        // A conta continua a mesma — senha, ativação e o papel de veterinário.
+        $this->assertNotNull($larissa->refresh()->ativado_em);
+        $this->assertContains('tutor', $larissa->papeis());
+        $this->assertContains('veterinario', $larissa->papeis());
     }
 
     public function test_cpf_com_digito_verificador_incorreto_e_recusado(): void

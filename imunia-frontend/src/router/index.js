@@ -47,11 +47,6 @@ const router = createRouter({
       component: () => import('@/views/public/RegisterProviderView.vue'),
     },
     {
-      path: '/criar-conta',
-      name: 'create-tutor-account',
-      component: () => import('@/views/public/CreateTutorAccountView.vue'),
-    },
-    {
       // P10 e P11 — os dois documentos que a caixa de aceite de P05 exige ler
       // antes de marcar. Públicos e sem guarda: quem ainda não tem conta é
       // justamente quem mais precisa deles.
@@ -103,17 +98,6 @@ const router = createRouter({
       meta: { requerAutenticacao: true },
     },
     {
-      // O cadastro de tutor acrescentado a uma conta que já existe (RF12,
-      // RN05) — o caminho do veterinário que também tem um animal. Vive sob
-      // `/conta` como a tela que a origina, e sem `area`: quem chega aqui é
-      // justamente quem ainda não tem o papel de tutor, e uma guarda por área
-      // o recusaria na porta do cadastro que veio fazer.
-      path: '/conta/tutor',
-      name: 'account-tutor-profile',
-      component: () => import('@/views/CreateTutorProfileView.vue'),
-      meta: { requerAutenticacao: true },
-    },
-    {
       // T17 — histórico de notificações (RF45), destino do sino do cabeçalho
       // do tutor. Diferente de `/conta`, tem área: o briefing a abre também ao
       // veterinário (RF45a), mas o âmbito dele é outro — o vínculo da clínica
@@ -150,15 +134,6 @@ const router = createRouter({
       meta: { requerAutenticacao: true, area: 'tutor' },
     },
     {
-      // T03 — cadastrar animal (RF16, RF17). Declarada antes de
-      // `/animais/:codigo`: a rota dinâmica casa com qualquer segmento, e
-      // depois dela "novo" seria lido como código de animal.
-      path: '/animais/novo',
-      name: 'tutor-new-animal',
-      component: () => import('@/views/tutor/AnimalCreateView.vue'),
-      meta: { requerAutenticacao: true, area: 'tutor' },
-    },
-    {
       // T04 — perfil do animal (RF16, RF17, RF19).
       path: '/animais/:codigo',
       name: 'tutor-animal-profile',
@@ -169,7 +144,7 @@ const router = createRouter({
       // T04a — editar a identificação do animal (RF16, RN20). Tela própria, e
       // não modal sobre T04: o que ela altera é o cadastro inteiro — nome,
       // espécie e fotografia —, e o endereço precisa poder ser guardado e
-      // recarregado como o de T03.
+      // recarregado.
       path: '/animais/:codigo/editar',
       name: 'tutor-edit-animal',
       component: () => import('@/views/tutor/AnimalEditView.vue'),
@@ -292,8 +267,8 @@ const router = createRouter({
     },
     {
       // V05 — cadastrar animal no atendimento (RF16, RF19, RF20). Declarada
-      // antes de `/clinica/animais/:codigo`, como `/animais/novo` do tutor e
-      // pelo mesmo motivo: a rota dinâmica leria "novo" como código.
+      // antes de `/clinica/animais/:codigo`: a rota dinâmica leria "novo"
+      // como código.
       path: '/clinica/animais/novo',
       name: 'vet-new-animal',
       component: () => import('@/views/vet/CadastrarAnimalView.vue'),

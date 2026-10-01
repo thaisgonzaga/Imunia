@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Prestador;
 use App\Models\Tutor;
 use App\Models\User;
-use App\Support\DocumentosLegais;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -19,8 +18,8 @@ use Tests\TestCase;
  * dois endereços — e dois endereços são duas pessoas para o resto do sistema,
  * do livro de acessos à autoria dos registros.
  *
- * O acréscimo acontece pelo cadastro de tutor autenticado e pelo convite de
- * equipe de A03. O cadastro público de estabelecimento (P04) não participa: ele
+ * O acréscimo acontece pelo cadastro de tutor feito pela clínica (V04), que
+ * anexa o papel à conta existente do endereço, e pelo convite de equipe de A03. O cadastro público de estabelecimento (P04) não participa: ele
  * é tela de porta, aberta a quem não tem conta, e não lê a sessão de quem a
  * preenche.
  */
@@ -129,150 +128,6 @@ class ContaComDoisPapeisTest extends TestCase
 
     // ------------------------------------------------------------------
     // O veterinário que também tem um animal
-    // ------------------------------------------------------------------
-
-    public function test_veterinario_autenticado_cria_o_proprio_cadastro_de_tutor(): void
-    {
-        $usuario = User::factory()->create(['name' => 'Marcelo Andrade']);
-
-        $resposta = $this->actingAs($usuario)->postJson('/api/conta/tutor', [
-            'cpf' => '529.982.247-25',
-            'aceite_termos' => true,
-        ]);
-
-        $resposta->assertCreated();
-        $resposta->assertJsonPath('tutor.nome', 'Marcelo Andrade');
-
-        $tutor = Tutor::firstWhere('user_id', $usuario->id);
-
-        $this->assertNotNull($tutor);
-        $this->assertSame('52998224725', $tutor->cpf);
-        $this->assertContains('tutor', $resposta->json('usuario.papeis'));
-        $this->assertSame('/inicio', $resposta->json('usuario.rota_inicial'));
-    }
-
-    public function test_cadastro_de_tutor_da_conta_registra_o_aceite_com_data_e_versao(): void
-    {
-        $usuario = User::factory()->create(['name' => 'Marcelo Andrade']);
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', ['cpf' => '52998224725', 'aceite_termos' => true])
-            ->assertCreated();
-
-        $tutor = Tutor::firstWhere('user_id', $usuario->id);
-
-        $this->assertTrue($tutor->termos_aceitos_em->isSameMinute(now()));
-        $this->assertSame(DocumentosLegais::VERSAO, $tutor->termos_versao);
-    }
-
-    public function test_sem_aceite_dos_termos_nao_ha_cadastro_de_tutor(): void
-    {
-        $usuario = User::factory()->create();
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', ['cpf' => '52998224725'])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('aceite_termos');
-
-        $this->assertSame(0, Tutor::query()->count());
-    }
-
-    public function test_conta_que_ja_e_tutora_nao_ganha_segundo_cadastro(): void
-    {
-        $usuario = User::factory()->create();
-        Tutor::factory()->for($usuario)->create();
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', ['cpf' => '52998224725', 'aceite_termos' => true])
-            ->assertStatus(409);
-
-        $this->assertSame(1, Tutor::query()->count());
-    }
-
-    /**
-     * RF12a — o CPF é único na plataforma. A recusa sai pela chave neutra do
-     * autocadastro, e não pelo campo `cpf`: responder "este CPF tem cadastro"
-     * a qualquer conta autenticada transformaria a rota em consulta de
-     * existência, que é o que RN12 e RF12b negam fora do atendimento.
-     */
-    public function test_cpf_de_outro_tutor_e_recusado_sem_dizer_que_e_o_cpf(): void
-    {
-        Tutor::factory()->create(['cpf' => '52998224725']);
-
-        $usuario = User::factory()->create();
-
-        $resposta = $this->actingAs($usuario)->postJson('/api/conta/tutor', [
-            'cpf' => '52998224725',
-            'aceite_termos' => true,
-        ]);
-
-        $resposta->assertStatus(422);
-        $resposta->assertJsonValidationErrors('conta');
-        $resposta->assertJsonMissingValidationErrors('cpf');
-    }
-
-    /**
-     * Quem foi convidado para uma equipe e ainda não definiu o nome informa-o
-     * aqui — e é a única vez em que este formulário o pede.
-     */
-    public function test_conta_sem_nome_informa_o_nome_ao_criar_o_cadastro_de_tutor(): void
-    {
-        $usuario = User::factory()->create(['name' => '']);
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', ['cpf' => '52998224725', 'aceite_termos' => true])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('nome');
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', [
-                'cpf' => '52998224725',
-                'nome' => 'Marcelo Andrade',
-                'aceite_termos' => true,
-            ])
-            ->assertCreated();
-
-        $this->assertSame('Marcelo Andrade', $usuario->refresh()->name);
-        $this->assertSame('Marcelo Andrade', Tutor::firstWhere('user_id', $usuario->id)->nome);
-    }
-
-    public function test_conta_com_nome_nao_o_redigita_aqui(): void
-    {
-        $usuario = User::factory()->create(['name' => 'Marcelo Andrade']);
-
-        $this->actingAs($usuario)
-            ->postJson('/api/conta/tutor', [
-                'cpf' => '52998224725',
-                'nome' => 'Outro Nome',
-                'aceite_termos' => true,
-            ])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('nome');
-
-        $this->assertSame('Marcelo Andrade', $usuario->refresh()->name);
-    }
-
-    public function test_o_autocadastro_publico_recusa_quem_ja_esta_em_uma_conta(): void
-    {
-        $usuario = User::factory()->create();
-
-        $resposta = $this->actingAs($usuario)->postJson('/api/tutores', [
-            'nome' => 'Marcelo Andrade',
-            'cpf' => '52998224725',
-            'email' => 'outro@example.com',
-            'password' => 'Segredo123',
-            'password_confirmation' => 'Segredo123',
-            'aceite_termos' => true,
-        ]);
-
-        $resposta->assertStatus(409);
-        $resposta->assertJsonPath('situacao', 'sessao_aberta');
-
-        $this->assertSame(1, User::query()->count());
-    }
-
-    // ------------------------------------------------------------------
-    // A entrada por papel
     // ------------------------------------------------------------------
 
     public function test_entrada_pelo_papel_de_tutor_leva_ao_painel_do_tutor(): void

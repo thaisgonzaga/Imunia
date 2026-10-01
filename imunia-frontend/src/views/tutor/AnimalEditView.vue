@@ -22,10 +22,10 @@ import { formatarDataAproximada } from '@/lib/masks.js'
 /**
  * T04a — editar a identificação do animal (RF16, RN20).
  *
- * A contrapartida de T03, e o mesmo desenho: primeiro o que é do tutor, sem
- * ressalva alguma; depois, explicado como divisão de trabalho, o que deixou de
- * ser dele. Duas coisas mudam entre cadastrar e corrigir, e as duas são ditas
- * na tela em vez de descobertas no envio:
+ * Primeiro o que é do tutor, sem ressalva alguma; depois, explicado como
+ * divisão de trabalho, o que deixou de ser dele. O cadastro é da clínica, e
+ * duas coisas limitam a correção — ambas ditas na tela em vez de descobertas
+ * no envio:
  *
  * - a espécie trava quando já há registro clínico (RF19d);
  * - sexo e nascimento passam ao veterinário quando ele caracteriza o animal
@@ -93,9 +93,9 @@ const declarouOpcional = computed(
 // Fotografia --------------------------------------------------------------
 
 /**
- * Os mesmos limites que o servidor aplica (RN20), repetidos aqui pelo mesmo
- * motivo de T03: descobrir que a foto era grande demais depois de esperar o
- * envio dela é o pior momento possível para saber disso.
+ * Os mesmos limites que o servidor aplica (RN20), repetidos aqui porque
+ * descobrir que a foto era grande demais depois de esperar o envio dela é o
+ * pior momento possível para saber disso.
  */
 const FORMATOS_DA_FOTO = ['image/jpeg', 'image/png', 'image/webp']
 const TAMANHO_MAXIMO_DA_FOTO_MB = 5
@@ -186,13 +186,12 @@ onUnmounted(descartarPrevia)
 // Envio --------------------------------------------------------------------
 
 /**
- * O caso em que os campos já foram gravados e só a foto não subiu. É o mesmo
- * estado de T03, pela mesma razão: o que foi salvo está salvo, e insistir na
- * foto ou seguir sem ela é decisão do tutor.
+ * O caso em que os campos já foram gravados e só a foto não subiu. O que foi
+ * salvo está salvo, e insistir na foto ou seguir sem ela é decisão do tutor.
  */
 const salvoSemFoto = ref(false)
 
-// O mesmo formato de T03 e T09: a barra entra sozinha quando o que foi escrito
+// O mesmo formato de T09: a barra entra sozinha quando o que foi escrito
 // já não pode ser um ano.
 function aoDigitarNascimento(valor) {
   form.value.nascimento = formatarDataAproximada(valor)
@@ -287,7 +286,7 @@ function primeiroErro(campo) {
 </script>
 
 <template>
-  <!-- Como em T03, `amplo`: o formulário traz a própria largura de leitura. -->
+  <!-- `amplo`: o formulário traz a própria largura de leitura. -->
   <TutorShell amplo>
     <div class="edicao">
       <RouterLink :to="`/animais/${codigo}`" class="edicao__voltar">

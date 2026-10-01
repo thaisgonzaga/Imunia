@@ -92,13 +92,13 @@ const diferenciais = [
             <p class="home-hero__lead">
               O Imunia guarda a carteira de vacinação e o prontuário de cães e gatos em um
               registro que acompanha o animal por toda a vida, mesmo que ele troque de
-              clínica. Quem decide quem pode ver esse histórico é o tutor.
+              clínica. O veterinário registra; o tutor acompanha tudo pelo celular.
             </p>
 
             <div class="home-hero__actions">
-              <RouterLink to="/criar-conta" class="home-cta home-cta--primary">
+              <RouterLink to="/entrar/tutor" class="home-cta home-cta--primary">
                 <PawPrint :size="20" />
-                Criar conta de tutor
+                Entrar
               </RouterLink>
               <RouterLink to="/cadastrar-prestador" class="home-cta home-cta--secondary">
                 <Building2 :size="20" class="home-cta__icon" />
@@ -106,13 +106,12 @@ const diferenciais = [
               </RouterLink>
             </div>
 
-            <!-- As duas portas de entrada, lado a lado. A conta é uma só e o
-                 e-mail também (RN05); o que se escolhe aqui é com qual papel
-                 se quer trabalhar agora. Sem esta linha, quem é as duas coisas
-                 conclui que precisa de duas contas. -->
+            <!-- O tutor não cria conta por aqui: o acesso chega por convite,
+                 quando a clínica cadastra o animal no e-mail dele. "Entrar"
+                 leva à porta do tutor; o veterinário tem a sua nesta linha. A
+                 conta é uma só (RN05), e o endereço escolhe o papel. -->
             <p class="home-hero__signin">
-              Já tem conta?
-              <RouterLink to="/entrar/tutor">Entrar como tutor</RouterLink>
+              Tutor recebe o acesso por convite da clínica, no e-mail cadastrado.
               <span aria-hidden="true">·</span>
               <RouterLink to="/entrar/veterinario">Entrar como veterinário</RouterLink>
             </p>

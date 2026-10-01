@@ -133,11 +133,9 @@ function emNumeros(iso) {
       <EmptyState
         v-if="animais.length === 0"
         :icone="PawPrint"
-        titulo="Cadastre seu primeiro animal"
-        descricao="Assim que ele estiver aqui, você acompanha as vacinas e recebe lembretes antes de cada dose."
-      >
-        <RouterLink to="/animais/novo" class="botao botao--primario">Cadastrar animal</RouterLink>
-      </EmptyState>
+        titulo="Nenhum animal por aqui ainda"
+        descricao="Seus animais aparecem aqui quando uma clínica que usa o Imunia os cadastrar. A partir daí, você acompanha as vacinas e recebe lembretes antes de cada dose."
+      />
 
       <template v-else>
         <section>
@@ -502,13 +500,6 @@ function emNumeros(iso) {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-}
-
-/* No painel o botão ocupa a linha inteira porque mora dentro de um bloco de
-   pendência, onde ele é a continuação da frase. No estado vazio não: ali ele é
-   um convite isolado, e fica curto e centrado sob o texto, como em T02. */
-.empty-state__acao .botao {
-  width: auto;
 }
 
 .botao--primario {

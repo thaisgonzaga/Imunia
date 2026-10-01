@@ -28,25 +28,6 @@ class EmailVerificationTest extends TestCase
     /**
      * RF12c — o autocadastro dispara imediatamente a verificação.
      */
-    public function test_autocadastro_de_tutor_dispara_a_confirmacao(): void
-    {
-        Notification::fake();
-
-        $this->postJson('/api/tutores', [
-            'nome' => 'Helena Ramos',
-            'cpf' => '52998224725',
-            'email' => 'helena.ramos@example.com',
-            'password' => 'Segredo123',
-            'password_confirmation' => 'Segredo123',
-            'aceite_termos' => true,
-        ])->assertCreated();
-
-        $usuario = User::firstWhere('email', 'helena.ramos@example.com');
-
-        $this->assertNull($usuario->email_verified_at);
-        Notification::assertSentTo($usuario, ConfirmacaoDeEmail::class);
-    }
-
     public function test_ligacao_valida_confirma_o_endereco(): void
     {
         $usuario = User::factory()->unverified()->create();

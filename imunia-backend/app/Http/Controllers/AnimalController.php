@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreAnimalRequest;
 use App\Http\Requests\UpdateAnimalRequest;
 use App\Models\Animal;
 use App\Models\Tutor;
 use App\Models\User;
-use App\Support\NomeSemelhante;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,51 +27,6 @@ class AnimalController extends Controller
         return response()->json([
             'animais' => $animais->map(fn (Animal $animal) => $animal->paraListagem())->all(),
         ]);
-    }
-
-    /**
-     * T03 — cadastrar animal (RF16, RF17, RF20a).
-     *
-     * O código único nasce com o cadastro, no `creating` do modelo, e não aqui:
-     * RF17c vale para toda origem de cadastro, e amarrá-lo a este verbo faria a
-     * garantia depender de qual porta o animal usou para entrar.
-     */
-    public function store(StoreAnimalRequest $request): JsonResponse
-    {
-        /** @var Tutor $tutor */
-        $tutor = $request->tutor;
-
-        $duplicado = $this->duplicidadeProvavel(
-            $tutor,
-            $request->validated('nome'),
-            $request->validated('especie'),
-        );
-
-        // RF20a — o alerta precede a confirmação e identifica o cadastro
-        // possivelmente equivalente. Não é recusa: o segundo envio, já ciente,
-        // cadastra. A prevenção importa mais do que a correção posterior
-        // porque a fusão de dois cadastros com registro clínico em ambos não é
-        // oferecida (limitação declarada de RF20).
-        if ($duplicado !== null && ! $request->boolean('confirmar_duplicidade')) {
-            return response()->json([
-                'message' => 'Você já tem um cadastro parecido com este.',
-                'duplicado' => $duplicado->paraListagem(),
-            ], 409);
-        }
-
-        $animal = $tutor->animais()->create([
-            'nome' => $request->validated('nome'),
-            'especie' => $request->validated('especie'),
-            'sexo' => $request->validated('sexo'),
-            'nascimento_em' => $request->nascimentoEm(),
-
-            // RN14 — o que o tutor declara é estimativa até que o veterinário a
-            // confirme (RF19). Explícito, e não deixado ao padrão da coluna,
-            // porque é esta linha que a resposta devolve à tela.
-            'nascimento_exato' => false,
-        ]);
-
-        return response()->json($animal->paraPerfil(), 201);
     }
 
     /**
@@ -193,24 +146,6 @@ class AnimalController extends Controller
         }
 
         return response()->json(['foto_url' => null]);
-    }
-
-    /**
-     * RF20a — "animal ativo, de mesma espécie e nome semelhante", do mesmo
-     * tutor. A espécie entra na consulta e o nome fica para
-     * `NomeSemelhante`, que compara o que o banco não sabe comparar.
-     *
-     * O animal com óbito registrado está fora: quem cadastra outro cão com o
-     * nome do que morreu não está duplicando cadastro algum, e receber um
-     * alerta nesse momento seria mais do que inútil.
-     */
-    private function duplicidadeProvavel(Tutor $tutor, string $nome, string $especie): ?Animal
-    {
-        return $tutor->animais()
-            ->where('especie', $especie)
-            ->whereNull('obito_em')
-            ->get()
-            ->first(fn (Animal $animal) => NomeSemelhante::entre($animal->nome, $nome));
     }
 
     private function tutorAutenticado(Request $request): Tutor
