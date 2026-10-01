@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -39,10 +38,9 @@ class RegistrosDaClinicaTest extends TestCase
     }
 
     /**
-     * Um animal **sem** autorização alguma, de propósito: o âmbito deste livro
-     * é a autoria, e a maior parte dos cenários não precisa de autorização
-     * para existir. Quem examina o endereço da linha a concede via
-     * `autorizar()`.
+     * Um animal **fora** da carteira, de propósito: o âmbito deste livro é a
+     * autoria, e a maior parte dos cenários não precisa de vínculo para
+     * existir. Quem precisa dele o cria via `vincular()`.
      */
     private function animal(string $nome = 'Théo'): Animal
     {
@@ -51,13 +49,9 @@ class RegistrosDaClinicaTest extends TestCase
         return Animal::factory()->create(['tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador): Autorizacao
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        return Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     private function antirrabica(): Imunobiologico
@@ -159,22 +153,22 @@ class RegistrosDaClinicaTest extends TestCase
 
     /**
      * O âmbito é a autoria, e as duas direções do contraste com a relação de
-     * animais precisam valer: a autorização vigente não põe no livro o que o
-     * prestador não produziu, e a falta dela não tira o que produziu.
+     * animais precisam valer: o vínculo não põe no livro o que o prestador não
+     * produziu, e a falta dele não tira o que produziu.
      */
-    public function test_o_ambito_e_a_autoria_e_nao_a_autorizacao(): void
+    public function test_o_ambito_e_a_autoria_e_nao_o_vinculo(): void
     {
         $clinica = $this->clinica();
         $outro = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica);
 
-        // Autorizado, mas nunca atendido aqui: figura na relação de animais e
+        // Vinculado, mas nunca atendido aqui: figura na relação de animais e
         // não neste livro.
-        $autorizado = $this->animal('Théo');
-        $this->autorizar($autorizado, $clinica);
-        $this->atender($autorizado, $outro, now()->subDays(2)->toDateTimeString());
+        $vinculado = $this->animal('Théo');
+        $this->vincular($vinculado, $clinica);
+        $this->atender($vinculado, $outro, now()->subDays(2)->toDateTimeString());
 
-        // Jamais autorizado, mas atendido aqui: figura neste livro e não na
+        // Jamais vinculado, mas atendido aqui: figura neste livro e não na
         // relação de animais.
         $atendido = $this->animal('Bidu');
         $this->atender($atendido, $clinica, now()->subDays(4)->toDateTimeString());
@@ -207,54 +201,40 @@ class RegistrosDaClinicaTest extends TestCase
     }
 
     /**
-     * RN40 — a revogação não alcança o que o próprio prestador produziu: a
-     * linha fica no livro. O que ela perde é o endereço, porque a leitura
-     * integral de V09 monta a série e a situação do animal com registros de
-     * todos os prestadores, e isso RN48 fecha com a revogação.
+     * Toda linha do livro leva o endereço da leitura integral de V09: a porta
+     * clínica alcança o animal pelo código, vinculado ou não, e não há mais
+     * linha sem caminho.
      */
-    public function test_sem_autorizacao_vigente_a_linha_fica_e_o_endereco_sai(): void
+    public function test_toda_linha_tem_endereco_com_ou_sem_vinculo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
+        $antirrabica = $this->antirrabica();
 
-        $vigente = $this->animal('Théo');
-        $this->autorizar($vigente, $clinica);
-        $aberto = $this->atender($vigente, $clinica, now()->subDay()->toDateTimeString());
+        $vinculado = $this->animal('Théo');
+        $this->vincular($vinculado, $clinica);
+        $aberto = $this->atender($vinculado, $clinica, now()->subDay()->toDateTimeString());
 
-        $revogado = $this->animal('Bidu');
-        Autorizacao::factory()->revogada()->create([
-            'animal_id' => $revogado->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $revogado->tutor->user_id,
-        ]);
-        $this->atender($revogado, $clinica, now()->subDays(2)->toDateTimeString());
-
-        $expirado = $this->animal('Mel');
-        Autorizacao::factory()->expirada()->create([
-            'animal_id' => $expirado->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $expirado->tutor->user_id,
-        ]);
-        $this->atender($expirado, $clinica, now()->subDays(3)->toDateTimeString());
+        $semVinculo = $this->animal('Bidu');
+        $vacina = $this->aplicar($semVinculo, $clinica, $antirrabica, now()->subDays(2)->toDateTimeString());
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/registros');
 
-        $resposta->assertJsonPath('total', 3);
+        $resposta->assertJsonPath('total', 2);
 
         $resposta->assertJsonPath('itens.0.animal.nome', 'Théo');
-        $resposta->assertJsonPath('itens.0.sob_autorizacao', true);
         $resposta->assertJsonPath(
             'itens.0.url',
-            "/clinica/animais/{$vigente->codigo}/atendimentos/{$aberto->id}?prestador={$clinica->id}",
+            "/clinica/animais/{$vinculado->codigo}/atendimentos/{$aberto->id}?prestador={$clinica->id}",
         );
+        $resposta->assertJsonMissingPath('itens.0.sob_autorizacao');
 
         $resposta->assertJsonPath('itens.1.animal.nome', 'Bidu');
-        $resposta->assertJsonPath('itens.1.sob_autorizacao', false);
-        $resposta->assertJsonPath('itens.1.url', null);
-
-        $resposta->assertJsonPath('itens.2.animal.nome', 'Mel');
-        $resposta->assertJsonPath('itens.2.sob_autorizacao', false);
-        $resposta->assertJsonPath('itens.2.url', null);
+        $resposta->assertJsonPath(
+            'itens.1.url',
+            "/clinica/animais/{$semVinculo->codigo}/vacinas/{$vacina->id}?prestador={$clinica->id}",
+        );
+        $resposta->assertJsonMissingPath('itens.1.sob_autorizacao');
     }
 
     /**
@@ -269,7 +249,7 @@ class RegistrosDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         $animal = $this->animal('Pipoca');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $original = $this->atender($animal, $clinica, now()->subDays(6)->toDateTimeString());
         $correcao = Atendimento::factory()->retificando($original)->create();

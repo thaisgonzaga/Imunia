@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -18,11 +17,9 @@ use Tests\TestCase;
 /**
  * V07a e V08a — escolher o animal antes de registrar.
  *
- * A tela é uma porta, e o que se prova aqui é sobretudo o que ela não abre:
- * animal fora do âmbito de autorização não entra no atalho, não vira caminho de
- * registro, e o que dele se diz continua sendo apenas que existe (RN12, RN48).
- * O resto — a busca e o registro de acesso — é o mesmo serviço de V03, e o teste
- * verifica que esta rota não escapou dele.
+ * O atalho é da carteira do prestador: animal que a clínica não acompanha não
+ * entra nele. O resto — a busca e o registro de acesso — é o mesmo serviço de
+ * V03, e o teste verifica que esta rota não escapou dele.
  */
 class EscolhaDeAnimalTest extends TestCase
 {
@@ -55,25 +52,10 @@ class EscolhaDeAnimalTest extends TestCase
         return Animal::factory()->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
-    {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
-    }
-
-    private function animalAutorizado(Prestador $prestador, string $nome, string $tutor): Animal
+    private function animalAcompanhado(Prestador $prestador, string $nome, string $tutor): Animal
     {
         $animal = $this->animalDe($tutor, $nome);
-        $this->autorizar($animal, $prestador);
+        $prestador->vincular($animal);
 
         return $animal;
     }
@@ -127,7 +109,7 @@ class EscolhaDeAnimalTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
 
         $this->atender($theo, $clinica, $marcelo, now()->subDays(2)->toDateTimeString());
 
@@ -144,18 +126,15 @@ class EscolhaDeAnimalTest extends TestCase
     }
 
     /**
-     * RN48 — a regra que decide o que esta tela pode oferecer. O animal foi
-     * atendido aqui, e o registro daquele atendimento continua sendo do
-     * prestador; o que caiu foi o acesso ao histórico, e sem ele não há novo
-     * registro a começar.
+     * O atalho lê a carteira do prestador, como o painel e as listas: um
+     * atendimento que não deixou o animal vinculado não o põe ali.
      */
-    public function test_animal_com_autorizacao_encerrada_sai_do_atalho(): void
+    public function test_animal_sem_vinculo_fica_fora_do_atalho(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica, 'expirada');
         $this->atender($theo, $clinica, $marcelo, now()->subDays(2)->toDateTimeString());
 
         $this->escolher($marcelo)->assertOk()->assertJsonCount(0, 'recentes');
@@ -167,12 +146,12 @@ class EscolhaDeAnimalTest extends TestCase
         $hospital = $this->clinica('Hospital Veterinário Central');
         $marcelo = $this->marcelo($clinica, $hospital);
 
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
-        $this->autorizar($theo, $hospital);
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
+        $hospital->vincular($theo);
         $this->atender($theo, $clinica, $marcelo, now()->subDays(2)->toDateTimeString());
 
-        // Atendido na clínica, e é lá que ele aparece: o hospital tem
-        // autorização vigente sobre o mesmo animal, mas ninguém passou por lá.
+        // Atendido na clínica, e é lá que ele aparece: o hospital também
+        // acompanha o mesmo animal, mas ninguém passou por lá.
         $this->escolher($marcelo, ['prestador' => $clinica->id])
             ->assertJsonCount(1, 'recentes');
 
@@ -185,8 +164,8 @@ class EscolhaDeAnimalTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
-        $mel = $this->animalAutorizado($clinica, 'Mel', 'Antônio Prado');
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
+        $mel = $this->animalAcompanhado($clinica, 'Mel', 'Antônio Prado');
 
         $this->atender($theo, $clinica, $marcelo, now()->subDays(9)->toDateTimeString());
         $this->atender($mel, $clinica, $marcelo, now()->subDay()->toDateTimeString());
@@ -205,7 +184,7 @@ class EscolhaDeAnimalTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalAutorizado($clinica, 'Bidu', 'Ruan Teixeira');
+        $animal = $this->animalAcompanhado($clinica, 'Bidu', 'Ruan Teixeira');
 
         Vacinacao::factory()->pregresso()->create([
             'animal_id' => $animal->id,
@@ -224,7 +203,7 @@ class EscolhaDeAnimalTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
 
         $imunobiologico = Imunobiologico::factory()->antirrabica()->create();
         $protocolo = ProtocoloVacinal::factory()->antirrabica()->create([
@@ -254,7 +233,7 @@ class EscolhaDeAnimalTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
 
         $this->atender($theo, $clinica, $marcelo, now()->subDays(2)->toDateTimeString());
 
@@ -265,13 +244,11 @@ class EscolhaDeAnimalTest extends TestCase
 
     /* A busca -------------------------------------------------------------- */
 
-    public function test_a_busca_devolve_o_animal_autorizado_com_o_prazo_do_acesso(): void
+    public function test_a_busca_devolve_o_animal_vinculado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $theo = $this->animalAutorizado($clinica, 'Théo', 'Helena Ramos');
-
-        $autorizacao = $theo->autorizacoes()->first();
+        $theo = $this->animalAcompanhado($clinica, 'Théo', 'Helena Ramos');
 
         $this->escolher($marcelo, ['termo' => 'Théo'])
             ->assertOk()
@@ -279,17 +256,14 @@ class EscolhaDeAnimalTest extends TestCase
             ->assertJsonCount(1, 'autorizados')
             ->assertJsonPath('autorizados.0.codigo', $theo->codigo)
             ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
-            // O prazo é do prestador sobre a própria autorização, e é o que a
-            // tela repete ao confirmar a escolha do animal.
-            ->assertJsonPath('autorizados.0.autorizado_ate', $autorizacao->expira_em->toDateString());
+            ->assertJsonPath('autorizados.0.vinculado', true);
     }
 
     /**
-     * RN12, RF18a — a tela nova não é uma segunda porta para o que V03 não
-     * mostra. Do animal sem autorização vigente saem espécie e nome, e o
-     * caminho é pedir autorização — nunca começar registro.
+     * O código alcança qualquer cadastro, como em V03: quem o tem na mão está
+     * com o animal à sua frente, e o registro pode começar por ele.
      */
-    public function test_animal_fora_do_ambito_devolve_apenas_a_existencia(): void
+    public function test_codigo_de_animal_sem_vinculo_traz_o_cartao_completo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -297,18 +271,38 @@ class EscolhaDeAnimalTest extends TestCase
 
         $this->escolher($marcelo, ['termo' => $pipoca->codigo])
             ->assertOk()
-            ->assertJsonCount(0, 'autorizados')
-            ->assertJsonPath('existencia.tipo', 'animal')
-            ->assertJsonPath('existencia.nome', 'Pipoca')
-            ->assertJsonMissing(['tutor' => 'Denise Colombo']);
+            ->assertJsonCount(1, 'autorizados')
+            ->assertJsonPath('autorizados.0.nome', 'Pipoca')
+            ->assertJsonPath('autorizados.0.tutor', 'Denise Colombo')
+            ->assertJsonPath('autorizados.0.vinculado', false)
+            ->assertJsonPath('existencia', null);
     }
 
     /**
-     * RF18b — a consulta fora do âmbito fica registrada, e o tutor a vê (T14).
+     * Por nome, a escolha só alcança a carteira — a mesma regra de V03.
+     */
+    public function test_busca_por_nome_nao_alcanca_animal_de_fora_da_carteira(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $this->animalDe('Denise Colombo', 'Pipoca');
+
+        $this->escolher($marcelo, ['termo' => 'Pipoca'])
+            ->assertOk()
+            ->assertJsonPath('estado', 'sem_resultado')
+            ->assertJsonCount(0, 'autorizados')
+            ->assertJsonMissing(['tutor' => 'Denise Colombo']);
+
+        $this->assertDatabaseCount('registros_de_acesso', 0);
+    }
+
+    /**
+     * RF18b — o encontro por código de animal que a clínica ainda não
+     * acompanha fica registrado, e o tutor o vê (T14).
      * Vale por esta rota como pela busca: o que a decide é a consulta, não a
      * tela de onde ela partiu.
      */
-    public function test_a_consulta_fora_do_ambito_fica_registrada(): void
+    public function test_a_consulta_por_codigo_de_animal_sem_vinculo_fica_registrada(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);

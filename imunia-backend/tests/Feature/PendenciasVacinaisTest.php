@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Notificacao;
 use App\Models\Prestador;
@@ -38,18 +37,13 @@ class PendenciasVacinaisTest extends TestCase
         return $usuario;
     }
 
-    private function animalAutorizado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
+    private function animalVinculado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
     {
         $tutor = Tutor::factory()->create(['nome' => "Tutor de {$nome}"]);
-        $animal = Animal::factory()->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
 
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
-
-        return $animal;
+        return Animal::factory()
+            ->acompanhadoPor($prestador)
+            ->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
     private function antirrabica(): Imunobiologico
@@ -107,21 +101,21 @@ class PendenciasVacinaisTest extends TestCase
     }
 
     /**
-     * RF49c — "animais sem autorização vigente não figuram no resultado". A
+     * RF49c — só figuram no resultado os animais da carteira do prestador. A
      * dose está vencida, o prestador aplicou a anterior, e mesmo assim a linha
-     * não existe: o que traz o animal para cá é a autorização do tutor.
+     * não existe: o que traz o animal para cá é o vínculo com o prestador.
      */
-    public function test_animal_sem_autorizacao_vigente_nao_figura_no_resultado(): void
+    public function test_animal_nao_vinculado_nao_figura_no_resultado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $autorizado = $this->animalAutorizado($clinica, 'Théo');
-        $this->aplicar($autorizado, $clinica, $antirrabica, now()->subMonths(14));
+        $vinculado = $this->animalVinculado($clinica, 'Théo');
+        $this->aplicar($vinculado, $clinica, $antirrabica, now()->subMonths(14));
 
-        $semAutorizacao = Animal::factory()->create(['nome' => 'Bidu']);
-        $this->aplicar($semAutorizacao, $clinica, $antirrabica, now()->subMonths(14));
+        $semVinculo = Animal::factory()->create(['nome' => 'Bidu']);
+        $this->aplicar($semVinculo, $clinica, $antirrabica, now()->subMonths(14));
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/pendencias');
 
@@ -130,21 +124,16 @@ class PendenciasVacinaisTest extends TestCase
         $resposta->assertJsonPath('itens.0.animal.nome', 'Théo');
     }
 
-    public function test_autorizacao_revogada_ou_expirada_nao_traz_a_pendencia(): void
+    public function test_sem_animal_vinculado_a_consulta_vem_vazia(): void
     {
         $clinica = $this->clinica();
+        $hospital = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        foreach (['revogada', 'expirada'] as $estado) {
-            $animal = Animal::factory()->create(['nome' => "Animal {$estado}"]);
-            Autorizacao::factory()->{$estado}()->create([
-                'animal_id' => $animal->id,
-                'prestador_id' => $clinica->id,
-                'concedida_por_user_id' => $animal->tutor->user_id,
-            ]);
-            $this->aplicar($animal, $clinica, $antirrabica, now()->subMonths(14));
-        }
+        // A dose foi aplicada aqui, mas o animal é da carteira de outro.
+        $animal = $this->animalVinculado($hospital, 'Amora');
+        $this->aplicar($animal, $clinica, $antirrabica, now()->subMonths(14));
 
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/pendencias')
@@ -162,13 +151,13 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $recente = $this->animalAutorizado($clinica, 'Kiko');
+        $recente = $this->animalVinculado($clinica, 'Kiko');
         $this->aplicar($recente, $clinica, $antirrabica, now()->subMonths(12)->subDays(5));
 
-        $antigo = $this->animalAutorizado($clinica, 'Pipoca');
+        $antigo = $this->animalVinculado($clinica, 'Pipoca');
         $this->aplicar($antigo, $clinica, $antirrabica, now()->subMonths(14));
 
-        $aVencer = $this->animalAutorizado($clinica, 'Mel');
+        $aVencer = $this->animalVinculado($clinica, 'Mel');
         $this->aplicar($aVencer, $clinica, $antirrabica, now()->subMonths(12)->addDays(10));
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/pendencias');
@@ -193,7 +182,7 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $animal = $this->animalAutorizado($clinica, 'Bidu');
+        $animal = $this->animalVinculado($clinica, 'Bidu');
         $this->aplicar($animal, $clinica, $antirrabica, now()->subDays(20));
 
         $this->actingAs($marcelo)
@@ -211,11 +200,11 @@ class PendenciasVacinaisTest extends TestCase
         $v10 = Imunobiologico::factory()->create();
         ProtocoloVacinal::factory()->antirrabica()->create(['imunobiologico_id' => $v10->id]);
 
-        $cao = $this->animalAutorizado($clinica, 'Pipoca', ['especie' => 'cao']);
+        $cao = $this->animalVinculado($clinica, 'Pipoca', ['especie' => 'cao']);
         $this->aplicar($cao, $clinica, $antirrabica, now()->subMonths(14));
         $this->aplicar($cao, $clinica, $v10, now()->subMonths(14));
 
-        $gato = $this->animalAutorizado($clinica, 'Mel', ['especie' => 'gato']);
+        $gato = $this->animalVinculado($clinica, 'Mel', ['especie' => 'gato']);
         $this->aplicar($gato, $clinica, $antirrabica, now()->subMonths(14));
 
         $atuando = $this->actingAs($marcelo);
@@ -254,10 +243,10 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $vencida = $this->animalAutorizado($clinica, 'Pipoca');
+        $vencida = $this->animalVinculado($clinica, 'Pipoca');
         $this->aplicar($vencida, $clinica, $antirrabica, now()->subMonths(14));
 
-        $emVinteDias = $this->animalAutorizado($clinica, 'Mel');
+        $emVinteDias = $this->animalVinculado($clinica, 'Mel');
         $this->aplicar($emVinteDias, $clinica, $antirrabica, now()->subMonths(12)->addDays(20));
 
         $atuando = $this->actingAs($marcelo);
@@ -284,7 +273,7 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $avisado = $this->animalAutorizado($clinica, 'Pipoca');
+        $avisado = $this->animalVinculado($clinica, 'Pipoca');
         $this->aplicar($avisado, $clinica, $antirrabica, now()->subMonths(14));
 
         Notificacao::factory()->create([
@@ -306,7 +295,7 @@ class PendenciasVacinaisTest extends TestCase
             'enviada_em' => now()->subDays(4),
         ]);
 
-        $nuncaAvisado = $this->animalAutorizado($clinica, 'Théo');
+        $nuncaAvisado = $this->animalVinculado($clinica, 'Théo');
         $this->aplicar($nuncaAvisado, $clinica, $antirrabica, now()->subMonths(15));
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/pendencias');
@@ -335,7 +324,7 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $animal = $this->animalAutorizado($clinica, 'Pipoca');
+        $animal = $this->animalVinculado($clinica, 'Pipoca');
         // A hora da aplicação é justamente o que produzia a divergência.
         $this->aplicar($animal, $clinica, $antirrabica, now()->subMonths(13)->setTime(9, 30));
 
@@ -357,10 +346,10 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica, $hospital);
         $antirrabica = $this->antirrabica();
 
-        $daClinica = $this->animalAutorizado($clinica, 'Théo');
+        $daClinica = $this->animalVinculado($clinica, 'Théo');
         $this->aplicar($daClinica, $clinica, $antirrabica, now()->subMonths(14));
 
-        $doHospital = $this->animalAutorizado($hospital, 'Amora');
+        $doHospital = $this->animalVinculado($hospital, 'Amora');
         $this->aplicar($doHospital, $hospital, $antirrabica, now()->subMonths(14));
 
         $this->actingAs($marcelo)->getJson('/api/clinica/pendencias')
@@ -395,10 +384,10 @@ class PendenciasVacinaisTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $cao = $this->animalAutorizado($clinica, 'Pipoca', ['especie' => 'cao']);
+        $cao = $this->animalVinculado($clinica, 'Pipoca', ['especie' => 'cao']);
         $this->aplicar($cao, $clinica, $antirrabica, now()->subMonths(14));
 
-        $gato = $this->animalAutorizado($clinica, 'Mel', ['especie' => 'gato']);
+        $gato = $this->animalVinculado($clinica, 'Mel', ['especie' => 'gato']);
         $this->aplicar($gato, $clinica, $antirrabica, now()->subMonths(14));
 
         $resposta = $this->actingAs($marcelo)->get('/api/clinica/pendencias/exportar?especie=gato');

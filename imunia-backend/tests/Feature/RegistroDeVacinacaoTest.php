@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -69,19 +68,10 @@ class RegistroDeVacinacaoTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
+    /** O animal já na carteira do prestador (`animal_prestador`). */
+    private function acompanhar(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     private function antirrabica(): Imunobiologico
@@ -140,7 +130,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         // RN08 — o papel administrativo não alcança o dado clínico.
         $usuario = User::factory()->create();
@@ -153,14 +143,14 @@ class RegistroDeVacinacaoTest extends TestCase
 
     /**
      * RN21 — o teste central da fatia. O vínculo é de veterinário, o prestador é
-     * o certo, a autorização está vigente: só falta a inscrição, e sem ela não
+     * o certo, o animal está na carteira: só falta a inscrição, e sem ela não
      * há registro clínico a criar.
      */
     public function test_veterinario_sem_crmv_no_vinculo_nao_registra(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = User::factory()->create();
         $usuario->prestadores()->attach($prestador, [
@@ -186,7 +176,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = $this->marcelo($prestador);
         $usuario->prestadores()->updateExistingPivot($prestador->id, ['encerrado_em' => now()->subDay()]);
@@ -201,7 +191,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $prestador = $this->clinica();
         $outro = $this->clinica('Pet Center Zona Sul');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = $this->marcelo($prestador);
 
@@ -220,39 +210,56 @@ class RegistroDeVacinacaoTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_animal_sem_autorizacao_vigente_nao_recebe_registro(): void
+    /**
+     * O código basta: o animal que a clínica ainda não acompanha recebe a
+     * aplicação, e o registro o põe na carteira do prestador.
+     */
+    public function test_animal_fora_da_carteira_recebe_registro_e_passa_a_ser_vinculado(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
-        $resposta = $this->actingAs($usuario)
-            ->postJson("/api/clinica/animais/{$animal->codigo}/vacinar", $this->corpo($imunobiologico));
+        $this->assertFalse($prestador->acompanha($animal));
 
-        $resposta->assertForbidden();
+        $this->actingAs($usuario)
+            ->postJson("/api/clinica/animais/{$animal->codigo}/vacinar", $this->corpo($imunobiologico))
+            ->assertCreated();
 
-        // A recusa nomeia o caminho: o profissional pode pedir acesso (V10).
-        $this->assertStringContainsString('Solicite o acesso', $resposta->json('message'));
-        $this->assertDatabaseCount('vacinacoes', 0);
+        $this->assertDatabaseCount('vacinacoes', 1);
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $prestador->id,
+            'origem' => Prestador::VINCULO_POR_ATENDIMENTO,
+        ]);
     }
 
-    public function test_autorizacao_expirada_e_revogada_nao_registram(): void
+    /** O vínculo é um por par: registrar de novo não duplica a carteira. */
+    public function test_registrar_em_animal_ja_vinculado_nao_duplica_o_vinculo(): void
     {
+        $prestador = $this->clinica();
+        $animal = $this->animalDe('Helena Ramos', 'Théo');
+        $prestador->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
+        $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
-        foreach (['expirada', 'revogada'] as $estado) {
-            $prestador = $this->clinica();
-            $animal = $this->animalDe('Helena Ramos', 'Théo');
-            $this->autorizar($animal, $prestador, $estado);
-            $usuario = $this->marcelo($prestador);
+        $this->actingAs($usuario)
+            ->getJson("/api/clinica/animais/{$animal->codigo}/vacinar")
+            ->assertOk();
 
-            $this->actingAs($usuario)
-                ->postJson("/api/clinica/animais/{$animal->codigo}/vacinar", $this->corpo($imunobiologico))
-                ->assertForbidden();
-        }
+        $this->actingAs($usuario)
+            ->postJson("/api/clinica/animais/{$animal->codigo}/vacinar", $this->corpo($imunobiologico))
+            ->assertCreated();
 
-        $this->assertDatabaseCount('vacinacoes', 0);
+        $this->assertDatabaseCount('animal_prestador', 1);
+
+        // A origem é a do primeiro ato: o registro não a reescreve.
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $prestador->id,
+            'origem' => Prestador::VINCULO_POR_CADASTRO,
+        ]);
     }
 
     /** RF22a — registrado o óbito, o calendário se encerra. */
@@ -260,7 +267,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo', ['obito_em' => now()->subMonth()->toDateString()]);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -282,7 +289,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -317,7 +324,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -334,7 +341,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -353,7 +360,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -387,7 +394,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -417,7 +424,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -437,7 +444,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo', ['especie' => 'cao']);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $inativa = Imunobiologico::factory()->create(['chave' => 'fora-de-linha', 'ativo' => false]);
@@ -465,7 +472,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -498,7 +505,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $semProtocolo = Imunobiologico::factory()->create(['ativo' => true, 'especie_destino' => 'ambas']);
@@ -530,7 +537,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -558,7 +565,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -585,7 +592,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -615,7 +622,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -651,7 +658,7 @@ class RegistroDeVacinacaoTest extends TestCase
             'nascimento_em' => now()->subWeeks(11)->toDateString(),
             'nascimento_exato' => true,
         ]);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         // Série primária de 3 doses com idade mínima de 16 semanas na final.
@@ -674,7 +681,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $prestador = $this->clinica();
         $outro = $this->clinica('Pet Center Zona Sul');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -698,7 +705,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -733,7 +740,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $prestador = $this->clinica();
         $outro = $this->clinica('Pet Center Zona Sul');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -759,7 +766,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         foreach (['putJson', 'patchJson', 'deleteJson'] as $verbo) {
@@ -778,7 +785,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -802,7 +809,7 @@ class RegistroDeVacinacaoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo', ['especie' => 'cao']);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $this->antirrabica();
@@ -834,7 +841,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $prestador = $this->clinica();
         $outro = $this->clinica('Pet Center Zona Sul');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
         $imunobiologico = $this->antirrabica();
 
@@ -902,7 +909,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $propria = $this->vacinaDaClinica($clinica);
 
@@ -926,7 +933,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $outra = $this->clinica('Hospital Bicho Bom');
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $alheia = $this->vacinaDaClinica($outra);
 
@@ -942,7 +949,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         // Sem o grupo aninhado no escopo, a precedência de AND sobre OR soltaria
         // este ramo e o item inativo voltaria à lista.
@@ -960,7 +967,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo', ['especie' => 'cao']);
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $felina = $this->vacinaDaClinica($clinica, ['especie_destino' => 'gato']);
 
@@ -977,7 +984,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $outra = $this->clinica('Hospital Bicho Bom');
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $alheia = $this->vacinaDaClinica($outra, ['especie_destino' => 'cao']);
 
@@ -997,7 +1004,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $propria = $this->vacinaDaClinica($clinica, [], [
             'numero_doses_serie_primaria' => 1,
@@ -1024,7 +1031,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $propria = $this->vacinaDaClinica($clinica, [], [
             'numero_doses_serie_primaria' => 1,
@@ -1050,7 +1057,7 @@ class RegistroDeVacinacaoTest extends TestCase
         $clinica = $this->clinica();
         $usuario = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->acompanhar($animal, $clinica);
 
         $propria = $this->vacinaDaClinica($clinica);
 

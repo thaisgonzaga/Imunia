@@ -51,9 +51,6 @@ const filtradoSemResultado = computed(
   () => consulta.value?.total === 0 && consulta.value?.total_sem_filtros > 0,
 )
 
-/** A nota da guarda só aparece quando há, na página, linha que precise dela. */
-const temLinhaSobGuarda = computed(() => itens.value.some((item) => !item.sob_autorizacao))
-
 function rotuloDaOpcao(chave, valor) {
   const lista = { tipo: 'tipos', profissional: 'profissionais' }[chave]
 
@@ -289,9 +286,6 @@ function iconeDaEspecie(especie) {
                   <span v-if="item.retifica" class="chip">retificação</span>
                   <span v-if="item.retificado" class="chip">retificado</span>
 
-                  <!-- RN40 — a linha sem autorização vigente fica; o que ela
-                       perde é o endereço. A nota sob a tabela explica. -->
-                  <span v-if="!item.sob_autorizacao" class="chip chip--guarda">sob guarda</span>
                 </span>
               </td>
               <td data-rotulo="Animal">
@@ -353,13 +347,6 @@ function iconeDaEspecie(especie) {
         </div>
       </div>
 
-      <!-- RN40 — a explicação é parte do desenho, como o bloco fixo de A01:
-           sem ela, a linha sem endereço parece defeito. -->
-      <p v-if="temLinhaSobGuarda && !filtradoSemResultado" class="registros__guarda">
-        Linhas marcadas com <strong>sob guarda</strong> são de animais sem autorização vigente do
-        tutor: o registro permanece no livro, porque a revogação não alcança o que a própria
-        clínica produziu — e a leitura completa volta a abrir com nova autorização.
-      </p>
     </div>
   </VetShell>
 </template>
@@ -407,13 +394,6 @@ function iconeDaEspecie(especie) {
 
 /* Ausência é informação, e a nota que a explica também é (--ink-muted passa no
    contraste; decisoes.md §9.1). */
-.registros__guarda {
-  margin: 0;
-  max-width: 75ch;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
 
 .registros__guarda strong {
   font-weight: 600;
@@ -690,10 +670,6 @@ function iconeDaEspecie(especie) {
   white-space: nowrap;
 }
 
-.chip--guarda {
-  border-color: var(--consent);
-  color: var(--consent);
-}
 
 .tabela__discreto {
   color: var(--ink-muted);

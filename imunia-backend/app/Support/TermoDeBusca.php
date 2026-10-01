@@ -29,12 +29,6 @@ final class TermoDeBusca
     /** ISO 11784/11785 — o transponder tem quinze dígitos. */
     private const DIGITOS_DO_MICROCHIP = 15;
 
-    /**
-     * Abaixo disto, o nome não revela existência de cadastro alheio. Ver
-     * `podeRevelarExistencia()`.
-     */
-    private const MINIMO_PARA_REVELAR_EXISTENCIA = 3;
-
     private function __construct(
         /** Um dos quatro tipos acima. */
         public readonly string $tipo,
@@ -42,8 +36,7 @@ final class TermoDeBusca
         public readonly string $original,
         /** Como o banco guarda: CPF em dígitos, código com hifens, nome como veio. */
         public readonly string $valor,
-    ) {
-    }
+    ) {}
 
     public static function de(?string $termo): self
     {
@@ -91,27 +84,13 @@ final class TermoDeBusca
     }
 
     /**
-     * RF13, RF18 — as três chaves exatas identificam um cadastro determinado, e
-     * é por isso que revelar a existência dele é resposta admissível: quem
-     * digitou o CPF já o conhecia. O nome não identifica ninguém, e por ele a
-     * segunda seção da tela responde apenas que *algo* corresponde — nunca o
-     * quê, e nunca quantos (RN12).
+     * CPF, código e micro-chip identificam um titular ou um animal
+     * determinado, e por isso alcançam qualquer cadastro; nome, só a carteira
+     * do prestador (ver `BuscaClinicaService`).
      */
     public function chaveExata(): bool
     {
         return $this->tipo !== self::NOME;
-    }
-
-    /**
-     * Termo curto não revela cadastro fora do âmbito do prestador. Duas letras
-     * corresponderiam a meia base, e a segunda seção da tela viraria contador
-     * de quantos cadastros existem — enumeração por outro nome. Dentro do
-     * âmbito de autorização a busca continua valendo com o que se digitar: ali
-     * o prestador já pode ver tudo o que encontrar.
-     */
-    public function podeRevelarExistencia(): bool
-    {
-        return $this->chaveExata() || mb_strlen($this->valor) >= self::MINIMO_PARA_REVELAR_EXISTENCIA;
     }
 
     /**

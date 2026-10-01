@@ -85,7 +85,7 @@ function abrirAba(chave) {
 }
 
 const acesso = computed(() => ficha.value?.acesso ?? null)
-const autorizado = computed(() => acesso.value === 'autorizado')
+const autorizado = computed(() => acesso.value === 'completo')
 const animal = computed(() => ficha.value?.animal ?? null)
 const autorizacao = computed(() => ficha.value?.autorizacao ?? null)
 const prestador = computed(() => ficha.value?.prestador?.nome ?? null)
@@ -336,7 +336,7 @@ async function carregar() {
     // Só com autorização vigente — sem ela não há histórico a exportar, e a
     // tela já explica o porquê — e o parâmetro sai do endereço, como acima.
     if (route.query.exportar) {
-      exportarAberto.value = ficha.value.acesso === 'autorizado'
+      exportarAberto.value = ficha.value.acesso === 'completo'
 
       router.replace({ query: { ...route.query, exportar: undefined } })
     }
@@ -347,7 +347,7 @@ async function carregar() {
     // "já registrado", que informa a data e o autor em vez de oferecer
     // formulário — e o parâmetro sai do endereço, como acima.
     if (route.query.obito) {
-      registrandoObito.value = ficha.value.acesso === 'autorizado'
+      registrandoObito.value = ficha.value.acesso === 'completo'
 
       router.replace({ query: { ...route.query, obito: undefined } })
     }

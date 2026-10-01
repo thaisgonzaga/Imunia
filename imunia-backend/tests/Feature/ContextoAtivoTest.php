@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\Tutor;
 use App\Models\User;
@@ -14,8 +13,8 @@ use Tests\TestCase;
  * A memória do contexto ativo (RF09b): a escolha de prestador feita numa tela
  * vale para a seguinte e para a próxima sessão, nos dois ambientes. Sem ela,
  * cada navegação devolvia o profissional ao primeiro vínculo — e um animal
- * recém-autorizado à clínica ficava invisível para quem estava no contexto do
- * consultório.
+ * recém-chegado à carteira da clínica ficava invisível para quem estava no
+ * contexto do consultório.
  */
 class ContextoAtivoTest extends TestCase
 {
@@ -160,26 +159,19 @@ class ContextoAtivoTest extends TestCase
             ->assertJsonPath('contexto_clinico', null);
     }
 
-    public function test_cada_vinculo_informa_animais_sob_autorizacao_vigente_e_o_papel_de_administrador(): void
+    public function test_cada_vinculo_informa_os_animais_da_carteira_e_o_papel_de_administrador(): void
     {
         $this->veterinario->prestadores()->attach($this->consultorio, ['papel' => 'admin_prestador']);
 
         $tutor = Tutor::factory()->create();
-        $animal = Animal::factory()->create(['tutor_id' => $tutor->id]);
+        $animal = Animal::factory()->acompanhadoPor($this->clinica)->create(['tutor_id' => $tutor->id]);
+        Animal::factory()->acompanhadoPor($this->clinica)->create(['tutor_id' => $tutor->id]);
 
-        // Renovada antes do prazo: duas autorizações vigentes, um animal só.
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $this->clinica->id,
-            'concedida_em' => now()->subDays(80),
-            'expira_em' => now()->addDays(10),
-        ]);
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $this->clinica->id,
-            'concedida_em' => now(),
-            'expira_em' => now()->addDays(90),
-        ]);
+        // Vincular de novo não duplica: o vínculo é um só por animal.
+        $this->clinica->vincular($animal);
+
+        // Animal de ninguém não conta para prestador algum.
+        Animal::factory()->create(['tutor_id' => $tutor->id]);
 
         $this->actingAs($this->veterinario)
             ->getJson('/api/clinica/painel')
@@ -188,7 +180,7 @@ class ContextoAtivoTest extends TestCase
             ->assertJsonPath('vinculos.0.animais', 0)
             ->assertJsonPath('vinculos.0.admin', true)
             ->assertJsonPath('vinculos.1.nome', 'Clínica Vida Animal')
-            ->assertJsonPath('vinculos.1.animais', 1)
+            ->assertJsonPath('vinculos.1.animais', 2)
             ->assertJsonPath('vinculos.1.admin', false);
     }
 }

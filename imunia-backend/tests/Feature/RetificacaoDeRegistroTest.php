@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -62,19 +61,9 @@ class RetificacaoDeRegistroTest extends TestCase
         return Animal::factory()->create(['tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): void
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     private function atendimentoDe(Animal $animal, Prestador $prestador, User $autor): Atendimento
@@ -173,7 +162,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $this->actingAs($marcelo)
@@ -195,7 +184,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $paula = $this->veterinario('Paula Nunes', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $this->actingAs($paula)
@@ -221,8 +210,8 @@ class RetificacaoDeRegistroTest extends TestCase
         $outra = $this->clinica('Pet Center');
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica, $outra);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
-        $this->autorizar($theo, $outra);
+        $this->vincular($theo, $clinica);
+        $this->vincular($theo, $outra);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $this->actingAs($marcelo)
@@ -238,19 +227,47 @@ class RetificacaoDeRegistroTest extends TestCase
             ->assertForbidden();
     }
 
-    // RN48 — a autoria não dispensa o consentimento: revogada a autorização
-    // (RF39), o prestador não alcança mais o registro que ele próprio produziu.
-    public function test_sem_autorizacao_vigente_o_registro_nao_e_exibido(): void
+    // O registro é alcançado pelo código, como a ficha: o animal fora da
+    // carteira do prestador é exibido ao autor, que continua podendo
+    // retificar, e o pedido o põe na carteira.
+    public function test_sem_vinculo_o_registro_e_exibido_e_o_animal_passa_a_ser_vinculado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica, 'revogada');
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
+
+        $this->assertFalse($clinica->acompanha($theo));
 
         $this->actingAs($marcelo)
             ->getJson("/api/clinica/animais/{$theo->codigo}/atendimentos/{$atendimento->id}?prestador={$clinica->id}")
-            ->assertForbidden();
+            ->assertOk()
+            ->assertJsonPath('pode_retificar', true);
+
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $theo->id,
+            'prestador_id' => $clinica->id,
+        ]);
+    }
+
+    // A retificação também alcança o animal pelo código: o autor corrige o
+    // próprio registro sem que o animal esteja na carteira, e a correção o
+    // põe nela.
+    public function test_o_autor_retifica_sem_vinculo_previo_e_o_animal_passa_a_ser_vinculado(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
+        $theo = $this->animalDe('Helena Ramos', 'Théo');
+        $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
+
+        $this->actingAs($marcelo)
+            ->postJson(
+                "/api/clinica/animais/{$theo->codigo}/atendimentos/{$atendimento->id}/retificar?prestador={$clinica->id}",
+                $this->prontuario(),
+            )
+            ->assertCreated();
+
+        $this->assertTrue($clinica->acompanha($theo));
     }
 
     // RN49, RF52b — abrir por endereço direto o registro de outro prestador
@@ -262,7 +279,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $paula = $this->veterinario('Paula Nunes', $outra);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $outra, $paula);
 
         $this->actingAs($marcelo)
@@ -286,7 +303,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
         $comoEstava = $atendimento->only([
             'motivo', 'anamnese', 'exame_fisico', 'hipoteses_diagnosticas', 'diagnostico', 'conduta',
@@ -327,7 +344,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         // Só dois campos mudam: o resto do corpo repete o que estava gravado,
@@ -373,7 +390,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $caminho = "/api/clinica/animais/{$theo->codigo}/atendimentos/{$atendimento->id}/retificar"
@@ -392,7 +409,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $this->actingAs($marcelo)
@@ -414,7 +431,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
 
         $iguais = collect(['motivo', 'anamnese', 'exame_fisico', 'hipoteses_diagnosticas', 'diagnostico', 'conduta'])
@@ -439,7 +456,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $atendimento = $this->atendimentoDe($theo, $clinica, $marcelo);
         $aplicacao = $this->aplicacaoDe($theo, $clinica, $marcelo);
 
@@ -470,7 +487,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $aplicacao = $this->aplicacaoDe($theo, $clinica, $marcelo);
 
         $resposta = $this->actingAs($marcelo)->postJson(
@@ -504,7 +521,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $aplicacao = $this->aplicacaoDe($theo, $clinica, $marcelo);
 
@@ -539,7 +556,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $aplicacao = $this->aplicacaoDe($theo, $clinica, $marcelo);
 
         $criada = $this->actingAs($marcelo)->postJson(
@@ -567,7 +584,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $pregresso = Vacinacao::factory()->pregresso()->create([
             ...$this->catalogo(),
@@ -593,7 +610,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
         $aplicacao = $this->aplicacaoDe($theo, $clinica, $marcelo);
 
         $this->actingAs($marcelo)
@@ -617,7 +634,7 @@ class RetificacaoDeRegistroTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->veterinario('Marcelo Andrade', $clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $aplicacao = Vacinacao::factory()->create([
             ...$this->catalogo(),

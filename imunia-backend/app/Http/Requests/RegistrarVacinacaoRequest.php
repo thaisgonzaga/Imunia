@@ -37,10 +37,10 @@ class RegistrarVacinacaoRequest extends FormRequest
     public ?Animal $animal = null;
 
     /**
-     * O âmbito é resolvido aqui, e não no controlador, pela ordem das respostas:
-     * a validação do corpo roda depois desta autorização, e um animal sem
-     * autorização vigente precisa responder 403 antes de qualquer 422 — senão o
-     * formato do erro já contaria que o pedido chegou a ser examinado.
+     * O contexto é resolvido aqui, e não no controlador, pela ordem das
+     * respostas: a validação do corpo roda depois desta autorização, e o 404 do
+     * código inexistente e o 403 do óbito precisam vir antes de qualquer 422.
+     * Alcançar o animal já o põe na carteira do prestador.
      *
      * Usa o mesmo trait dos controladores clínicos de propósito. Reescrever as
      * verificações de vínculo, prestador ativo e CRMV aqui criaria um segundo
@@ -58,14 +58,7 @@ class RegistrarVacinacaoRequest extends FormRequest
 
         abort_if($this->animal === null, 404, 'Animal não encontrado.');
 
-        // RF35c, RN37 — sem autorização vigente do tutor não há registro a
-        // começar. A recusa nomeia o caminho (V10), porque a resposta certa para
-        // o profissional aqui não é desistir: é pedir acesso.
-        abort_if(
-            ! $this->animal->autorizacoes()->where('prestador_id', $this->prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de registrar.',
-        );
+        $this->prestador->vincular($this->animal);
 
         // RF22a — registrado o óbito, o calendário se encerra e não há nova
         // aplicação a lançar. A única escrita que resta é a retificação (RF33).

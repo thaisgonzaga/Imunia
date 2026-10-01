@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\AnexoAtendimento;
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -22,7 +21,8 @@ use Tests\TestCase;
  * que produz **prontuário**. Quatro garantias são o assunto da suíte:
  *
  * 1. **Quem escreve é quem tem inscrição** (RN21), no prestador que escolheu
- *    (RF31c), sobre animal cujo tutor autorizou (RN37, RN48).
+ *    (RF31c), sobre qualquer animal cujo código tenha à mão — registrar já o
+ *    põe na carteira do prestador (`animal_prestador`).
  * 2. **Data, hora e autoria são do sistema** (RF31b): o que o formulário
  *    mandar sobre esses três é ignorado.
  * 3. **O anexo só existe vinculado ao registro** (RN28), com formato e tamanho
@@ -77,19 +77,10 @@ class RegistroDeAtendimentoTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
+    /** O animal já na carteira do prestador (`animal_prestador`). */
+    private function acompanhar(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     /**
@@ -133,7 +124,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = User::factory()->create();
         $usuario->prestadores()->attach($prestador, ['papel' => 'admin_prestador']);
@@ -143,12 +134,12 @@ class RegistroDeAtendimentoTest extends TestCase
             ->assertForbidden();
     }
 
-    /** RN21 — vínculo, prestador e autorização em ordem; falta a inscrição. */
+    /** RN21 — vínculo, prestador e carteira em ordem; falta a inscrição. */
     public function test_veterinario_sem_crmv_no_vinculo_nao_registra(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = User::factory()->create();
         $usuario->prestadores()->attach($prestador, [
@@ -168,20 +159,43 @@ class RegistroDeAtendimentoTest extends TestCase
         $this->assertDatabaseCount('atendimentos', 0);
     }
 
-    /** RN37, RN48 — sem autorização vigente não há prontuário a escrever. */
-    public function test_sem_autorizacao_vigente_o_registro_e_recusado(): void
+    /**
+     * O código basta: o animal que a clínica ainda não acompanha recebe o
+     * atendimento, e o registro o põe na carteira do prestador.
+     */
+    public function test_animal_fora_da_carteira_recebe_o_registro_e_passa_a_ser_vinculado(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador, 'revogada');
         $usuario = $this->marcelo($prestador);
+
+        $this->assertFalse($prestador->acompanha($animal));
 
         $this->actingAs($usuario)
             ->postJson("/api/clinica/animais/{$animal->codigo}/atender", $this->corpo())
-            ->assertForbidden()
-            ->assertJsonPath('message', 'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de registrar.');
+            ->assertCreated();
 
-        $this->assertDatabaseCount('atendimentos', 0);
+        $this->assertDatabaseCount('atendimentos', 1);
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $prestador->id,
+            'origem' => Prestador::VINCULO_POR_ATENDIMENTO,
+        ]);
+    }
+
+    /** Abrir a tela de registro já alcança o animal, e a carteira o recebe. */
+    public function test_abrir_o_registro_de_animal_fora_da_carteira_o_vincula(): void
+    {
+        $prestador = $this->clinica();
+        $animal = $this->animalDe('Helena Ramos', 'Théo');
+        $usuario = $this->marcelo($prestador);
+
+        $this->actingAs($usuario)
+            ->getJson("/api/clinica/animais/{$animal->codigo}/atender")
+            ->assertOk();
+
+        $this->assertTrue($prestador->acompanha($animal));
+        $this->assertDatabaseCount('animal_prestador', 1);
     }
 
     /** RF22a — registrado o óbito, encerra-se o registro clínico do animal. */
@@ -189,7 +203,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo', ['obito_em' => now()->subMonth()]);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $this->actingAs($usuario)
@@ -199,7 +213,7 @@ class RegistroDeAtendimentoTest extends TestCase
         $this->assertDatabaseCount('atendimentos', 0);
     }
 
-    /** RN12 — código inexistente é 404; fora do âmbito é 403. São coisas diferentes. */
+    /** RN12 — só o código inexistente é recusado: 404, não 403. */
     public function test_codigo_inexistente_responde_404(): void
     {
         $prestador = $this->clinica();
@@ -221,7 +235,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $resposta = $this->actingAs($usuario)->postJson(
@@ -263,7 +277,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $this->actingAs($usuario)->postJson(
@@ -278,7 +292,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $this->actingAs($usuario)
@@ -304,7 +318,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $anterior = Atendimento::factory()->create([
@@ -335,7 +349,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $this->actingAs($usuario)
@@ -384,7 +398,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         Atendimento::factory()->create([
@@ -410,7 +424,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $resposta = $this->actingAs($usuario)->postJson(
@@ -431,7 +445,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $resposta = $this->actingAs($usuario)->postJson(
@@ -452,7 +466,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $envio = $this->actingAs($usuario)->postJson(
@@ -496,7 +510,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $marcelo = $this->marcelo($prestador);
         $larissa = $this->marcelo($prestador);
@@ -520,7 +534,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $token = $this->actingAs($usuario)->postJson(
@@ -550,7 +564,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         foreach (['putJson', 'patchJson', 'deleteJson'] as $verbo) {
@@ -568,7 +582,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $primeiro = $this->actingAs($usuario)
@@ -589,7 +603,7 @@ class RegistroDeAtendimentoTest extends TestCase
         $prestador = $this->clinica();
         $outro = $this->clinica('Pet Center Zona Sul');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         Atendimento::factory()->create([
@@ -616,7 +630,7 @@ class RegistroDeAtendimentoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         Atendimento::factory()->create([
@@ -636,13 +650,13 @@ class RegistroDeAtendimentoTest extends TestCase
     /**
      * A ponta a ponta que interessa ao tutor: o que o veterinário escreveu em
      * V08 é o que Helena lê em T08, com a autoria à vista e o anexo servido
-     * pela rota que confere a autorização (RF32c).
+     * pela rota que confere o acesso (RF32c).
      */
     public function test_o_prontuario_gravado_e_o_que_o_tutor_le_depois(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $usuario = $this->marcelo($prestador);
 
         $token = $this->actingAs($usuario)->postJson(

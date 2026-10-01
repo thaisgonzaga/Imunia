@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AlcancaAnimal;
 use App\Http\Controllers\Concerns\ResolvePrestadorAtivo;
 use App\Http\Requests\RegistrarVacinacaoRequest;
 use App\Models\Animal;
@@ -33,7 +34,7 @@ use Illuminate\Http\Request;
  */
 class RegistroDeVacinacaoController extends Controller
 {
-    use ResolvePrestadorAtivo;
+    use AlcancaAnimal, ResolvePrestadorAtivo;
 
     public function __construct(
         private readonly RegistroDeVacinacaoService $registro,
@@ -111,22 +112,12 @@ class RegistroDeVacinacaoController extends Controller
     }
 
     /**
-     * RN12 — código inexistente e animal fora do âmbito respondem coisas
-     * diferentes de propósito: o primeiro é 404, o segundo é 403 que nomeia o
-     * caminho de V10. Negar a existência de quem existe mandaria o profissional
-     * procurar de novo o que ele já encontrou.
+     * Código inexistente é 404; o animal existente entra na carteira do
+     * prestador (`AlcancaAnimal`) e só o óbito impede o registro.
      */
     private function animalAutorizado(string $codigo, Prestador $prestador): Animal
     {
-        $animal = Animal::query()->with('tutor')->where('codigo', $codigo)->first();
-
-        abort_if($animal === null, 404, 'Animal não encontrado.');
-
-        abort_if(
-            ! $animal->autorizacoes()->where('prestador_id', $prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de registrar.',
-        );
+        $animal = $this->animalAlcancado($codigo, $prestador);
 
         abort_if(
             $animal->inativo(),

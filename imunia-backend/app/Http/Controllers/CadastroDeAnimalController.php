@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AlcancaAnimal;
 use App\Http\Controllers\Concerns\ResolvePrestadorAtivo;
 use App\Http\Requests\CadastrarAnimalNaClinicaRequest;
 use App\Http\Requests\CaracterizarAnimalRequest;
@@ -22,14 +23,13 @@ use Illuminate\Validation\ValidationException;
  * e caracterização de uma vez; e a consolidação (`caracterizar`), que completa
  * o cadastro preliminar iniciado pelo tutor sem jamais criar um segundo (RN19).
  *
- * O cadastro criado aqui **não** entra no âmbito do prestador: a autorização é
- * ato do tutor (RF36, RF37), e não subproduto do balcão. O sucesso conduz à
- * ficha, que no estado sem autorização já oferece o pedido de V10 — é o
- * encadeamento que RF13c promete, tela a tela.
+ * O cadastro criado aqui entra na carteira do prestador que o fez, e o sucesso
+ * conduz à ficha: cadastrar e atender são o mesmo balcão, sem etapa do tutor no
+ * meio.
  */
 class CadastroDeAnimalController extends Controller
 {
-    use ResolvePrestadorAtivo;
+    use AlcancaAnimal, ResolvePrestadorAtivo;
 
     public function store(CadastrarAnimalNaClinicaRequest $request): JsonResponse
     {
@@ -81,6 +81,8 @@ class CadastroDeAnimalController extends Controller
             'caracterizado_em' => now(),
             'caracterizado_por_user_id' => $profissional->id,
         ]);
+
+        $prestador->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
 
         return response()->json([
             'message' => "Animal cadastrado com o código {$animal->codigo}.",
@@ -195,12 +197,10 @@ class CadastroDeAnimalController extends Controller
     }
 
     /**
-     * O alerta identifica o cadastro possivelmente equivalente (RF20a) — mas o
-     * quanto ele identifica depende do âmbito. Sob autorização vigente, o
-     * cartão completo, com o caminho para a ficha. Fora dele, o mínimo que
-     * RF18a admite para animal sem autorização — nome e espécie, sem código —
-     * e a revelação fica registrada (RF18b), porque descobrir pelo formulário
-     * que o tutor tem um animal parecido é descobrir por busca com outro nome.
+     * O alerta identifica o cadastro possivelmente equivalente (RF20a), com o
+     * caminho para a ficha. Se a clínica ainda não acompanha aquele animal, a
+     * revelação fica registrada (RF18b): descobrir pelo formulário que o tutor
+     * tem um animal parecido é descobrir por busca com outro nome.
      */
     private function alertaDeDuplicidade(
         User $profissional,
@@ -208,36 +208,22 @@ class CadastroDeAnimalController extends Controller
         Tutor $tutor,
         Animal $duplicado,
     ): JsonResponse {
-        $autorizado = Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
-            ->whereKey($duplicado->id)
-            ->exists();
-
-        if ($autorizado) {
-            return response()->json([
-                'message' => 'Este tutor já tem um cadastro parecido com este.',
-                'duplicado' => [
-                    ...$duplicado->paraListagem(),
-                    'ambito' => 'autorizado',
-                ],
-            ], 409);
+        if (! $prestador->acompanha($duplicado)) {
+            RegistroDeAcesso::create([
+                'prestador_id' => $prestador->id,
+                'user_id' => $profissional->id,
+                'tutor_id' => $tutor->id,
+                'animal_id' => $duplicado->id,
+                'natureza' => RegistroDeAcesso::ALERTA_DE_DUPLICIDADE,
+                'ocorrido_em' => now(),
+            ]);
         }
-
-        RegistroDeAcesso::create([
-            'prestador_id' => $prestador->id,
-            'user_id' => $profissional->id,
-            'tutor_id' => $tutor->id,
-            'animal_id' => $duplicado->id,
-            'natureza' => RegistroDeAcesso::ALERTA_DE_DUPLICIDADE,
-            'ocorrido_em' => now(),
-        ]);
 
         return response()->json([
             'message' => 'Este tutor já tem um cadastro parecido com este.',
             'duplicado' => [
-                'nome' => $duplicado->nome,
-                'especie' => $duplicado->especie,
-                'ambito' => 'fora_do_ambito',
+                ...$duplicado->paraListagem(),
+                'ambito' => 'autorizado',
             ],
         ], 409);
     }
@@ -267,28 +253,11 @@ class CadastroDeAnimalController extends Controller
     }
 
     /**
-     * A caracterização exige autorização vigente (RN48): ela é escrita sobre o
-     * cadastro, não registro próprio do prestador. O código inexistente é 404
-     * para todos; o animal fora do âmbito responde 403 com o caminho — a
-     * ficha, que já sabe pedir a autorização (V10).
+     * O código inexistente é 404; o existente entra na carteira do prestador
+     * que o caracteriza (`AlcancaAnimal`).
      */
     private function animalAutorizado(Prestador $prestador, string $codigo): Animal
     {
-        $animal = Animal::query()->where('codigo', $codigo)->first();
-
-        abort_if($animal === null, 404, 'Animal não encontrado.');
-
-        $autorizado = Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
-            ->whereKey($animal->id)
-            ->exists();
-
-        abort_unless(
-            $autorizado,
-            403,
-            'Sem autorização vigente para este animal. Peça a autorização ao tutor pela ficha.',
-        );
-
-        return $animal;
+        return $this->animalAlcancado($codigo, $prestador);
     }
 }

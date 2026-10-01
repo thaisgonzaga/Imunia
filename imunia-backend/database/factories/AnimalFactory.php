@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Animal;
+use App\Models\Prestador;
 use App\Models\Tutor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -58,5 +59,14 @@ class AnimalFactory extends Factory
             'sexo' => 'femea',
             'nascimento_em' => null,
         ]);
+    }
+
+    /**
+     * Na carteira do prestador — o âmbito de painel, pendências, listas e
+     * busca por nome.
+     */
+    public function acompanhadoPor(Prestador $prestador): static
+    {
+        return $this->afterCreating(fn (Animal $animal) => $prestador->vincular($animal));
     }
 }

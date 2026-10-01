@@ -444,12 +444,9 @@ class EquipePrestadorTest extends TestCase
         $larissa = $this->veterinario($clinica, 'Larissa Nogueira', '20981');
 
         $tutor = Tutor::factory()->create(['nome' => 'Helena Ramos']);
-        $animal = Animal::factory()->create(['tutor_id' => $tutor->id, 'nome' => 'Théo']);
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
+        $animal = Animal::factory()
+            ->acompanhadoPor($clinica)
+            ->create(['tutor_id' => $tutor->id, 'nome' => 'Théo']);
 
         RegistroDeAcesso::factory()->create([
             'prestador_id' => $clinica->id,

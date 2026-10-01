@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AlcancaAnimal;
 use App\Http\Controllers\Concerns\ResolvePrestadorAtivo;
 use App\Http\Requests\RetificarAtendimentoRequest;
 use App\Http\Requests\RetificarVacinacaoRequest;
@@ -26,13 +27,13 @@ use Illuminate\Http\Request;
  *
  * As duas leituras existem porque T06 e T08, que mostram os mesmos registros,
  * são telas do tutor: elas partem da titularidade e respondem 403 a quem
- * escreveu o prontuário. Aqui o âmbito é a autorização vigente do prestador
- * ativo (RN48), abrir registro alheio grava a linha do livro de acessos (RN49)
+ * escreveu o prontuário. Aqui o âmbito é o contexto clínico do prestador
+ * ativo, abrir registro alheio grava a linha do livro de acessos (RN49)
  * e a resposta diz se a ação de retificar cabe a quem está lendo (RN27, RNF09).
  */
 class RegistroClinicoController extends Controller
 {
-    use ResolvePrestadorAtivo;
+    use AlcancaAnimal, ResolvePrestadorAtivo;
 
     public function __construct(
         private readonly RegistroClinicoService $registros,
@@ -126,26 +127,8 @@ class RegistroClinicoController extends Controller
         ], 201);
     }
 
-    /**
-     * RN12 e RN48 — código inexistente e animal fora do âmbito respondem coisas
-     * diferentes de propósito: o primeiro é 404; o segundo, 403 que nomeia o
-     * caminho de V10. Diferente de V06, aqui não há estado de tela para a falta
-     * de autorização: uma ficha sem autorização mostra o que RF18a permite, mas
-     * um prontuário determinado é conteúdo clínico inteiro, e não há versão
-     * reduzida dele a exibir.
-     */
     private function animalAutorizado(string $codigo, Prestador $prestador): Animal
     {
-        $animal = Animal::query()->with('tutor')->where('codigo', $codigo)->first();
-
-        abort_if($animal === null, 404, 'Animal não encontrado.');
-
-        abort_if(
-            ! $animal->autorizacoes()->where('prestador_id', $prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso para ver o registro.',
-        );
-
-        return $animal;
+        return $this->animalAlcancado($codigo, $prestador);
     }
 }

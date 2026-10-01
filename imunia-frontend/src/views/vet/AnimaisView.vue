@@ -130,17 +130,9 @@ function iconeDaEspecie(especie) {
   return especie === 'gato' ? Cat : Dog
 }
 
-/**
- * RN39 — a coluna anuncia o vencimento com a mesma antecedência da ficha e de
- * T12. O texto sai daqui, e não do servidor, porque é apresentação da mesma
- * contagem que `dias_restantes` já traz.
- */
-function vencimento(autorizacao) {
-  if (!autorizacao.a_expirar) return `até ${emNumeros(autorizacao.expira_em)}`
-  if (autorizacao.dias_restantes === 0) return 'expira hoje'
-  if (autorizacao.dias_restantes === 1) return 'expira amanhã'
-
-  return `expira em ${autorizacao.dias_restantes} dias`
+/** Desde quando a clínica acompanha o animal (vínculo criado pelo cadastro ou pelo atendimento). */
+function acompanhaDesde(vinculo) {
+  return vinculo?.desde ? `desde ${emNumeros(vinculo.desde)}` : '—'
 }
 </script>
 
@@ -289,7 +281,7 @@ function vencimento(autorizacao) {
               <th scope="col">Idade</th>
               <th scope="col">Situação vacinal</th>
               <th scope="col">Última passagem</th>
-              <th scope="col">Autorização</th>
+              <th scope="col">Acompanha</th>
               <th scope="col" class="tabela__acao">Ação</th>
             </tr>
           </thead>
@@ -328,10 +320,8 @@ function vencimento(autorizacao) {
                 <span v-if="item.ultima_passagem">{{ emNumeros(item.ultima_passagem) }}</span>
                 <span v-else class="tabela__nunca">nenhum registro aqui</span>
               </td>
-              <td data-rotulo="Autorização" class="tabela__numeros">
-                <span :class="{ 'tabela__a-expirar': item.autorizacao.a_expirar }">
-                  {{ vencimento(item.autorizacao) }}
-                </span>
+              <td data-rotulo="Acompanha" class="tabela__numeros">
+                <span>{{ acompanhaDesde(item.vinculo) }}</span>
               </td>
               <td data-rotulo="Ação" class="tabela__acao">
                 <RouterLink :to="`/clinica/animais/${item.codigo}`" class="tabela__ligacao">
@@ -695,10 +685,6 @@ function vencimento(autorizacao) {
 
 /* RN39 — o âmbar do aviso de expiração, na variante de texto que passa em
    contraste, como na coluna de atraso de V02. */
-.tabela__a-expirar {
-  font-weight: 600;
-  color: var(--status-due-text);
-}
 
 .tabela__ligacao {
   font-weight: 600;

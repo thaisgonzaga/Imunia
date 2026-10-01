@@ -17,18 +17,10 @@ use Illuminate\Support\Collection;
  * antigo, com a autoria que assinou cada um (RN22).
  *
  * O âmbito é o inverso do da relação de animais, e a inversão é a tela: lá
- * decide a autorização vigente (RN48 — quem a clínica pode *acompanhar*);
- * aqui decide a autoria (RN40 — o que a clínica *produziu e guarda*). O
- * registro do animal cuja autorização venceu ou foi revogada continua no
- * livro, porque a revogação não o alcança — retirá-lo da relação desmentiria
- * a frase que T12 exibe ao tutor antes de revogar (RF39d) e a obrigação de
- * guarda que a Resolução CFMV nº 1.321/2020 impõe ao prestador.
- *
- * A guarda lista; a leitura integral é outra coisa. Sem autorização vigente a
- * linha vem sem endereço, porque V09 monta a série da carteira e a situação do
- * animal com registros de todos os prestadores — conteúdo que RN48 fecha com a
- * revogação. A leitura do registro sob guarda, na versão que não vaza o que é
- * de terceiros, é fatia própria.
+ * decide o vínculo (RN48 — quem a clínica *acompanha*); aqui decide a autoria
+ * (RN40 — o que a clínica *produziu e guarda*, como manda a Resolução CFMV
+ * nº 1.321/2020). Toda linha tem endereço: o registro se abre pelo código do
+ * animal, como qualquer outro.
  */
 class RegistrosDaClinicaService
 {
@@ -91,7 +83,7 @@ class RegistrosDaClinicaService
 
     /**
      * RN40 — a consulta que define o âmbito: `prestador_id` nos próprios
-     * registros, e nenhuma junção com autorização. A ordem é a cronológica do
+     * registros, e nenhuma junção com vínculo. A ordem é a cronológica do
      * ato clínico, invertida: livro se folheia do que acabou de acontecer para
      * trás, e a retificação — que conserva a data do original (V09) — aparece
      * ao lado do registro que corrige, que é onde RF33b a quer visível.
@@ -115,28 +107,22 @@ class RegistrosDaClinicaService
             ->with(['animal.tutor', 'imunobiologico', 'retificacao'])
             ->get();
 
-        $autorizados = $this->animaisSobAutorizacao(
-            $prestador,
-            $atendimentos->pluck('animal_id')->merge($vacinacoes->pluck('animal_id'))->unique(),
-        );
-
         return $atendimentos
-            ->map(fn (Atendimento $registro) => $this->linhaDoAtendimento($registro, $prestador, $autorizados))
+            ->map(fn (Atendimento $registro) => $this->linhaDoAtendimento($registro, $prestador))
             ->merge($vacinacoes->map(
-                fn (Vacinacao $registro) => $this->linhaDaVacinacao($registro, $prestador, $autorizados),
+                fn (Vacinacao $registro) => $this->linhaDaVacinacao($registro, $prestador),
             ))
             ->sortByDesc(fn (array $linha) => $linha['ordenacao'])
             ->values();
     }
 
     /**
-     * @param  Collection<int, int>  $autorizados
      * @return array<string, mixed>
      */
-    private function linhaDoAtendimento(Atendimento $registro, Prestador $prestador, Collection $autorizados): array
+    private function linhaDoAtendimento(Atendimento $registro, Prestador $prestador): array
     {
         return [
-            ...$this->linhaComum($registro, $prestador, $registro->atendido_em, $autorizados),
+            ...$this->linhaComum($registro, $prestador, $registro->atendido_em),
             'tipo' => 'atendimento',
             'titulo' => $registro->titulo,
             'dose' => null,
@@ -149,13 +135,12 @@ class RegistrosDaClinicaService
     }
 
     /**
-     * @param  Collection<int, int>  $autorizados
      * @return array<string, mixed>
      */
-    private function linhaDaVacinacao(Vacinacao $registro, Prestador $prestador, Collection $autorizados): array
+    private function linhaDaVacinacao(Vacinacao $registro, Prestador $prestador): array
     {
         return [
-            ...$this->linhaComum($registro, $prestador, $registro->aplicado_em, $autorizados),
+            ...$this->linhaComum($registro, $prestador, $registro->aplicado_em),
             'tipo' => 'vacinacao',
             'titulo' => $registro->imunobiologico?->nome_comercial ?? 'Vacina não identificada',
 
@@ -173,17 +158,14 @@ class RegistrosDaClinicaService
     }
 
     /**
-     * @param  Collection<int, int>  $autorizados
      * @return array<string, mixed>
      */
     private function linhaComum(
         Atendimento|Vacinacao $registro,
         Prestador $prestador,
         CarbonInterface $em,
-        Collection $autorizados,
     ): array {
         $animal = $registro->animal;
-        $sobAutorizacao = $autorizados->contains($animal->id);
 
         return [
             'id' => $registro->id,
@@ -203,14 +185,7 @@ class RegistrosDaClinicaService
                 'especie' => $animal->especie,
             ],
             'tutor' => $animal->tutor->nome,
-            'sob_autorizacao' => $sobAutorizacao,
-
-            // Sem autorização vigente, sem endereço: V09 responderia 403, e a
-            // tela não oferece o que o servidor recusa (RNF09). A linha fica —
-            // é a guarda de RN40 —, e o endereço volta com a autorização.
-            'url' => $sobAutorizacao
-                ? $this->caminho($registro, $animal, $prestador)
-                : null,
+            'url' => $this->caminho($registro, $animal, $prestador),
 
             'ordenacao' => [
                 $em->format('Y-m-d H:i:s'),
@@ -230,25 +205,6 @@ class RegistrosDaClinicaService
         $segmento = $registro instanceof Atendimento ? 'atendimentos' : 'vacinas';
 
         return "/clinica/animais/{$animal->codigo}/{$segmento}/{$registro->id}?prestador={$prestador->id}";
-    }
-
-    /**
-     * RN48 — a única pergunta sobre autorização que este livro faz, e ela não
-     * decide quem figura: decide qual linha tem endereço.
-     *
-     * @param  Collection<int, int>  $ids
-     * @return Collection<int, int>
-     */
-    private function animaisSobAutorizacao(Prestador $prestador, Collection $ids): Collection
-    {
-        if ($ids->isEmpty()) {
-            return collect();
-        }
-
-        return Animal::query()
-            ->whereIn('id', $ids)
-            ->sobAutorizacaoVigenteDe($prestador)
-            ->pluck('id');
     }
 
     /**

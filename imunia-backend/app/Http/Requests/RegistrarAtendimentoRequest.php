@@ -20,9 +20,8 @@ use Illuminate\Validation\Validator;
  * que não existe seria pior do que declarar a pendência.
  *
  * O âmbito é resolvido em `authorize()`, e não no controlador, pela mesma ordem
- * de respostas de V07: um animal sem autorização vigente precisa responder 403
- * antes de qualquer 422, senão o formato do erro já contaria que o prontuário
- * chegou a ser examinado.
+ * de respostas de V07: o 404 do código inexistente e o 403 do óbito vêm antes
+ * de qualquer 422. Alcançar o animal já o põe na carteira do prestador.
  */
 class RegistrarAtendimentoRequest extends FormRequest
 {
@@ -45,14 +44,7 @@ class RegistrarAtendimentoRequest extends FormRequest
 
         abort_if($this->animal === null, 404, 'Animal não encontrado.');
 
-        // RF35c, RN37 — sem autorização vigente do tutor não há prontuário a
-        // escrever. A recusa nomeia o caminho (V10): a resposta certa para o
-        // profissional aqui não é desistir, é pedir acesso.
-        abort_if(
-            ! $this->animal->autorizacoes()->where('prestador_id', $this->prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de registrar.',
-        );
+        $this->prestador->vincular($this->animal);
 
         // RF22a — registrado o óbito, encerram-se os registros clínicos do
         // animal. A única escrita que resta é a retificação (RF33).

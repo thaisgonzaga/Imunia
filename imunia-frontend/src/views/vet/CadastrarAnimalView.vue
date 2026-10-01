@@ -168,6 +168,13 @@ async function carregar() {
       // vínculos. Nada é consultado nem registrado.
       contexto.value = await apiGet('/api/clinica/buscar')
 
+      // Vindo de V04 com o tutor já resolvido, a barreira do CPF se confere
+      // sozinha.
+      if (route.query.cpf) {
+        cpf.value = String(route.query.cpf)
+        await verificar()
+      }
+
       return
     }
 
@@ -223,7 +230,10 @@ async function verificar() {
 
     const consulta = await apiGet(`/api/clinica/buscar?${busca}`)
 
-    if (consulta.autorizados?.length) {
+    if (consulta.tutor) {
+      tutorConhecido.value = consulta.tutor.nome
+      etapaDoTutor.value = 'confirmado'
+    } else if (consulta.autorizados?.length) {
       tutorConhecido.value = consulta.autorizados[0].tutor
       etapaDoTutor.value = 'confirmado'
     } else if (consulta.existencia?.tipo === 'tutor') {

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\AnexoAtendimento;
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -19,8 +18,8 @@ use Tests\TestCase;
  *
  * Três garantias são o assunto destes testes, e as três são de conformidade:
  *
- * 1. Sem autorização vigente, a ficha responde espécie, nome e código — e nada
- *    mais (RF35c). Nem o nome do tutor, nem a contagem de registros.
+ * 1. O código alcança o animal: a ficha sai inteira para qualquer prestador
+ *    que o tenha na mão, e abri-la põe o animal na carteira do prestador.
  * 2. A gravação do log precede a exibição (RF52b): a resposta que traz registro
  *    de outro prestador deixa a linha gravada, e a que não traz não deixa.
  * 3. O óbito registrado encerra o calendário (RF22a) sem esconder o histórico.
@@ -63,19 +62,9 @@ class FichaClinicaTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     private function atender(Animal $animal, Prestador $prestador, User $profissional): Atendimento
@@ -116,7 +105,7 @@ class FichaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $hospital = $this->clinica('Hospital Veterinário Central');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $hospital);
+        $this->vincular($animal, $hospital);
 
         $this->abrirFicha($this->marcelo($clinica), $animal, ['prestador' => $hospital->id])
             ->assertForbidden();
@@ -131,83 +120,93 @@ class FichaClinicaTest extends TestCase
             ->assertNotFound();
     }
 
-    /* Sem autorização — o estado P2 -------------------------------------- */
+    /* Alcance pelo código — o vínculo nasce da ficha ----------------------- */
 
     /**
-     * RF35c — na ausência de autorização, nada além da identificação do animal.
-     * O teste afirma pela negativa, que é como a regra é escrita: o que não pode
-     * aparecer não aparece em canto algum da resposta.
+     * O código é identificador exato: quem o tem na mão está com o animal à
+     * frente, e o atendimento não espera pelo tutor. A ficha sai inteira para
+     * o animal que a clínica nunca viu, e abri-la o põe na carteira dela.
      */
-    public function test_sem_autorizacao_a_ficha_devolve_apenas_a_identificacao_do_animal(): void
+    public function test_animal_fora_da_carteira_e_alcancado_pelo_codigo_e_passa_a_ser_vinculado(): void
     {
         $clinica = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Mel', ['especie' => 'gato']);
 
-        $resposta = $this->abrirFicha($this->marcelo($clinica), $animal)
+        $this->assertFalse($clinica->acompanha($animal));
+
+        $this->abrirFicha($this->marcelo($clinica), $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'sem_autorizacao')
+            ->assertJsonPath('acesso', 'completo')
             ->assertJsonPath('animal.nome', 'Mel')
             ->assertJsonPath('animal.especie', 'gato')
             ->assertJsonPath('animal.codigo', $animal->codigo)
-            ->assertJsonPath('autorizacao', null)
+            ->assertJsonPath('animal.tutor.nome', 'Helena Ramos')
+            ->assertJsonPath('vinculo.desde', now()->toDateString())
+            ->assertJsonPath('vinculo.origem', Prestador::VINCULO_POR_ATENDIMENTO)
+            ->assertJsonMissingPath('autorizacao');
 
-            // Os blocos da ficha não vêm vazios: não vêm.
-            ->assertJsonMissingPath('carteira')
-            ->assertJsonMissingPath('historico')
-            ->assertJsonMissingPath('alertas')
-            ->assertJsonMissingPath('resumo')
-            ->assertJsonMissingPath('anexos')
-            ->assertJsonMissingPath('animal.tutor');
-
-        // RN12 — nem o nome do tutor, nem o do animal por via indireta, nem
-        // data de nascimento: a resposta inteira não contém a palavra.
-        $this->assertStringNotContainsString('Helena', $resposta->getContent());
-    }
-
-    public function test_autorizacao_expirada_nao_abre_a_ficha(): void
-    {
-        $clinica = $this->clinica();
-        $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica, 'expirada');
-
-        $this->abrirFicha($this->marcelo($clinica), $animal)
-            ->assertOk()
-            ->assertJsonPath('acesso', 'sem_autorizacao');
-    }
-
-    public function test_autorizacao_revogada_nao_abre_a_ficha(): void
-    {
-        $clinica = $this->clinica();
-        $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica, 'revogada');
-
-        $this->abrirFicha($this->marcelo($clinica), $animal)
-            ->assertOk()
-            ->assertJsonPath('acesso', 'sem_autorizacao');
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $clinica->id,
+            'origem' => Prestador::VINCULO_POR_ATENDIMENTO,
+        ]);
     }
 
     /**
-     * RN37 — a autorização é nominal e por prestador. A concedida à clínica
-     * não vale no hospital, ainda que seja o mesmo profissional em ambos: é o
-     * prestador que responde pela guarda do prontuário (decisoes.md §4.2).
+     * O vínculo é idempotente: reabrir a ficha não o recria, e a origem e a
+     * data do primeiro ato — aqui, o cadastro pela clínica — continuam sendo
+     * as que a ficha mostra.
      */
-    public function test_autorizacao_de_outro_prestador_nao_vale_no_contexto_ativo(): void
+    public function test_reabrir_a_ficha_preserva_a_origem_e_a_data_do_vinculo(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $animal = $this->animalDe('Helena Ramos', 'Théo');
+
+        $this->travel(-10)->days();
+        $clinica->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
+        $this->travelBack();
+
+        $this->abrirFicha($marcelo, $animal)->assertOk();
+        $this->abrirFicha($marcelo, $animal)
+            ->assertOk()
+            ->assertJsonPath('vinculo.origem', Prestador::VINCULO_POR_CADASTRO)
+            ->assertJsonPath('vinculo.desde', now()->subDays(10)->toDateString());
+
+        $this->assertDatabaseCount('animal_prestador', 1);
+    }
+
+    /**
+     * O vínculo é por prestador. O mesmo profissional, aberto o animal no
+     * contexto do hospital, põe o animal na carteira do hospital — e a da
+     * clínica, onde ele já estava, não muda.
+     */
+    public function test_abrir_a_ficha_em_outro_contexto_vincula_o_prestador_ativo(): void
     {
         $clinica = $this->clinica();
         $hospital = $this->clinica('Hospital Veterinário Central');
         $marcelo = $this->marcelo($clinica, $hospital);
 
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $this->abrirFicha($marcelo, $animal, ['prestador' => $hospital->id])
             ->assertOk()
-            ->assertJsonPath('acesso', 'sem_autorizacao');
+            ->assertJsonPath('acesso', 'completo')
+            ->assertJsonPath('prestador.id', $hospital->id);
+
+        $this->assertTrue($hospital->acompanha($animal));
+        $this->assertTrue($clinica->acompanha($animal));
+        $this->assertDatabaseCount('animal_prestador', 2);
     }
 
     /* Log de acesso — RF52 ------------------------------------------------ */
 
-    public function test_abrir_ficha_sem_autorizacao_fica_registrado(): void
+    /**
+     * Abrir a ficha de um animal novo para a clínica não é, por si, acesso a
+     * registro alheio: sem histórico de outro prestador, nenhuma linha.
+     */
+    public function test_abrir_ficha_de_animal_novo_sem_historico_alheio_nao_gera_log(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -215,13 +214,7 @@ class FichaClinicaTest extends TestCase
 
         $this->abrirFicha($marcelo, $animal)->assertOk();
 
-        $this->assertDatabaseHas('registros_de_acesso', [
-            'prestador_id' => $clinica->id,
-            'user_id' => $marcelo->id,
-            'tutor_id' => $animal->tutor_id,
-            'animal_id' => $animal->id,
-            'natureza' => RegistroDeAcesso::FICHA_SEM_AUTORIZACAO,
-        ]);
+        $this->assertDatabaseCount('registros_de_acesso', 0);
     }
 
     /**
@@ -235,12 +228,12 @@ class FichaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->atender($animal, $clinica, $marcelo);
 
         $this->abrirFicha($marcelo, $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'autorizado')
+            ->assertJsonPath('acesso', 'completo')
             ->assertJsonPath('aviso_outro_prestador', false);
 
         $this->assertDatabaseCount('registros_de_acesso', 0);
@@ -253,7 +246,7 @@ class FichaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->atender($animal, $petCenter, $marcelo);
 
         $this->abrirFicha($marcelo, $animal)
@@ -280,7 +273,7 @@ class FichaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->atender($animal, $petCenter, $marcelo);
 
         $this->abrirFicha($marcelo, $animal)->assertOk();
@@ -289,53 +282,37 @@ class FichaClinicaTest extends TestCase
         $this->assertDatabaseCount('registros_de_acesso', 2);
     }
 
-    /* Ficha autorizada ---------------------------------------------------- */
+    /* Ficha completa ------------------------------------------------------ */
 
-    public function test_a_ficha_autorizada_traz_as_quatro_abas_e_o_prazo_da_autorizacao(): void
+    public function test_a_ficha_traz_as_quatro_abas_e_o_vinculo_com_o_prestador(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $autorizacao = $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
-        $this->abrirFicha($marcelo, $animal)
+        $resposta = $this->abrirFicha($marcelo, $animal)
             ->assertOk()
-            ->assertJsonPath('acesso', 'autorizado')
+            ->assertJsonPath('acesso', 'completo')
             ->assertJsonPath('animal.tutor.nome', 'Helena Ramos')
-            ->assertJsonPath('autorizacao.expira_em', $autorizacao->expira_em->toDateString())
-            ->assertJsonPath('autorizacao.a_expirar', false)
+            ->assertJsonPath('vinculo.desde', now()->toDateString())
+            ->assertJsonPath('vinculo.origem', Prestador::VINCULO_POR_ATENDIMENTO)
+            ->assertJsonMissingPath('autorizacao')
             ->assertJsonStructure([
                 'prestador' => ['id', 'nome'],
                 'vinculos',
+                'vinculo' => ['desde', 'origem'],
                 'resumo' => ['contagens', 'proximas_doses', 'total_de_atendimentos'],
                 'carteira' => ['resumo', 'proximas_doses', 'grupos'],
                 'historico' => ['resumo', 'filtros', 'entradas'],
                 'anexos',
                 'alertas' => ['clinicos', 'administrativos'],
             ]);
-    }
 
-    /**
-     * RN39 — noventa dias, renováveis. A quinze dias do fim, a ficha avisa, e o
-     * texto diz o que o prestador pode fazer a respeito: pedir, nunca conceder
-     * (RF36).
-     */
-    public function test_autorizacao_perto_do_fim_vira_alerta_administrativo(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalDe('Helena Ramos', 'Théo');
-
-        $this->autorizar($animal, $clinica)
-            ->forceFill(['expira_em' => now()->addDays(9)])
-            ->save();
-
-        $resposta = $this->abrirFicha($marcelo, $animal)
-            ->assertOk()
-            ->assertJsonPath('autorizacao.a_expirar', true);
-
+        // Não há prazo a vencer: o alerta de autorização a expirar saiu junto
+        // com a autorização.
         $chaves = array_column($resposta->json('alertas.administrativos'), 'chave');
-        $this->assertContains('autorizacao-a-expirar', $chaves);
+        $this->assertNotContains('autorizacao-a-expirar', $chaves);
     }
 
     /**
@@ -350,7 +327,7 @@ class FichaClinicaTest extends TestCase
 
         $tutor = Tutor::factory()->create(['nome' => 'Helena Ramos']);
         $animal = Animal::factory()->gato()->create(['tutor_id' => $tutor->id]);
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $resposta = $this->abrirFicha($marcelo, $animal)
             ->assertOk()
@@ -385,7 +362,7 @@ class FichaClinicaTest extends TestCase
             'microchip' => '076000000000123',
             'caracterizado_por_user_id' => $marcelo->id,
         ])->save();
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $this->abrirFicha($marcelo, $animal)
             ->assertOk()
@@ -410,7 +387,7 @@ class FichaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Antônio Prado', 'Tobias');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->atender($animal, $clinica, $marcelo);
 
         $animal->forceFill([
@@ -438,9 +415,8 @@ class FichaClinicaTest extends TestCase
     /* Anexos — RF32 -------------------------------------------------------- */
 
     /**
-     * RF32c — o arquivo sai pela rota que confere a autorização, e o caminho no
-     * armazenamento não aparece em resposta alguma. Uma URL pública assinada uma
-     * vez continuaria valendo depois de revogado o acesso; esta não.
+     * RF32c — o arquivo sai pela rota clínica, sob a sessão do profissional, e
+     * o caminho no armazenamento não aparece em resposta alguma.
      */
     public function test_os_anexos_saem_pela_rota_clinica_e_nunca_pelo_caminho_do_arquivo(): void
     {
@@ -449,7 +425,7 @@ class FichaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $atendimento = $this->atender($animal, $clinica, $marcelo);
         $anexo = AnexoAtendimento::factory()->create([
@@ -471,14 +447,17 @@ class FichaClinicaTest extends TestCase
             ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
-    public function test_o_anexo_e_recusado_sem_autorizacao_vigente(): void
+    /**
+     * O anexo é alcançado pelo código como a ficha: a clínica que nunca abriu
+     * o animal recebe o arquivo, e o pedido o põe na carteira dela.
+     */
+    public function test_o_anexo_de_animal_fora_da_carteira_e_entregue_e_vincula(): void
     {
         Storage::fake('local');
 
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $autorizacao = $this->autorizar($animal, $clinica);
 
         $atendimento = $this->atender($animal, $clinica, $marcelo);
         $anexo = AnexoAtendimento::factory()->create([
@@ -487,13 +466,41 @@ class FichaClinicaTest extends TestCase
         ]);
         Storage::disk('local')->put('anexos/raspado.png', 'conteudo-de-teste');
 
-        // A revogação alcança o arquivo já listado numa ficha aberta antes
-        // dela: a conferência é a cada pedido, não a cada tela (RN40).
-        $autorizacao->forceFill(['revogada_em' => now()])->save();
+        $this->assertFalse($clinica->acompanha($animal));
 
         $this->actingAs($marcelo)
             ->get("/api/clinica/animais/{$animal->codigo}/anexos/{$anexo->id}")
-            ->assertForbidden();
+            ->assertOk();
+
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $clinica->id,
+        ]);
+    }
+
+    /**
+     * O anexo é do animal do endereço: o de outro animal responde 404, ainda
+     * que exista.
+     */
+    public function test_o_anexo_de_outro_animal_nao_e_encontrado(): void
+    {
+        Storage::fake('local');
+
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $animal = $this->animalDe('Helena Ramos', 'Théo');
+        $outro = $this->animalDe('Sofia Nunes', 'Pipoca');
+
+        $atendimento = $this->atender($outro, $clinica, $marcelo);
+        $anexo = AnexoAtendimento::factory()->create([
+            'atendimento_id' => $atendimento->id,
+            'caminho' => 'anexos/raspado.png',
+        ]);
+        Storage::disk('local')->put('anexos/raspado.png', 'conteudo-de-teste');
+
+        $this->actingAs($marcelo)
+            ->get("/api/clinica/animais/{$animal->codigo}/anexos/{$anexo->id}")
+            ->assertNotFound();
     }
 
     /**
@@ -509,7 +516,7 @@ class FichaClinicaTest extends TestCase
         $petCenter = $this->clinica('Pet Center Zona Sul');
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $atendimento = $this->atender($animal, $petCenter, $marcelo);
         $anexo = AnexoAtendimento::factory()->create([
@@ -537,7 +544,7 @@ class FichaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Sofia Nunes', 'Pipoca');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         $animal->tutor->user->forceFill(['ativado_em' => null])->save();
 

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -144,6 +145,36 @@ class Animal extends Model
         $consulta->whereHas(
             'autorizacoes',
             fn (Builder $autorizacoes) => $autorizacoes->where('prestador_id', $prestador->id)->vigente(),
+        );
+    }
+
+    /**
+     * Os prestadores que acompanham este animal — vínculo criado pelo próprio
+     * trabalho clínico (cadastro, ficha aberta por identificador, registro), e
+     * não por concessão do tutor.
+     *
+     * @return BelongsToMany<Prestador, Animal>
+     */
+    public function prestadoresVinculados(): BelongsToMany
+    {
+        return $this->belongsToMany(Prestador::class, 'animal_prestador')
+            ->withPivot('origem', 'vinculado_em')
+            ->withTimestamps();
+    }
+
+    /**
+     * O âmbito de toda consulta agregada do prestador: painel, pendências,
+     * listas e busca por nome. Fica aqui, e não repetido em cada consulta,
+     * porque um lugar só é onde o filtro pode ser esquecido.
+     *
+     * @param  Builder<Animal>  $consulta
+     */
+    #[Scope]
+    protected function vinculadoA(Builder $consulta, Prestador $prestador): void
+    {
+        $consulta->whereHas(
+            'prestadoresVinculados',
+            fn (Builder $prestadores) => $prestadores->whereKey($prestador->id),
         );
     }
 

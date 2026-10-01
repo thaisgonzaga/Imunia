@@ -119,8 +119,8 @@ async function verificar() {
     existencia.value = consulta.existencia ?? null
     solicitacao.value = null
 
-    if (consulta.autorizados?.length) {
-      autorizados.value = consulta.autorizados
+    if (consulta.autorizados?.length || consulta.tutor) {
+      autorizados.value = consulta.autorizados ?? []
       etapa.value = 'vinculado'
     } else if (consulta.existencia?.tipo === 'tutor') {
       etapa.value = 'existente'
@@ -145,12 +145,21 @@ async function cadastrar() {
     const busca = new URLSearchParams()
     if (contexto.value?.prestador) busca.set('prestador', contexto.value.prestador.id)
 
-    criado.value = await apiPost(`/api/clinica/tutores?${busca}`, {
+    const resposta = await apiPost(`/api/clinica/tutores?${busca}`, {
       nome: formulario.value.nome,
       cpf: somenteDigitos(cpf.value),
       email: formulario.value.email,
     })
 
+    // RF12b — alguém cadastrou este CPF entre a verificação e o envio: o
+    // cadastro que já existe vale, e o atendimento segue para o animal.
+    if (resposta.situacao === 'cpf_existente') {
+      autorizados.value = []
+      etapa.value = 'vinculado'
+      return
+    }
+
+    criado.value = resposta
     etapa.value = 'sucesso'
   } catch (excecao) {
     if (excecao instanceof ApiError && excecao.status === 422) {
@@ -353,8 +362,8 @@ onMounted(carregar)
         <!-- Já autorizado: o tutor não é novo nem está fora do âmbito. -->
         <section v-else-if="etapa === 'vinculado'" class="secao-vinculado">
           <p class="secao-vinculado__texto">
-            Este tutor já está na plataforma, e {{ prestador }} tem autorização
-            vigente para os animais abaixo. Não há o que cadastrar aqui.
+            Este tutor já está cadastrado no Imunia. Abra a ficha de um animal abaixo ou
+            <RouterLink :to="`/clinica/animais/novo?cpf=${somenteDigitos(cpf)}`">cadastre um novo animal</RouterLink>.
           </p>
           <div class="cartoes">
             <RouterLink

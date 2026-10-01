@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Exportacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
@@ -14,6 +13,7 @@ use App\Models\Tutor;
 use App\Models\User;
 use App\Models\Vacinacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -23,8 +23,9 @@ use Tests\TestCase;
  *
  * Duas garantias são o assunto destes testes:
  *
- * 1. O âmbito é a autorização vigente do prestador ativo, não a titularidade:
- *    sem ela, 403 — na emissão e em cada download.
+ * 1. A porta clínica alcança o animal pelo código, não pela titularidade:
+ *    emitir ou baixar põe o animal na carteira do prestador ativo, e só o
+ *    código inexistente responde 404.
  * 2. A emissão cujo documento leva registro de outro prestador grava a linha
  *    de RN49 antes de existir; a que leva só registro próprio, não. E a
  *    pergunta é sobre o documento emitido, não sobre o animal: o recorte que
@@ -73,13 +74,9 @@ class ExportacaoPelaClinicaTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador): Autorizacao
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        return Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     /**
@@ -134,35 +131,39 @@ class ExportacaoPelaClinicaTest extends TestCase
             ->assertForbidden();
     }
 
-    // O âmbito da porta clínica: autorização vigente, não titularidade. O 403
-    // nomeia o caminho em vez de negar a existência — mesma régua de V07.
-    public function test_sem_autorizacao_vigente_a_emissao_responde_403(): void
+    // O âmbito da porta clínica é o código, não a titularidade nem um
+    // consentimento prévio: o animal que a clínica nunca viu é alcançado, o
+    // documento sai, e o animal entra na carteira dela.
+    public function test_animal_fora_da_carteira_e_alcancado_pelo_codigo_e_passa_a_ser_vinculado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
         $this->vacinar($animal, $clinica);
 
-        $this->emitir($marcelo, $animal, $clinica)->assertForbidden();
+        $this->assertFalse($clinica->acompanha($animal));
 
-        $this->assertSame(0, Exportacao::query()->count());
-        $this->assertDatabaseCount('registros_de_acesso', 0);
-    }
+        $this->emitir($marcelo, $animal, $clinica)->assertCreated();
 
-    public function test_autorizacao_expirada_nao_e_vigente(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->vacinar($animal, $clinica);
-
-        Autorizacao::factory()->expirada()->create([
+        $this->assertSame(1, Exportacao::query()->count());
+        $this->assertDatabaseHas('animal_prestador', [
             'animal_id' => $animal->id,
             'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
+            'origem' => Prestador::VINCULO_POR_ATENDIMENTO,
         ]);
+    }
 
-        $this->emitir($marcelo, $animal, $clinica)->assertForbidden();
+    public function test_codigo_inexistente_responde_404(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+
+        $this->actingAs($marcelo)
+            ->postJson("/api/clinica/animais/IM-0000-0000/exportacoes?prestador={$clinica->id}", ['conteudo' => 'historico'])
+            ->assertNotFound();
+
+        $this->assertSame(0, Exportacao::query()->count());
+        $this->assertDatabaseCount('animal_prestador', 0);
     }
 
     /* Emissão --------------------------------------------------------------- */
@@ -172,7 +173,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         $resposta = $this->emitir($marcelo, $animal, $clinica);
@@ -202,7 +203,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         $pelaClinica = $this->emitir($marcelo, $animal, $clinica)->json('exportacao');
@@ -220,7 +221,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $outra = $this->clinica('Clínica Boa Vista');
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
 
         // O único registro é alheio e fica fora do recorte de 12 meses: o
         // documento não existe, e a linha de RN49 sobre ele também não pode
@@ -246,7 +247,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $outra = $this->clinica('Clínica Boa Vista');
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $outra);
 
         $this->emitir($marcelo, $animal, $clinica)->assertCreated();
@@ -265,7 +266,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         $this->emitir($marcelo, $animal, $clinica)->assertCreated();
@@ -281,7 +282,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
         Vacinacao::factory()->pregresso()->create([
             'animal_id' => $animal->id,
@@ -302,7 +303,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $outra = $this->clinica('Clínica Boa Vista');
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         Atendimento::factory()->create([
@@ -331,7 +332,7 @@ class ExportacaoPelaClinicaTest extends TestCase
         $outra = $this->clinica('Clínica Boa Vista');
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         Atendimento::factory()->create([
@@ -352,23 +353,25 @@ class ExportacaoPelaClinicaTest extends TestCase
 
     /* Download --------------------------------------------------------------- */
 
-    public function test_o_download_reverifica_a_autorizacao_a_cada_pedido(): void
+    // O download é alcance pelo código como a emissão: o pedido de arquivo
+    // de um animal que saiu da carteira o põe de volta nela.
+    public function test_o_download_alcanca_o_animal_pelo_codigo_e_o_vincula(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $autorizacao = $this->autorizar($animal, $clinica);
+        $this->vincular($animal, $clinica);
         $this->vacinar($animal, $clinica);
 
         $url = $this->emitir($marcelo, $animal, $clinica)->json('exportacao.url_documento');
 
         $this->actingAs($marcelo)->get($url)->assertOk();
 
-        // A autorização revogada entre emitir e baixar fecha o arquivo — a
-        // mesma regra do anexo (RF32c).
-        $autorizacao->update(['revogada_em' => now()]);
+        DB::table('animal_prestador')->delete();
 
-        $this->actingAs($marcelo)->get($url)->assertForbidden();
+        $this->actingAs($marcelo)->get($url)->assertOk();
+
+        $this->assertTrue($clinica->acompanha($animal));
     }
 
     public function test_a_emissao_de_outro_animal_responde_404(): void
@@ -377,8 +380,8 @@ class ExportacaoPelaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $animal = $this->animalDe('Helena Ramos', 'Théo');
         $vizinho = $this->animalDe('Marcos Lima', 'Bidu');
-        $this->autorizar($animal, $clinica);
-        $this->autorizar($vizinho, $clinica);
+        $this->vincular($animal, $clinica);
+        $this->vincular($vizinho, $clinica);
         $this->vacinar($animal, $clinica);
 
         $codigo = $this->emitir($marcelo, $animal, $clinica)->json('exportacao.codigo');

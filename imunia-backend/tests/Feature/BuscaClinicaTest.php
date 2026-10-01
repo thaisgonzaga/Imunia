@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -14,10 +13,10 @@ use Tests\TestCase;
 /**
  * V03 — buscar animal ou tutor (RF51, RF18, RF13).
  *
- * Metade destes testes não verifica o que a busca encontra, e sim o que ela se
- * recusa a dizer. É a tela de maior risco de vazamento por desenho de interface
- * do sistema, e a asserção que mais importa aqui é a de que o nome do tutor não
- * aparece em resposta alguma sem autorização vigente (RN12).
+ * Duas portas, com alcances diferentes: o identificador exato (CPF, código,
+ * micro-chip) traz o cadastro inteiro, seja de que clínica for, e o encontro de
+ * animal fora da carteira fica registrado (RF18b); o nome só alcança os animais
+ * que a clínica já acompanha, e não registra nada.
  */
 class BuscaClinicaTest extends TestCase
 {
@@ -66,19 +65,9 @@ class BuscaClinicaTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
+    private function vincular(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     private function buscar(User $usuario, string $termo, array $extras = [])
@@ -113,13 +102,13 @@ class BuscaClinicaTest extends TestCase
     /**
      * A tela recém-aberta ainda não perguntou nada, e precisa saber em que
      * prestador está para desenhar a faixa de contexto. Termo vazio devolve
-     * isso, e nada mais: nenhum animal, nenhuma existência, nenhum registro.
+     * isso, e nada mais: nenhum animal, nenhum registro.
      */
     public function test_a_busca_sem_termo_devolve_apenas_o_contexto_clinico(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $this->autorizar($this->animalDe('Helena Ramos', 'Théo'), $clinica);
+        $this->vincular($this->animalDe('Helena Ramos', 'Théo'), $clinica);
 
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/buscar')
@@ -133,14 +122,14 @@ class BuscaClinicaTest extends TestCase
         $this->assertDatabaseCount('registros_de_acesso', 0);
     }
 
-    /* Primeira seção — sob autorização (RN48) ------------------------------ */
+    /* Busca por nome — só a carteira do prestador ------------------------- */
 
-    public function test_busca_por_nome_traz_o_animal_sob_autorizacao(): void
+    public function test_busca_por_nome_traz_o_animal_vinculado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $this->buscar($marcelo, 'Théo')
             ->assertOk()
@@ -149,9 +138,8 @@ class BuscaClinicaTest extends TestCase
             ->assertJsonCount(1, 'autorizados')
             ->assertJsonPath('autorizados.0.nome', 'Théo')
             ->assertJsonPath('autorizados.0.codigo', $theo->codigo)
-            // Com autorização vigente, o nome de quem trouxe o animal pode
-            // aparecer: é o que distingue as duas seções da tela.
             ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
+            ->assertJsonPath('autorizados.0.vinculado', true)
             ->assertJsonPath('existencia', null);
     }
 
@@ -159,7 +147,7 @@ class BuscaClinicaTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $this->autorizar($this->animalDe('Helena Ramos', 'Théo'), $clinica);
+        $this->vincular($this->animalDe('Helena Ramos', 'Théo'), $clinica);
 
         // No balcão, "a Helena" e "o Théo" identificam a mesma ficha.
         $this->buscar($marcelo, 'Helena')
@@ -168,18 +156,73 @@ class BuscaClinicaTest extends TestCase
             ->assertJsonPath('autorizados.0.nome', 'Théo');
     }
 
-    public function test_busca_por_codigo_do_animal_autorizado_traz_a_ficha_completa(): void
+    /**
+     * Nome não identifica ninguém: a busca por nome em toda a base seria
+     * varredura de dados de terceiros. Fora da carteira, nada aparece — nem
+     * cartão de existência, nem contagem.
+     */
+    public function test_busca_por_nome_nao_alcanca_animal_de_fora_da_carteira(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $this->animalDe('Helena Ramos', 'Théo');
+        $this->animalDe('Helena Fontes', 'Bidu');
+
+        $resposta = $this->buscar($marcelo, 'Helena')
+            ->assertOk()
+            ->assertJsonPath('estado', 'sem_resultado')
+            ->assertJsonCount(0, 'autorizados')
+            ->assertJsonPath('existencia', null);
+
+        $this->assertStringNotContainsString('Ramos', $resposta->getContent());
+        $this->assertStringNotContainsString('Fontes', $resposta->getContent());
+    }
+
+    public function test_a_busca_por_nome_nao_mistura_prestadores(): void
+    {
+        $clinica = $this->clinica();
+        $hospital = $this->clinica('Hospital Veterinário Central');
+        $marcelo = $this->marcelo($clinica, $hospital);
+        $this->vincular($this->animalDe('Helena Ramos', 'Théo'), $clinica);
+
+        // O mesmo animal, o mesmo profissional, outro contexto ativo: fora da
+        // carteira do hospital, o Théo não é resultado por nome.
+        $this->buscar($marcelo, 'Théo', ['prestador' => $hospital->id])
+            ->assertOk()
+            ->assertJsonCount(0, 'autorizados');
+    }
+
+    /**
+     * A busca por nome só olha a própria carteira, e o que a clínica já
+     * acompanha não é acesso que RF18b mande registrar.
+     */
+    public function test_a_busca_por_nome_nao_registra_acesso(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $this->vincular($this->animalDe('Helena Ramos', 'Théo'), $clinica);
+        $this->animalDe('Helena Fontes', 'Bidu');
+
+        $this->buscar($marcelo, 'Helena')->assertOk();
+
+        $this->assertDatabaseCount('registros_de_acesso', 0);
+    }
+
+    /* Identificador exato — alcança qualquer cadastro ---------------------- */
+
+    public function test_busca_por_codigo_do_animal_vinculado_traz_o_cartao_completo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $this->buscar($marcelo, $theo->codigo)
             ->assertOk()
             ->assertJsonPath('tipo', 'codigo')
             ->assertJsonCount(1, 'autorizados')
             ->assertJsonPath('autorizados.0.tutor', 'Helena Ramos')
+            ->assertJsonPath('autorizados.0.vinculado', true)
             ->assertJsonPath('existencia', null);
     }
 
@@ -192,7 +235,7 @@ class BuscaClinicaTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $solto = strtolower(str_replace('-', '', $theo->codigo));
 
@@ -202,100 +245,34 @@ class BuscaClinicaTest extends TestCase
             ->assertJsonPath('autorizados.0.codigo', $theo->codigo);
     }
 
-    public function test_busca_por_microchip_traz_o_animal_sob_autorizacao(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $tutor = Tutor::factory()->create(['nome' => 'Helena Ramos']);
-        $theo = Animal::factory()
-            ->comMicrochip('076000000000042')
-            ->create(['tutor_id' => $tutor->id, 'nome' => 'Théo']);
-        $this->autorizar($theo, $clinica);
-
-        $this->buscar($marcelo, '076000000000042')
-            ->assertOk()
-            ->assertJsonPath('tipo', 'microchip')
-            ->assertJsonCount(1, 'autorizados')
-            ->assertJsonPath('autorizados.0.nome', 'Théo');
-    }
-
-    public function test_a_busca_nao_mistura_prestadores(): void
-    {
-        $clinica = $this->clinica();
-        $hospital = $this->clinica('Hospital Veterinário Central');
-        $marcelo = $this->marcelo($clinica, $hospital);
-        $this->autorizar($this->animalDe('Helena Ramos', 'Théo'), $clinica);
-
-        // O mesmo animal, o mesmo profissional, outro contexto ativo: fora da
-        // clínica que o tutor autorizou, o Théo não é resultado (RN48).
-        $this->buscar($marcelo, 'Théo', ['prestador' => $hospital->id])
-            ->assertOk()
-            ->assertJsonCount(0, 'autorizados');
-    }
-
-    public function test_autorizacao_revogada_ou_expirada_nao_traz_o_animal(): void
-    {
-        foreach (['revogada', 'expirada'] as $estado) {
-            $clinica = $this->clinica("Clínica {$estado}");
-            $marcelo = $this->marcelo($clinica);
-            $theo = $this->animalDe('Helena Ramos', 'Théo');
-            $this->autorizar($theo, $clinica, $estado);
-
-            $this->buscar($marcelo, $theo->codigo)
-                ->assertOk()
-                ->assertJsonCount(0, 'autorizados', "autorização {$estado}")
-                // Some da primeira seção e reaparece na segunda com o mínimo:
-                // a autorização vencida não apaga o animal do mundo.
-                ->assertJsonPath('existencia.tipo', 'animal');
-        }
-    }
-
-    /* Segunda seção — só a existência (RN12, RF13, RF18) ------------------- */
-
-    public function test_cpf_existente_sem_autorizacao_revela_apenas_a_existencia(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $this->animalDe('Helena Ramos', 'Théo', ['cpf' => self::CPF_VALIDO]);
-
-        $resposta = $this->buscar($marcelo, '238.471.905-04')
-            ->assertOk()
-            ->assertJsonPath('tipo', 'cpf')
-            ->assertJsonCount(0, 'autorizados')
-            // RF13a — a tela informa apenas que existe cadastro para o CPF. A
-            // pendência de solicitação é ato do próprio prestador (V10), não
-            // dado do tutor — e aqui não há pedido feito.
-            ->assertJsonPath('existencia', ['tipo' => 'tutor', 'solicitacao_pendente' => null]);
-
-        // RF13b — nome, contato e relação de animais permanecem ocultos. A
-        // asserção é sobre o corpo inteiro, e não sobre um campo: o vazamento
-        // que importa é o que escapa por onde ninguém olhou.
-        $this->assertStringNotContainsString('Helena Ramos', $resposta->getContent());
-        $this->assertStringNotContainsString('Théo', $resposta->getContent());
-    }
-
-    public function test_codigo_sem_autorizacao_revela_apenas_nome_e_especie(): void
+    /**
+     * Quem tem o código na mão está com o animal à sua frente: a resposta traz
+     * o cadastro inteiro, seja de que clínica for. Buscar não vincula — quem
+     * põe o animal na carteira é a ficha aberta.
+     */
+    public function test_codigo_de_animal_sem_vinculo_traz_o_cartao_completo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $mel = $this->animalDe('Antônio Prado', 'Mel', ['especie' => 'gato']);
 
-        $resposta = $this->buscar($marcelo, $mel->codigo)
+        $this->buscar($marcelo, $mel->codigo)
             ->assertOk()
-            ->assertJsonCount(0, 'autorizados')
-            // RF18a — espécie, nome e a indicação de histórico mediante
-            // autorização, que é texto da tela e não dado do animal.
-            ->assertJsonPath('existencia', [
-                'tipo' => 'animal',
-                'nome' => 'Mel',
-                'especie' => 'gato',
-                'solicitacao_pendente' => null,
-            ]);
+            ->assertJsonPath('estado', 'normal')
+            ->assertJsonCount(1, 'autorizados')
+            ->assertJsonPath('autorizados.0.nome', 'Mel')
+            ->assertJsonPath('autorizados.0.especie', 'gato')
+            ->assertJsonPath('autorizados.0.tutor', 'Antônio Prado')
+            ->assertJsonPath('autorizados.0.vinculado', false)
+            ->assertJsonPath('existencia', null);
 
-        $this->assertStringNotContainsString('Antônio Prado', $resposta->getContent());
+        $this->assertDatabaseMissing('animal_prestador', [
+            'animal_id' => $mel->id,
+            'prestador_id' => $clinica->id,
+        ]);
     }
 
-    public function test_microchip_sem_autorizacao_revela_apenas_nome_e_especie(): void
+    public function test_microchip_de_animal_sem_vinculo_traz_o_cartao_completo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -303,76 +280,75 @@ class BuscaClinicaTest extends TestCase
         Animal::factory()
             ->comMicrochip('076000000000099')
             ->gato()
-            ->create(['tutor_id' => $tutor->id]);
+            ->create(['tutor_id' => $tutor->id, 'nome' => 'Mel']);
 
         $this->buscar($marcelo, '076000000000099')
             ->assertOk()
             ->assertJsonPath('tipo', 'microchip')
-            ->assertJsonPath('existencia.tipo', 'animal')
-            ->assertJsonPath('existencia.especie', 'gato');
+            ->assertJsonCount(1, 'autorizados')
+            ->assertJsonPath('autorizados.0.nome', 'Mel')
+            ->assertJsonPath('autorizados.0.especie', 'gato')
+            ->assertJsonPath('autorizados.0.tutor', 'Antônio Prado')
+            ->assertJsonPath('autorizados.0.vinculado', false)
+            ->assertJsonPath('existencia', null);
     }
 
     /**
-     * Por nome, a segunda seção não diz o que corresponde nem quantos: um
-     * cartão só, seja qual for o número de cadastros alcançados. Cartão por
-     * correspondência transformaria a busca em contador de quantas pessoas com
-     * aquele nome existem na plataforma.
+     * Pelo CPF o encontrado é o titular: todos os animais dele vêm, os que a
+     * clínica já acompanha e os que ainda não, cada um com a sua marca.
      */
-    public function test_busca_por_nome_colapsa_os_cadastros_fora_do_ambito_em_um_cartao(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $this->animalDe('Helena Ramos', 'Théo');
-        $this->animalDe('Helena Fontes', 'Bidu');
-
-        $resposta = $this->buscar($marcelo, 'Helena')
-            ->assertOk()
-            ->assertJsonCount(0, 'autorizados')
-            ->assertJsonPath('existencia', ['tipo' => 'outro']);
-
-        $this->assertStringNotContainsString('Ramos', $resposta->getContent());
-        $this->assertStringNotContainsString('Fontes', $resposta->getContent());
-    }
-
-    /**
-     * Duas letras corresponderiam a meia base, e a segunda seção viraria
-     * contador de cadastros — enumeração por outro nome.
-     */
-    public function test_nome_curto_nao_revela_cadastro_fora_do_ambito(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-        $this->animalDe('Helena Ramos', 'Bo');
-
-        $this->buscar($marcelo, 'Bo')
-            ->assertOk()
-            ->assertJsonPath('existencia', null)
-            ->assertJsonPath('estado', 'sem_resultado');
-
-        $this->assertDatabaseCount('registros_de_acesso', 0);
-    }
-
-    /**
-     * O tutor que já aparece na primeira seção não é anunciado de novo na
-     * segunda: dizer que ele tem *outros* animais seria a contagem que RN12
-     * proíbe.
-     */
-    public function test_tutor_ja_visivel_nao_gera_cartao_de_existencia(): void
+    public function test_cpf_traz_todos_os_animais_do_tutor_com_a_marca_de_vinculo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo', ['cpf' => self::CPF_VALIDO]);
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
+        Animal::factory()->gato()->create(['tutor_id' => $theo->tutor_id, 'nome' => 'Nina']);
 
-        // A Nina, do mesmo tutor, não está autorizada — e continua invisível.
-        Animal::factory()->gato()->create(['tutor_id' => $theo->tutor_id]);
-
-        $resposta = $this->buscar($marcelo, self::CPF_VALIDO)
+        $this->buscar($marcelo, '238.471.905-04')
             ->assertOk()
-            ->assertJsonCount(1, 'autorizados')
+            ->assertJsonPath('tipo', 'cpf')
+            ->assertJsonCount(2, 'autorizados')
+            // Ordenados por nome.
+            ->assertJsonPath('autorizados.0.nome', 'Nina')
+            ->assertJsonPath('autorizados.0.vinculado', false)
+            ->assertJsonPath('autorizados.1.nome', 'Théo')
+            ->assertJsonPath('autorizados.1.vinculado', true)
+            ->assertJsonPath('autorizados.1.tutor', 'Helena Ramos')
+            ->assertJsonPath('tutor.nome', 'Helena Ramos')
             ->assertJsonPath('existencia', null);
+    }
 
-        $this->assertStringNotContainsString('Nina', $resposta->getContent());
+    public function test_cpf_de_tutor_sem_animal_devolve_o_titular_e_fica_registrado(): void
+    {
+        // V04 e V05 precisam seguir para o cadastro do primeiro animal de um
+        // tutor que ainda não tem nenhum.
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $helena = Tutor::factory()->create(['nome' => 'Helena Ramos', 'cpf' => self::CPF_VALIDO]);
+
+        $this->buscar($marcelo, '238.471.905-04')
+            ->assertOk()
+            ->assertJsonPath('estado', 'normal')
+            ->assertJsonCount(0, 'autorizados')
+            ->assertJsonPath('tutor.nome', 'Helena Ramos');
+
+        $this->assertDatabaseHas('registros_de_acesso', [
+            'prestador_id' => $clinica->id,
+            'tutor_id' => $helena->id,
+            'animal_id' => null,
+            'natureza' => RegistroDeAcesso::BUSCA_POR_CPF,
+        ]);
+    }
+
+    public function test_busca_por_codigo_nao_devolve_titular(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
+        $theo = $this->animalDe('Helena Ramos', 'Théo');
+
+        $this->buscar($marcelo, $theo->codigo)
+            ->assertOk()
+            ->assertJsonPath('tutor', null);
     }
 
     public function test_termo_sem_correspondencia_alguma_devolve_sem_resultado(): void
@@ -389,16 +365,19 @@ class BuscaClinicaTest extends TestCase
 
     /* Registro de acesso (RF18b, RF52) ------------------------------------- */
 
-    public function test_a_consulta_por_cpf_sem_autorizacao_fica_registrada(): void
+    public function test_a_consulta_por_cpf_de_tutor_fora_da_carteira_fica_registrada(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo', ['cpf' => self::CPF_VALIDO]);
+        Animal::factory()->gato()->create(['tutor_id' => $theo->tutor_id]);
 
         $this->buscar($marcelo, self::CPF_VALIDO)->assertOk();
 
-        // RF52 — usuário, prestador, natureza e data e hora. Sem animal: a
-        // consulta por CPF não chegou a saber de animal algum.
+        // RF52 — usuário, prestador, natureza e data e hora. Sem animal: o
+        // encontrado pelo CPF é o titular. Uma linha só, ainda que dois
+        // animais tenham vindo.
+        $this->assertDatabaseCount('registros_de_acesso', 1);
         $this->assertDatabaseHas('registros_de_acesso', [
             'prestador_id' => $clinica->id,
             'user_id' => $marcelo->id,
@@ -408,7 +387,7 @@ class BuscaClinicaTest extends TestCase
         ]);
     }
 
-    public function test_a_consulta_por_codigo_sem_autorizacao_fica_registrada_com_o_animal(): void
+    public function test_a_consulta_por_codigo_de_animal_sem_vinculo_fica_registrada_com_o_animal(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -425,38 +404,65 @@ class BuscaClinicaTest extends TestCase
         ]);
     }
 
-    /**
-     * Um cartão na tela, uma linha por titular alcançado: o log presta contas a
-     * cada pessoa cuja existência foi revelada, ainda que a tela não as
-     * distinga.
-     */
-    public function test_a_busca_por_nome_registra_uma_linha_por_titular_alcancado(): void
+    public function test_a_consulta_por_microchip_de_animal_sem_vinculo_fica_registrada_com_o_animal(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $this->animalDe('Helena Ramos', 'Théo');
-        $this->animalDe('Helena Fontes', 'Bidu');
+        $tutor = Tutor::factory()->create(['nome' => 'Antônio Prado']);
+        $mel = Animal::factory()
+            ->comMicrochip('076000000000099')
+            ->gato()
+            ->create(['tutor_id' => $tutor->id]);
 
-        $this->buscar($marcelo, 'Helena')->assertOk();
+        $this->buscar($marcelo, '076000000000099')->assertOk();
 
-        $this->assertDatabaseCount('registros_de_acesso', 2);
+        $this->assertDatabaseHas('registros_de_acesso', [
+            'prestador_id' => $clinica->id,
+            'user_id' => $marcelo->id,
+            'tutor_id' => $tutor->id,
+            'animal_id' => $mel->id,
+            'natureza' => RegistroDeAcesso::BUSCA_POR_MICROCHIP,
+        ]);
     }
 
     /**
-     * O acesso a quem já autorizou não é o acesso que RF18b manda registrar: a
-     * autorização vigente é o próprio consentimento, e um log que anotasse toda
-     * consulta rotineira afogaria em ruído a que importa (T14).
+     * O acesso a quem a clínica já acompanha não é o acesso que RF18b manda
+     * registrar: um log que anotasse toda consulta rotineira afogaria em
+     * ruído a que importa (T14).
      */
-    public function test_o_animal_sob_autorizacao_nao_gera_registro_de_acesso(): void
+    public function test_o_animal_vinculado_nao_gera_registro_de_acesso(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $theo = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($theo, $clinica);
+        $this->vincular($theo, $clinica);
 
         $this->buscar($marcelo, $theo->codigo)->assertOk();
 
         $this->assertDatabaseCount('registros_de_acesso', 0);
+    }
+
+    /**
+     * O vínculo é da clínica, e não do profissional: o mesmo animal, buscado
+     * pelo código no contexto de outro prestador, é encontro registrado ali.
+     */
+    public function test_vinculo_com_outra_clinica_nao_dispensa_o_registro(): void
+    {
+        $clinica = $this->clinica();
+        $hospital = $this->clinica('Hospital Veterinário Central');
+        $marcelo = $this->marcelo($clinica, $hospital);
+        $theo = $this->animalDe('Helena Ramos', 'Théo');
+        $this->vincular($theo, $clinica);
+
+        $this->buscar($marcelo, $theo->codigo, ['prestador' => $hospital->id])
+            ->assertOk()
+            ->assertJsonPath('autorizados.0.vinculado', false);
+
+        $this->assertDatabaseHas('registros_de_acesso', [
+            'prestador_id' => $hospital->id,
+            'animal_id' => $theo->id,
+            'natureza' => RegistroDeAcesso::BUSCA_POR_CODIGO,
+        ]);
     }
 
     /**

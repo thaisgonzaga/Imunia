@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -39,21 +38,16 @@ class PainelVeterinarioTest extends TestCase
     }
 
     /**
-     * Animal com autorização vigente para o prestador — a única forma de um
-     * animal entrar no painel (RN48).
+     * Animal na carteira do prestador — a única forma de um animal entrar no
+     * painel (RN48).
      */
-    private function animalAutorizado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
+    private function animalVinculado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
     {
         $tutor = Tutor::factory()->create(['nome' => "Tutor de {$nome}"]);
-        $animal = Animal::factory()->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
 
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
-
-        return $animal;
+        return Animal::factory()
+            ->acompanhadoPor($prestador)
+            ->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
     private function atendimento(Animal $animal, Prestador $prestador, User $profissional, array $atributos = []): Atendimento
@@ -103,8 +97,8 @@ class PainelVeterinarioTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $this->animalAutorizado($clinica);
-        $this->atendimento($this->animalAutorizado($clinica, 'Bidu'), $clinica, $marcelo);
+        $this->animalVinculado($clinica);
+        $this->atendimento($this->animalVinculado($clinica, 'Bidu'), $clinica, $marcelo);
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/painel');
 
@@ -118,19 +112,19 @@ class PainelVeterinarioTest extends TestCase
 
     /**
      * RN48 — a regra que dá âmbito a toda esta tela. O animal existe, tem
-     * registro do prestador, e mesmo assim não figura: o que o traz para cá é a
-     * autorização do tutor, e nada mais.
+     * registro do prestador, e mesmo assim não figura: o que o traz para cá é o
+     * vínculo com o prestador, e nada mais.
      */
-    public function test_animal_sem_autorizacao_vigente_nao_figura_no_painel(): void
+    public function test_animal_nao_vinculado_nao_figura_no_painel(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        $autorizado = $this->animalAutorizado($clinica, 'Théo');
-        $this->atendimento($autorizado, $clinica, $marcelo);
+        $vinculado = $this->animalVinculado($clinica, 'Théo');
+        $this->atendimento($vinculado, $clinica, $marcelo);
 
-        $semAutorizacao = Animal::factory()->create(['nome' => 'Bidu']);
-        $this->atendimento($semAutorizacao, $clinica, $marcelo);
+        $semVinculo = Animal::factory()->create(['nome' => 'Bidu']);
+        $this->atendimento($semVinculo, $clinica, $marcelo);
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/painel');
 
@@ -141,20 +135,14 @@ class PainelVeterinarioTest extends TestCase
         $resposta->assertJsonPath('indicadores.atendimentos', 1);
     }
 
-    public function test_autorizacao_revogada_ou_expirada_nao_da_acesso(): void
+    public function test_vinculo_com_outro_prestador_nao_traz_o_animal(): void
     {
         $clinica = $this->clinica();
+        $hospital = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica);
 
-        foreach (['revogada', 'expirada'] as $estado) {
-            $animal = Animal::factory()->create(['nome' => "Animal {$estado}"]);
-            Autorizacao::factory()->{$estado}()->create([
-                'animal_id' => $animal->id,
-                'prestador_id' => $clinica->id,
-                'concedida_por_user_id' => $animal->tutor->user_id,
-            ]);
-            $this->atendimento($animal, $clinica, $marcelo);
-        }
+        $animal = $this->animalVinculado($hospital, 'Amora');
+        $this->atendimento($animal, $clinica, $marcelo);
 
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/painel')
@@ -173,10 +161,10 @@ class PainelVeterinarioTest extends TestCase
         $hospital = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica, $hospital);
 
-        $daClinica = $this->animalAutorizado($clinica, 'Théo');
+        $daClinica = $this->animalVinculado($clinica, 'Théo');
         $this->atendimento($daClinica, $clinica, $marcelo);
 
-        $doHospital = $this->animalAutorizado($hospital, 'Amora');
+        $doHospital = $this->animalVinculado($hospital, 'Amora');
         $this->atendimento($doHospital, $hospital, $marcelo);
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/painel');
@@ -213,7 +201,7 @@ class PainelVeterinarioTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalAutorizado($clinica);
+        $animal = $this->animalVinculado($clinica);
 
         $this->atendimento($animal, $clinica, $marcelo, ['atendido_em' => now()->subDays(2)]);
         $this->atendimento($animal, $clinica, $marcelo, ['atendido_em' => now()->subDays(21)]);
@@ -241,7 +229,7 @@ class PainelVeterinarioTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $larissa = $this->marcelo($clinica);
-        $animal = $this->animalAutorizado($clinica);
+        $animal = $this->animalVinculado($clinica);
 
         $this->atendimento($animal, $clinica, $marcelo);
         $this->atendimento($animal, $clinica, $larissa, ['atendido_em' => now()->subDay()]);
@@ -253,11 +241,11 @@ class PainelVeterinarioTest extends TestCase
             ->assertJsonPath('animais_atendidos.paginacao.total', 1);
     }
 
-    public function test_dose_atrasada_de_animal_autorizado_vira_pendencia(): void
+    public function test_dose_atrasada_de_animal_vinculado_vira_pendencia(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalAutorizado($clinica);
+        $animal = $this->animalVinculado($clinica);
 
         $imunobiologico = Imunobiologico::factory()->antirrabica()->create();
         $protocolo = ProtocoloVacinal::factory()->antirrabica()->create([
@@ -289,7 +277,7 @@ class PainelVeterinarioTest extends TestCase
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
-        $animal = $this->animalAutorizado($clinica);
+        $animal = $this->animalVinculado($clinica);
 
         $this->atendimento($animal, $clinica, $marcelo, [
             'retorno_em' => now()->addDays(5)->toDateString(),
@@ -324,10 +312,10 @@ class PainelVeterinarioTest extends TestCase
 
     /**
      * O estado que explica RN48 a quem já trabalha no sistema: há registro, e
-     * ele continua sob a guarda do prestador (RN40); o que não há é autorização
-     * vigente, e é isso que esvazia o painel.
+     * ele continua sob a guarda do prestador (RN40); o que não há é animal
+     * vinculado, e é isso que esvazia o painel.
      */
-    public function test_prestador_com_registro_e_sem_autorizacao_vigente_explica_a_regra(): void
+    public function test_prestador_com_registro_e_sem_animal_vinculado_explica_a_regra(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -346,7 +334,7 @@ class PainelVeterinarioTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         foreach (range(1, 6) as $indice) {
-            $animal = $this->animalAutorizado($clinica, "Animal {$indice}");
+            $animal = $this->animalVinculado($clinica, "Animal {$indice}");
             $this->atendimento($animal, $clinica, $marcelo, [
                 'atendido_em' => now()->subDays($indice),
             ]);

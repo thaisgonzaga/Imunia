@@ -16,9 +16,8 @@ use Illuminate\Support\Collection;
  * A etapa existe por uma assimetria do fluxo clínico: acionado pela ficha
  * (V06), o registro já sabe de quem é; acionado pelo botão "Registrar" do
  * cabeçalho, falta o animal. Resolver essa falta com um campo dentro do
- * formulário de V07 abriria caminho para começar a redigir um registro de
- * animal fora do âmbito de autorização e descobrir o impedimento só ao
- * confirmar — depois de escrito o prontuário.
+ * formulário de V07 abriria caminho para começar a redigir um registro sem
+ * ter confirmado de qual animal ele é.
  *
  * Daí esta classe não ter busca própria: quem procura é `BuscaClinicaService`,
  * o mesmo de V03, com o mesmo âmbito (RN48), a mesma parcimônia sobre o que
@@ -62,10 +61,7 @@ class EscolhaDeAnimalService
 
     /**
      * Os animais atendidos pelo prestador ativo na janela, do mais recente para
-     * o mais antigo — e só os que continuam sob autorização vigente. A
-     * autorização pode ter caído ou sido revogada depois do atendimento (RF39,
-     * RN39), e o atalho não pode oferecer como caminho de registro um animal
-     * cujo histórico o prestador já não pode nem abrir.
+     * o mais antigo — dentro da carteira do prestador.
      *
      * @return list<array<string, mixed>>
      */
@@ -78,7 +74,7 @@ class EscolhaDeAnimalService
         }
 
         return Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
+            ->vinculadoA($prestador)
             ->whereIn('id', $ultimos->keys())
             ->with('tutor')
             ->get()

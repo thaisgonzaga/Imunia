@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Convite;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
@@ -18,10 +17,10 @@ use Tests\TestCase;
  * V04 — cadastrar tutor no atendimento (RF12, RF13, RF14).
  *
  * O que mais importa aqui é o que o cadastro **não** faz: não cria segundo
- * registro para CPF que já existe (RF12b), não devolve nome nem dado algum do
- * cadastro encontrado (RN12), e não deixa a revelação de existência sem linha
- * no livro de acessos (RF18b). O caminho feliz é o mesmo desenho de A03: conta
- * de senha inacessível, ativação por convite.
+ * registro para CPF que já existe (RF12b) — devolve o cadastro encontrado para
+ * o atendimento seguir — e não deixa o encontro de tutor fora da carteira sem
+ * linha no livro de acessos (RF18b). O caminho feliz é o mesmo desenho de A03:
+ * conta de senha inacessível, ativação por convite.
  */
 class CadastroDeTutorTest extends TestCase
 {
@@ -105,24 +104,28 @@ class CadastroDeTutorTest extends TestCase
         Notification::assertSentTo($tutor->user, ConviteDeAtivacao::class);
     }
 
-    public function test_cpf_existente_nao_cria_segundo_registro_e_conduz_ao_vinculo(): void
+    public function test_cpf_existente_nao_cria_segundo_registro_e_devolve_o_cadastro(): void
     {
         Notification::fake();
 
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        Tutor::factory()->create(['nome' => 'Helena Ramos', 'cpf' => self::CPF_VALIDO]);
+        $helena = Tutor::factory()->create(['nome' => 'Helena Ramos', 'cpf' => self::CPF_VALIDO]);
 
         $response = $this->actingAs($marcelo)->postJson(
             '/api/clinica/tutores',
             $this->dados(['nome' => 'Helena R.', 'email' => 'outra@example.com']),
         );
 
-        $response->assertStatus(409)->assertJsonPath('situacao', 'cpf_existente');
-
-        // RN12 — a resposta afirma a existência e nada além dela.
-        $this->assertStringNotContainsString('Helena Ramos', $response->getContent());
+        // O atendimento não para: a tela recebe o cadastro que já existe e
+        // segue para o animal, com o nome que está no registro — não o que foi
+        // digitado agora.
+        $response->assertOk()
+            ->assertJsonPath('situacao', 'cpf_existente')
+            ->assertJsonPath('tutor.id', $helena->id)
+            ->assertJsonPath('tutor.nome', 'Helena Ramos')
+            ->assertJsonPath('tutor.cpf', self::CPF_VALIDO);
 
         // RF12b — jamais um segundo registro, nem convite, nem conta nova.
         $this->assertSame(1, Tutor::query()->count());
@@ -132,7 +135,7 @@ class CadastroDeTutorTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_a_revelacao_de_existencia_no_envio_fica_registrada(): void
+    public function test_o_encontro_de_tutor_fora_da_carteira_fica_registrado(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -140,10 +143,10 @@ class CadastroDeTutorTest extends TestCase
         $helena = Tutor::factory()->create(['cpf' => self::CPF_VALIDO]);
 
         $this->actingAs($marcelo)->postJson('/api/clinica/tutores', $this->dados())
-            ->assertStatus(409);
+            ->assertOk();
 
-        // RF18b — mesmo fora da busca de V03, revelar que o CPF tem cadastro é
-        // revelação, e o titular a vê em T14.
+        // RF18b — mesmo fora da busca de V03, chegar pelo CPF a um tutor que a
+        // clínica não acompanha é encontro, e o titular o vê em T14.
         $this->assertDatabaseHas('registros_de_acesso', [
             'prestador_id' => $clinica->id,
             'user_id' => $marcelo->id,
@@ -153,25 +156,19 @@ class CadastroDeTutorTest extends TestCase
         ]);
     }
 
-    public function test_tutor_ja_sob_autorizacao_vigente_nao_gera_linha_no_livro(): void
+    public function test_tutor_com_animal_ja_acompanhado_nao_gera_linha_no_livro(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
         $helena = Tutor::factory()->create(['cpf' => self::CPF_VALIDO]);
-        $animal = Animal::factory()->create(['tutor_id' => $helena->id]);
-
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $helena->user_id,
-        ]);
+        Animal::factory()->acompanhadoPor($clinica)->create(['tutor_id' => $helena->id]);
 
         $this->actingAs($marcelo)->postJson('/api/clinica/tutores', $this->dados())
-            ->assertStatus(409);
+            ->assertOk();
 
-        // O profissional já enxerga este tutor pelo próprio âmbito: anunciar a
-        // existência não revelou nada, e linha aqui só encheria T14 de ruído.
+        // A clínica já acompanha um animal deste tutor: reencontrá-lo não
+        // revelou nada, e linha aqui só encheria T14 de ruído.
         $this->assertSame(0, RegistroDeAcesso::query()->count());
     }
 

@@ -20,9 +20,9 @@ use Illuminate\Support\Collection;
  * - **prestador ativo** (RF48a) — o painel nunca mistura estabelecimentos. Um
  *   mesmo veterinário atende em vários, e o que ele registrou em um não é
  *   assunto do outro (decisoes.md §4.2);
- * - **autorização vigente** (RN48) — só entram animais que o tutor autorizou o
- *   prestador a acompanhar. Sem nenhuma autorização não há painel: não é falha,
- *   é a regra funcionando.
+ * - **carteira do prestador** (RN48) — só entram animais vinculados a ele, pelo
+ *   cadastro ou pelo atendimento. Carteira vazia não é falha: é a clínica que
+ *   ainda não atendeu ninguém no sistema.
  *
  * Regra de negócio vive aqui, e não no controlador (decisoes.md §5.2).
  */
@@ -46,9 +46,7 @@ class PainelVeterinarioService
     /** Itens dos blocos da coluna da direita, antes do "Ver todas" que leva a V02. */
     private const ITENS_POR_BLOCO = 5;
 
-    public function __construct(private readonly CalendarioVacinalService $calendario)
-    {
-    }
+    public function __construct(private readonly CalendarioVacinalService $calendario) {}
 
     /**
      * @return array<string, mixed>
@@ -60,19 +58,19 @@ class PainelVeterinarioService
         // Uma consulta só para o âmbito inteiro, e daqui em diante tudo se
         // restringe a estes animais. É o filtro que, esquecido em um único
         // lugar, transforma o painel em vazamento de histórico alheio (RN48).
-        $autorizados = Animal::query()->sobAutorizacaoVigenteDe($prestador)->with('tutor')->get();
+        $acompanhados = Animal::query()->vinculadoA($prestador)->with('tutor')->get();
 
         // A carteira de cada animal é cara — uma consulta com quatro relações —
         // e é pedida duas vezes: pelas pendências e pela coluna de situação da
         // tabela. Montada uma vez por animal e guardada, para que a segunda
         // pergunta não repita a primeira. A rechamada em escala é V02, que
         // responde por consulta e não por laço (RNF03).
-        $carteiras = $autorizados->mapWithKeys(
+        $carteiras = $acompanhados->mapWithKeys(
             fn (Animal $animal) => [$animal->id => $this->calendario->montarCarteira($animal)],
         );
 
-        $pendencias = $this->pendencias($autorizados, $carteiras, $dias);
-        $retornos = $this->retornos($prestador, $autorizados, $dias);
+        $pendencias = $this->pendencias($acompanhados, $carteiras, $dias);
+        $retornos = $this->retornos($prestador, $acompanhados, $dias);
 
         return [
             'profissional' => [
@@ -81,9 +79,9 @@ class PainelVeterinarioService
             ],
             'prestador' => ['id' => $prestador->id, 'nome' => $prestador->nome],
             'intervalo' => ['dias' => $dias, 'opcoes' => self::INTERVALOS_EM_DIAS],
-            'estado' => $this->estado($prestador, $autorizados),
-            'indicadores' => $this->indicadores($veterinario, $prestador, $autorizados, $pendencias, $retornos, $desde, $dias),
-            'animais_atendidos' => $this->animaisAtendidos($prestador, $autorizados, $carteiras, $desde, $pagina),
+            'estado' => $this->estado($prestador, $acompanhados),
+            'indicadores' => $this->indicadores($veterinario, $prestador, $acompanhados, $pendencias, $retornos, $desde, $dias),
+            'animais_atendidos' => $this->animaisAtendidos($prestador, $acompanhados, $carteiras, $desde, $pagina),
             'pendencias' => $pendencias->take(self::ITENS_POR_BLOCO)->values()->all(),
             'retornos' => $retornos->take(self::ITENS_POR_BLOCO)->values()->all(),
         ];
@@ -92,19 +90,18 @@ class PainelVeterinarioService
     /**
      * Os três estados de tela que não são o normal (§8.3 do briefing). A ordem
      * importa: quem nunca registrou nada precisa dos três passos iniciais, e não
-     * da explicação sobre autorização — que só faz sentido para quem já trabalha
-     * no sistema e viu o painel esvaziar.
+     * de um painel vazio que só faz sentido para quem já trabalha no sistema.
      *
-     * @param Collection<int, Animal> $autorizados
+     * @param  Collection<int, Animal>  $acompanhados
      */
-    private function estado(Prestador $prestador, Collection $autorizados): string
+    private function estado(Prestador $prestador, Collection $acompanhados): string
     {
         $semRegistroAlgum = ! Atendimento::where('prestador_id', $prestador->id)->exists()
             && ! Vacinacao::where('prestador_id', $prestador->id)->where('origem', 'profissional')->exists();
 
         return match (true) {
             $semRegistroAlgum => 'primeiro_acesso',
-            $autorizados->isEmpty() => 'sem_autorizacoes',
+            $acompanhados->isEmpty() => 'sem_autorizacoes',
             default => 'normal',
         };
     }
@@ -113,21 +110,21 @@ class PainelVeterinarioService
      * Os quatro números do topo. São números, e não gráficos: cada um responde a
      * uma pergunta declarada e leva à lista que a detalha.
      *
-     * @param Collection<int, Animal> $autorizados
-     * @param Collection<int, array<string, mixed>> $pendencias
-     * @param Collection<int, array<string, mixed>> $retornos
+     * @param  Collection<int, Animal>  $acompanhados
+     * @param  Collection<int, array<string, mixed>>  $pendencias
+     * @param  Collection<int, array<string, mixed>>  $retornos
      * @return array<string, mixed>
      */
     private function indicadores(
         User $veterinario,
         Prestador $prestador,
-        Collection $autorizados,
+        Collection $acompanhados,
         Collection $pendencias,
         Collection $retornos,
         CarbonInterface $desde,
         int $dias,
     ): array {
-        $ids = $autorizados->modelKeys();
+        $ids = $acompanhados->modelKeys();
 
         // "Registrados por você": RF48 fala dos animais atendidos pelo
         // profissional, e este é o único indicador pessoal do painel. Os demais
@@ -169,15 +166,15 @@ class PainelVeterinarioService
      * frente, da mais antiga para a mais recente, sem precisar ordenar por
      * situação antes.
      *
-     * @param Collection<int, Animal> $autorizados
-     * @param Collection<int, array<string, mixed>> $carteiras
+     * @param  Collection<int, Animal>  $acompanhados
+     * @param  Collection<int, array<string, mixed>>  $carteiras
      * @return Collection<int, array<string, mixed>>
      */
-    private function pendencias(Collection $autorizados, Collection $carteiras, int $dias): Collection
+    private function pendencias(Collection $acompanhados, Collection $carteiras, int $dias): Collection
     {
         $limite = today()->addDays($dias)->toDateString();
 
-        return $autorizados
+        return $acompanhados
             ->flatMap(fn (Animal $animal) => collect($carteiras[$animal->id]['proximas_doses'])
                 ->filter(fn (array $dose) => $dose['prevista_para'] <= $limite)
                 ->map(fn (array $dose) => [
@@ -199,12 +196,12 @@ class PainelVeterinarioService
      * o retorno que já passou ou foi cumprido, e aí saiu do painel por RF34c, ou
      * não foi, e aí é assunto da rechamada em V02, não do "o que vem por aí".
      *
-     * @param Collection<int, Animal> $autorizados
+     * @param  Collection<int, Animal>  $acompanhados
      * @return Collection<int, array<string, mixed>>
      */
-    private function retornos(Prestador $prestador, Collection $autorizados, int $dias): Collection
+    private function retornos(Prestador $prestador, Collection $acompanhados, int $dias): Collection
     {
-        $animaisPorId = $autorizados->keyBy('id');
+        $animaisPorId = $acompanhados->keyBy('id');
 
         return Atendimento::whereIn('animal_id', $animaisPorId->keys())
             ->where('prestador_id', $prestador->id)
@@ -233,18 +230,18 @@ class PainelVeterinarioService
      * animal. A tela exibe qual das duas foi, porque "vacina" e "atendimento"
      * dizem coisas diferentes sobre o que o profissional vai encontrar na ficha.
      *
-     * @param Collection<int, Animal> $autorizados
-     * @param Collection<int, array<string, mixed>> $carteiras
+     * @param  Collection<int, Animal>  $acompanhados
+     * @param  Collection<int, array<string, mixed>>  $carteiras
      * @return array<string, mixed>
      */
     private function animaisAtendidos(
         Prestador $prestador,
-        Collection $autorizados,
+        Collection $acompanhados,
         Collection $carteiras,
         CarbonInterface $desde,
         int $pagina,
     ): array {
-        $ids = $autorizados->modelKeys();
+        $ids = $acompanhados->modelKeys();
 
         $porAtendimento = Atendimento::whereIn('animal_id', $ids)
             ->where('prestador_id', $prestador->id)
@@ -261,7 +258,7 @@ class PainelVeterinarioService
             ->groupBy('animal_id')
             ->pluck('em', 'animal_id');
 
-        $linhas = $autorizados
+        $linhas = $acompanhados
             ->map(function (Animal $animal) use ($porAtendimento, $porVacina, $carteiras) {
                 $atendimento = $porAtendimento[$animal->id] ?? null;
                 $vacina = $porVacina[$animal->id] ?? null;

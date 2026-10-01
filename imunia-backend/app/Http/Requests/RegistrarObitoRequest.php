@@ -12,11 +12,8 @@ use Illuminate\Foundation\Http\FormRequest;
  * V12 — registrar o óbito do animal (RF22).
  *
  * O âmbito é resolvido em `authorize()`, na mesma ordem de respostas de V07 e
- * V08: vínculo, inscrição, animal, autorização. O óbito muda o estado do
- * animal inteiro — para o tutor e para todo prestador autorizado —, e por isso
- * exige autorização vigente sem a exceção que o atendimento tem: não há aqui o
- * "registrar no prontuário desta clínica" de V08, porque o óbito não é
- * prontuário de uma clínica.
+ * V08: vínculo profissional, inscrição, animal. O óbito muda o estado do
+ * animal inteiro — para o tutor e para todo prestador que o acompanha.
  *
  * O que não está aqui, de propósito: a recusa por óbito já registrado. Ela não
  * é erro de formulário, é estado da tela (§V12), e responde 409 no controlador
@@ -48,11 +45,7 @@ class RegistrarObitoRequest extends FormRequest
 
         abort_if($this->animal === null, 404, 'Animal não encontrado.');
 
-        abort_if(
-            ! $this->animal->autorizacoes()->where('prestador_id', $this->prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de registrar.',
-        );
+        $this->prestador->vincular($this->animal);
 
         return true;
     }

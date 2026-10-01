@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'tipo',
@@ -147,5 +148,45 @@ class Prestador extends Model
         }
 
         return "CRMV-{$this->responsavel_tecnico_crmv_uf} {$this->responsavel_tecnico_crmv}";
+    }
+
+    public const VINCULO_POR_CADASTRO = 'cadastro';
+
+    public const VINCULO_POR_ATENDIMENTO = 'atendimento';
+
+    /**
+     * A carteira de pacientes do prestador (ver `Animal::vinculadoA`).
+     *
+     * @return BelongsToMany<Animal, Prestador>
+     */
+    public function animaisVinculados(): BelongsToMany
+    {
+        return $this->belongsToMany(Animal::class, 'animal_prestador')
+            ->withPivot('origem', 'vinculado_em')
+            ->withTimestamps();
+    }
+
+    /**
+     * Põe o animal na carteira do prestador. Idempotente: o primeiro vínculo
+     * fica, com a origem e a data de quando nasceu, e as chamadas seguintes não
+     * mudam nada — cada porta de entrada pode chamar sem perguntar antes.
+     */
+    public function vincular(Animal $animal, string $origem = self::VINCULO_POR_ATENDIMENTO): void
+    {
+        $agora = now();
+
+        DB::table('animal_prestador')->insertOrIgnore([
+            'animal_id' => $animal->id,
+            'prestador_id' => $this->id,
+            'origem' => $origem,
+            'vinculado_em' => $agora,
+            'created_at' => $agora,
+            'updated_at' => $agora,
+        ]);
+    }
+
+    public function acompanha(Animal $animal): bool
+    {
+        return $this->animaisVinculados()->whereKey($animal->id)->exists();
     }
 }

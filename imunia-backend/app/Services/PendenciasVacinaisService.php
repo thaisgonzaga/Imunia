@@ -18,8 +18,7 @@ use Illuminate\Support\Collection;
  * Dois âmbitos, os mesmos de V01 e pelo mesmo motivo:
  *
  * - **prestador ativo** — a rechamada é de um estabelecimento determinado;
- * - **autorização vigente** (RN48) — animal sem autorização não figura no
- *   resultado, e essa é a exigência literal de RF49c.
+ * - **carteira do prestador** (RN48) — só animais vinculados a ele.
  *
  * **Sobre o desempenho (RNF03).** `PainelVeterinarioService` registra que a
  * rechamada em escala "responde por consulta e não por laço". O laço que aquele
@@ -48,12 +47,10 @@ class PendenciasVacinaisService
     /** Linhas por página da tabela, no formato "Exibindo 1–25 de 137" (§5.1). */
     private const LINHAS_POR_PAGINA = 25;
 
-    public function __construct(private readonly CalendarioVacinalService $calendario)
-    {
-    }
+    public function __construct(private readonly CalendarioVacinalService $calendario) {}
 
     /**
-     * @param array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string} $filtros
+     * @param  array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string}  $filtros
      * @return array<string, mixed>
      */
     public function consultar(Prestador $prestador, array $filtros, int $pagina): array
@@ -76,8 +73,8 @@ class PendenciasVacinaisService
             'estado' => $animais->isEmpty() ? 'sem_autorizacoes' : 'normal',
             'filtros' => $this->descreverFiltros($filtros),
 
-            // O denominador do vazio positivo: "os N animais sob autorização
-            // vigente estão com o calendário em dia". Sem ele a confirmação
+            // O denominador do vazio positivo: "os N animais acompanhados
+            // estão com o calendário em dia". Sem ele a confirmação
             // seria uma frase sobre coisa nenhuma.
             'animais_no_ambito' => $animais->count(),
             'total' => $total,
@@ -98,7 +95,7 @@ class PendenciasVacinaisService
      * rechamada. Exportar a página em que se está seria exportar um recorte de
      * interface, e não a resposta à pergunta.
      *
-     * @param array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string} $filtros
+     * @param  array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string}  $filtros
      * @return Collection<int, array<string, mixed>>
      */
     public function paraExportacao(Prestador $prestador, array $filtros): Collection
@@ -118,7 +115,7 @@ class PendenciasVacinaisService
     private function animaisNoAmbito(Prestador $prestador): Collection
     {
         return Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
+            ->vinculadoA($prestador)
             ->with([
                 'tutor',
                 'vacinacoes' => fn ($consulta) => $consulta->orderBy('aplicado_em'),
@@ -135,7 +132,7 @@ class PendenciasVacinaisService
      * antirrábica vencida e V10 a vencer aparece duas vezes porque são duas
      * doses a marcar, e a coluna "Dose" é o que as distingue.
      *
-     * @param Collection<int, Animal> $animais
+     * @param  Collection<int, Animal>  $animais
      * @return Collection<int, array<string, mixed>>
      */
     private function pendencias(Collection $animais, int $dias): Collection
@@ -194,7 +191,7 @@ class PendenciasVacinaisService
      * conservar a mais recente de cada chave, porque a última a ser indexada
      * vence as anteriores.
      *
-     * @param Collection<int, Animal> $animais
+     * @param  Collection<int, Animal>  $animais
      * @return Collection<string, Notificacao>
      */
     private function ultimasNotificacoes(Collection $animais): Collection
@@ -240,8 +237,8 @@ class PendenciasVacinaisService
     }
 
     /**
-     * @param Collection<int, array<string, mixed>> $pendencias
-     * @param array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string} $filtros
+     * @param  Collection<int, array<string, mixed>>  $pendencias
+     * @param  array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string}  $filtros
      * @return Collection<int, array<string, mixed>>
      */
     private function aplicarFiltros(Collection $pendencias, array $filtros): Collection
@@ -269,7 +266,7 @@ class PendenciasVacinaisService
      * retorna nada ("gato" e "leptospirose"), e ela precisa ser escolhível para
      * que a tela possa explicar por que não retornou.
      *
-     * @param array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string} $filtros
+     * @param  array{dias: int, especie: ?string, imunobiologico: ?string, situacao: ?string}  $filtros
      * @return array<string, mixed>
      */
     private function descreverFiltros(array $filtros): array

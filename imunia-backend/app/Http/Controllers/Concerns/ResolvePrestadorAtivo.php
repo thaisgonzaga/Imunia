@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A porta de entrada do ambiente clínico, comum a toda tela do veterinário: há
@@ -87,7 +87,7 @@ trait ResolvePrestadorAtivo
      * com um vínculo só: é a tela que decide não desenhar a faixa quando não há
      * entre o que alternar (§5.2 do briefing).
      *
-     * Cada vínculo diz quantos animais estão sob autorização vigente ali — o
+     * Cada vínculo diz quantos animais estão na carteira daquele prestador — o
      * sinal de que há trabalho esperando em outro contexto, sem nome nem código
      * de animal — e se o usuário também administra aquela conta, que é o que
      * decide se a barra lateral desenha os destinos da administração (A01-A03).
@@ -98,12 +98,9 @@ trait ResolvePrestadorAtivo
     {
         $vinculos = $usuario->prestadoresComoVeterinario();
 
-        // Distintos porque a renovação antecipada convive com a autorização
-        // anterior ainda vigente — duas linhas, um animal.
-        $animais = Autorizacao::query()
+        $animais = DB::table('animal_prestador')
             ->whereIn('prestador_id', $vinculos->modelKeys())
-            ->vigente()
-            ->selectRaw('prestador_id, COUNT(DISTINCT animal_id) as total')
+            ->selectRaw('prestador_id, COUNT(*) as total')
             ->groupBy('prestador_id')
             ->pluck('total', 'prestador_id');
 

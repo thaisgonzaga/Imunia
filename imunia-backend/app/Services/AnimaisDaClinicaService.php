@@ -13,13 +13,12 @@ use Illuminate\Support\Collection;
  * Relação de animais da clínica — o destino "Animais" da barra lateral (§5.3
  * do briefing). É a lista de navegação do plantel: quem está sob os cuidados
  * deste prestador, em que situação vacinal, quando passou por aqui pela última
- * vez e até quando a autorização vale.
+ * vez e desde quando o acompanha.
  *
- * Não é busca. Achar um animal determinado é papel de V03, que responde também
- * sobre o que está fora do âmbito — com a parcimônia de RN12 e o log de RF18b.
- * Esta lista responde só sobre o que está dentro, e por isso o âmbito é o
- * mesmo de V01 e V02, pelos mesmos motivos: prestador ativo (RF48a) e
- * autorização vigente (RN48).
+ * Não é busca. Achar um animal determinado é papel de V03, que alcança também
+ * quem ainda não está na carteira, pelo identificador exato. Esta lista
+ * responde só sobre a carteira, e por isso o âmbito é o mesmo de V01 e V02:
+ * prestador ativo (RF48a) e vínculo com o animal (RN48).
  *
  * A ordem é alfabética, e não por urgência: lista de navegação se percorre
  * como catálogo, e a urgência já tem tela própria — V02, a um clique na mesma
@@ -81,15 +80,15 @@ class AnimaisDaClinicaService
     /**
      * RN48 — o âmbito, e a única consulta que o define. As vacinações vêm
      * junto, como em V02: é o que permite montar a situação do plantel inteiro
-     * sem voltar ao banco por animal. A autorização vigente vem também, porque
-     * a coluna de vencimento sai dela.
+     * sem voltar ao banco por animal. O vínculo vem também, porque a coluna
+     * "acompanha desde" sai dele.
      *
      * @return Collection<int, Animal>
      */
     private function animaisNoAmbito(Prestador $prestador): Collection
     {
         return Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
+            ->vinculadoA($prestador)
             ->with([
                 'tutor',
                 'vacinacoes' => fn ($consulta) => $consulta->orderBy('aplicado_em'),
@@ -97,9 +96,7 @@ class AnimaisDaClinicaService
                 'vacinacoes.protocoloVacinal',
                 'vacinacoes.prestador',
                 'vacinacoes.lancadoPor',
-                'autorizacoes' => fn ($consulta) => $consulta
-                    ->where('prestador_id', $prestador->id)
-                    ->vigente(),
+                'prestadoresVinculados' => fn ($consulta) => $consulta->whereKey($prestador->id),
             ])
             ->orderBy('nome')
             ->orderBy('id')
@@ -131,9 +128,7 @@ class AnimaisDaClinicaService
                 $this->calendario->montarCarteiraCom($animal, $animal->vacinacoes),
             );
 
-        // A vigente de vencimento mais distante, como na ficha (V06): pode
-        // haver mais de uma quando o tutor renovou antes do prazo.
-        $autorizacao = $animal->autorizacoes->sortByDesc('expira_em')->first();
+        $vinculo = $animal->prestadoresVinculados->first()?->pivot;
 
         return [
             'codigo' => $animal->codigo,
@@ -149,13 +144,10 @@ class AnimaisDaClinicaService
                 ? null
                 : CarbonImmutable::parse($ultimaPassagem)->toDateString(),
 
-            // O vencimento é informação de trabalho da clínica: renovar é do
-            // tutor (RF40c), mas saber até quando se enxerga o histórico é
-            // daqui — o mesmo aviso de quinze dias da ficha e de T12 (RN39).
-            'autorizacao' => [
-                'expira_em' => $autorizacao->expira_em->toDateString(),
-                'dias_restantes' => $autorizacao->diasRestantes(),
-                'a_expirar' => $autorizacao->situacao() === 'a_expirar',
+            'vinculo' => [
+                'desde' => $vinculo?->vinculado_em
+                    ? CarbonImmutable::parse($vinculo->vinculado_em)->toDateString()
+                    : null,
             ],
         ];
     }

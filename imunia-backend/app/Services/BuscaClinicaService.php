@@ -12,20 +12,20 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * A busca do ambiente clínico (V03, RF51) — e, com ela, a regra que o briefing
- * chama de "a tela de maior risco de vazamento por desenho de interface de todo
- * o sistema".
+ * A busca do ambiente clínico (V03, RF51).
  *
- * A resposta tem duas seções, e a diferença entre elas é a razão de ser desta
- * classe. A primeira é o que o prestador pode ver: animais sob autorização
- * vigente (RN48), com tudo. A segunda é o que ele não pode: a existência de um
- * cadastro, e nada além dela — sem nome de tutor, sem contato, sem relação de
- * animais, sem contagem (RN12, RF13a, RF13b, RF18a).
+ * Duas portas, com alcances diferentes:
  *
- * A tentação natural, ao encontrar o cadastro, é exibir os dados para confirmar
- * que se trata da mesma pessoa. Fazê-lo converteria o CPF em chave de consulta
- * a dados pessoais de terceiros, que é exatamente a falha que o sistema inteiro
- * foi desenhado para não ter.
+ * - **Identificador exato** — CPF do tutor, código do animal, micro-chip. Quem
+ *   o tem na mão está com o animal (ou com o tutor) à sua frente, e o
+ *   atendimento não espera por ninguém: a resposta traz o cadastro inteiro,
+ *   seja de que clínica for. Abrir a ficha o põe na carteira do prestador.
+ * - **Nome** — de animal ou de tutor, só dentro da carteira. Nome não
+ *   identifica ninguém, e a busca por nome em toda a base seria varredura de
+ *   dados de terceiros.
+ *
+ * O encontro por identificador de um animal que a clínica ainda não acompanha
+ * fica registrado (RF18b), e o tutor o vê no livro de acessos (T14).
  */
 class BuscaClinicaService
 {
@@ -36,61 +36,50 @@ class BuscaClinicaService
      */
     private const RESULTADOS_POR_SECAO = 24;
 
-    /**
-     * Teto de tutores alcançados por um registro de busca por nome. A segunda
-     * seção mostra um cartão só, mas o log de RF18b presta contas a cada
-     * pessoa cuja existência foi revelada — e um termo genérico não pode virar
-     * varredura da base inteira.
-     */
-    private const TUTORES_POR_REGISTRO = 25;
-
-    public function __construct(
-        private readonly CalendarioVacinalService $calendario,
-        private readonly SolicitacoesDeAcessoService $solicitacoes,
-    ) {}
+    public function __construct(private readonly CalendarioVacinalService $calendario) {}
 
     /**
      * @return array<string, mixed>
      */
     public function buscar(User $profissional, Prestador $prestador, TermoDeBusca $termo): array
     {
-        $autorizados = $this->autorizados($prestador, $termo);
-        $existencia = $this->existenciaForaDoAmbito($prestador, $termo, $autorizados);
+        $animais = $this->encontrados($prestador, $termo);
 
-        // RF52b — a gravação do log é condição da exibição, e não posterior a
-        // ela. Por isso o registro acontece aqui, antes de a resposta ser
-        // montada: se a linha não puder ser gravada, a existência não é
-        // revelada, e não o contrário.
-        if ($existencia !== null) {
-            $this->registrar($profissional, $prestador, $termo, $existencia);
-        }
+        // Pelo CPF a resposta é também o titular, com ou sem animal: é o que
+        // permite a V04 e V05 seguirem para o cadastro do animal de um tutor
+        // que ainda não tem nenhum.
+        $tutor = $termo->tipo === TermoDeBusca::CPF && ! $termo->vazio()
+            ? Tutor::query()->where('cpf', $termo->valor)->first()
+            : null;
+
+        // RF52b — a gravação do log é condição da exibição: acontece antes de a
+        // resposta ser montada.
+        $this->registrar($profissional, $prestador, $termo, $animais, $tutor);
 
         return [
             'termo' => $termo->original,
             'tipo' => $termo->tipo,
 
-            // Vocabulário de estado das telas do veterinário (V01, V02), aqui
-            // com os dois que são próprios desta: a tela ainda não perguntou
-            // nada, e nada corresponde ao que se perguntou.
             'estado' => match (true) {
                 $termo->vazio() => 'inicial',
-                $autorizados->isEmpty() && $existencia === null => 'sem_resultado',
+                $animais->isEmpty() && $tutor === null => 'sem_resultado',
                 default => 'normal',
             },
 
-            'autorizados' => $this->cartoes($autorizados),
-            'existencia' => $existencia['cartao'] ?? null,
+            'autorizados' => $this->cartoes($animais),
+            'tutor' => $tutor === null ? null : ['nome' => $tutor->nome],
+
+            // A seção de "existência fora do âmbito" deixou de existir: o
+            // identificador exato agora traz o cadastro inteiro. A chave fica
+            // nula enquanto as telas ainda a leem.
+            'existencia' => null,
         ];
     }
 
     /**
-     * RN48 — a primeira seção é o âmbito do prestador, e nada mais. O escopo do
-     * modelo é o mesmo de V01 e V02: um lugar só onde a condição de vigência
-     * pode ser esquecida, e não três.
-     *
      * @return Collection<int, Animal>
      */
-    private function autorizados(Prestador $prestador, TermoDeBusca $termo): Collection
+    private function encontrados(Prestador $prestador, TermoDeBusca $termo): Collection
     {
         // Termo vazio não é busca por tudo: é a tela recém-aberta, que só
         // precisa saber em que prestador está.
@@ -98,21 +87,15 @@ class BuscaClinicaService
             return new Collection;
         }
 
-        $consulta = Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
-            ->with([
-                'tutor',
-                'vacinacoes' => fn ($vacinacoes) => $vacinacoes->orderBy('aplicado_em'),
+        $consulta = Animal::query()->with([
+            'tutor',
+            'vacinacoes' => fn ($vacinacoes) => $vacinacoes->orderBy('aplicado_em'),
+            'prestadoresVinculados' => fn ($prestadores) => $prestadores->whereKey($prestador->id),
+        ]);
 
-                // Até quando o acesso vale. É informação do prestador sobre a
-                // própria autorização — nada do tutor, nada de terceiro —, e o
-                // que permite a V07a confirmar a escolha do animal dizendo o
-                // prazo em que o registro pode ser feito.
-                'autorizacoes' => fn ($autorizacoes) => $autorizacoes
-                    ->where('prestador_id', $prestador->id)
-                    ->vigente()
-                    ->orderByDesc('expira_em'),
-            ]);
+        if (! $termo->chaveExata()) {
+            $consulta->vinculadoA($prestador);
+        }
 
         $this->restringirAoTermo($consulta, $termo);
 
@@ -144,117 +127,6 @@ class BuscaClinicaService
     }
 
     /**
-     * A segunda seção. Devolve o cartão que a tela exibe e os titulares a quem
-     * o log presta contas — nunca os dados de um nem de outro.
-     *
-     * @param  Collection<int, Animal>  $autorizados
-     * @return array{cartao: array<string, mixed>, tutores: list<int>, animal_id: int|null}|null
-     */
-    private function existenciaForaDoAmbito(
-        Prestador $prestador,
-        TermoDeBusca $termo,
-        Collection $autorizados,
-    ): ?array {
-        if ($termo->vazio() || ! $termo->podeRevelarExistencia()) {
-            return null;
-        }
-
-        if ($termo->tipo === TermoDeBusca::CPF) {
-            $tutor = Tutor::where('cpf', $termo->valor)->first();
-
-            // Com algum animal deste tutor já sob autorização, o profissional o
-            // conhece pelo próprio resultado da primeira seção: anunciar de
-            // novo que "existe um cadastro" não acrescentaria informação, e
-            // dizer que existem *outros* animais seria a contagem que RN12
-            // proíbe.
-            if ($tutor === null || $autorizados->isNotEmpty()) {
-                return null;
-            }
-
-            return [
-                // RF13a e RF13b — apenas a existência. Nome, contato e relação
-                // de animais permanecem ocultos até a autorização. A pendência
-                // é o ato do próprio prestador, e é o que a tela mostra no
-                // lugar do botão de pedir de novo (V10).
-                'cartao' => [
-                    'tipo' => 'tutor',
-                    'solicitacao_pendente' => $this->solicitacoes->pendenciaParaTutor($prestador, $tutor),
-                ],
-                'tutores' => [$tutor->id],
-                'animal_id' => null,
-            ];
-        }
-
-        if ($termo->chaveExata()) {
-            $coluna = $termo->tipo === TermoDeBusca::CODIGO ? 'codigo' : 'microchip';
-            $animal = Animal::where($coluna, $termo->valor)->first();
-
-            if ($animal === null || $autorizados->isNotEmpty()) {
-                return null;
-            }
-
-            return [
-                // RF18a — espécie, nome e a indicação de que há histórico
-                // mediante autorização. O nome do animal não identifica o
-                // tutor, e é o que permite ao profissional confirmar, com quem
-                // está à sua frente, que ditou o código certo.
-                'cartao' => [
-                    'tipo' => 'animal',
-                    'nome' => $animal->nome,
-                    'especie' => $animal->especie,
-                    'solicitacao_pendente' => $this->solicitacoes->pendenciaParaAnimal($prestador, $animal),
-                ],
-                'tutores' => [$animal->tutor_id],
-                'animal_id' => $animal->id,
-            ];
-        }
-
-        $tutores = $this->tutoresForaDoAmbito($termo, $autorizados);
-
-        if ($tutores === []) {
-            return null;
-        }
-
-        return [
-            // Um cartão só, seja qual for o número de correspondências: o
-            // desenho não tem plural. Cartão por correspondência transformaria
-            // a busca por nome em contador de quantas pessoas com aquele nome
-            // existem na plataforma.
-            'cartao' => ['tipo' => 'outro'],
-            'tutores' => $tutores,
-            'animal_id' => null,
-        ];
-    }
-
-    /**
-     * @param  Collection<int, Animal>  $autorizados
-     * @return list<int>
-     */
-    private function tutoresForaDoAmbito(TermoDeBusca $termo, Collection $autorizados): array
-    {
-        $curinga = $this->curinga($termo);
-
-        $porTutor = Tutor::where('nome', 'like', $curinga)
-            ->limit(self::TUTORES_POR_REGISTRO)
-            ->pluck('id');
-
-        $porAnimal = Animal::where('nome', 'like', $curinga)
-            ->limit(self::TUTORES_POR_REGISTRO)
-            ->pluck('tutor_id');
-
-        // Tutor que já apareceu na primeira seção sai daqui inteiro, mesmo que
-        // tenha outro animal fora do âmbito: a alternativa seria informar que
-        // ele tem mais animais do que os exibidos, que é a contagem de RN12.
-        return $porTutor
-            ->merge($porAnimal)
-            ->unique()
-            ->diff($autorizados->pluck('tutor_id'))
-            ->take(self::TUTORES_POR_REGISTRO)
-            ->values()
-            ->all();
-    }
-
-    /**
      * `%` e `_` digitados pelo profissional são texto, e não curinga: sem o
      * escape, um termo de um caractere só percorreria a base inteira.
      */
@@ -264,35 +136,60 @@ class BuscaClinicaService
     }
 
     /**
-     * RF18b — a consulta sem autorização fica registrada, e o tutor a vê (T14).
-     * Uma linha por titular cuja existência foi revelada: por CPF ou por
-     * código, é sempre um; por nome, são aqueles a quem o cartão coletivo se
-     * refere, ainda que a tela mostre um cartão só.
+     * RF18b — o encontro por identificador de animal que a clínica ainda não
+     * acompanha fica registrado, uma linha por titular, e o tutor o vê em T14.
+     * A busca por nome não registra nada: ela só alcança a própria carteira.
      *
-     * @param  array{cartao: array<string, mixed>, tutores: list<int>, animal_id: int|null}  $existencia
+     * @param  Collection<int, Animal>  $animais
      */
     private function registrar(
         User $profissional,
         Prestador $prestador,
         TermoDeBusca $termo,
-        array $existencia,
+        Collection $animais,
+        ?Tutor $tutor,
     ): void {
         $agora = now();
 
-        RegistroDeAcesso::insert(array_map(fn (int $tutorId) => [
-            'prestador_id' => $prestador->id,
-            'user_id' => $profissional->id,
-            'tutor_id' => $tutorId,
-            'animal_id' => $existencia['animal_id'],
-            'natureza' => $termo->naturezaDoRegistro(),
-            'ocorrido_em' => $agora,
-        ], $existencia['tutores']));
+        // O titular sem animal algum também foi encontrado.
+        if ($tutor !== null && $animais->isEmpty()) {
+            RegistroDeAcesso::create([
+                'prestador_id' => $prestador->id,
+                'user_id' => $profissional->id,
+                'tutor_id' => $tutor->id,
+                'animal_id' => null,
+                'natureza' => RegistroDeAcesso::BUSCA_POR_CPF,
+                'ocorrido_em' => $agora,
+            ]);
+
+            return;
+        }
+
+        $alheios = $animais->filter(fn (Animal $animal) => $animal->prestadoresVinculados->isEmpty());
+
+        if ($alheios->isEmpty()) {
+            return;
+        }
+
+        RegistroDeAcesso::insert($alheios
+            ->groupBy('tutor_id')
+            ->map(fn (Collection $doTutor, int $tutorId) => [
+                'prestador_id' => $prestador->id,
+                'user_id' => $profissional->id,
+                'tutor_id' => $tutorId,
+                // Pelo CPF o encontrado é o titular, como em V04; pelo código e
+                // pelo micro-chip, um animal determinado.
+                'animal_id' => $termo->tipo === TermoDeBusca::CPF ? null : $doTutor->first()->id,
+                'natureza' => $termo->naturezaDoRegistro(),
+                'ocorrido_em' => $agora,
+            ])
+            ->values()
+            ->all());
     }
 
     /**
-     * O cartão completo da primeira seção: o mesmo vocabulário do painel do
-     * veterinário (V01), acrescido da idade e do nome de quem o trouxe — que
-     * aqui podem ser exibidos, porque há autorização vigente.
+     * O cartão do resultado: o mesmo vocabulário do painel do veterinário (V01),
+     * acrescido da idade e do nome de quem o trouxe.
      *
      * Montado campo a campo, e não por `Animal::paraListagem()`, porque aquele
      * caminho recalcula a carteira animal a animal (uma consulta por linha) e
@@ -311,7 +208,7 @@ class BuscaClinicaService
             'nascimento_exato' => $animal->nascimento_exato, // RN14
             'preliminar' => $animal->preliminar(), // RN17
             'tutor' => $animal->tutor->nome,
-            'autorizado_ate' => $animal->autorizacoes->first()?->expira_em->toDateString(),
+            'vinculado' => $animal->prestadoresVinculados->isNotEmpty(),
             'situacao' => $this->calendario->situacaoDaCarteira(
                 $this->calendario->montarCarteiraCom($animal, $animal->vacinacoes),
             ),

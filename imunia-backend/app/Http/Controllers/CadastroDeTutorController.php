@@ -20,13 +20,12 @@ use Illuminate\Validation\ValidationException;
  *
  * A segunda origem do cadastro que RF12 admite: o profissional cria o registro
  * global no balcão, e o titular recebe o convite de ativação pelo qual define a
- * própria senha (RF14). Até ativar, a conta existe para o registro clínico e
- * para nada mais — não recebe lembrete, não concede autorização.
+ * própria senha (RF14). O atendimento não espera por isso: até ativar, a conta
+ * existe para o registro clínico, e o tutor que quiser acompanhar entra depois.
  *
  * A conta nasce como a do veterinário convidado em A03: senha aleatória
  * inacessível, `ativado_em` nulo. A diferença é o nome, que aqui vem preenchido
- * — o veterinário o colheu de quem está à sua frente, e é ele que RF13b manda
- * ocultar de todo outro prestador até a autorização.
+ * — o veterinário o colheu de quem está à sua frente.
  */
 class CadastroDeTutorController extends Controller
 {
@@ -41,11 +40,11 @@ class CadastroDeTutorController extends Controller
         $existente = Tutor::query()->where('cpf', $dados['cpf'])->first();
 
         if ($existente !== null) {
-            return $this->conduzirAoVinculo($profissional, $prestador, $existente);
+            return $this->conduzirAoCadastroExistente($profissional, $prestador, $existente);
         }
 
-        // Depois do CPF, de propósito: com cadastro existente, o fluxo é o de
-        // RF13 e o e-mail digitado nem chega a importar. A recusa confirma que
+        // Depois do CPF, de propósito: com cadastro existente, o fluxo segue
+        // para o animal e o e-mail digitado nem chega a importar. A recusa confirma que
         // o endereço tem conta, mas não de quem nem de que papel — e quem a lê
         // é um profissional autenticado com o titular à sua frente, não o
         // visitante anônimo de quem o autocadastro se defende.
@@ -96,28 +95,22 @@ class CadastroDeTutorController extends Controller
     }
 
     /**
-     * RF12b — o CPF existente jamais cria segundo registro: conduz ao fluxo de
-     * vínculo de RF13. A resposta diz só que o cadastro existe — sem nome, sem
-     * contato, sem animais (RN12) —, e fica registrada como toda revelação de
-     * existência (RF18b), pela mesma razão da busca de V03: o titular vê em T14
-     * que este prestador chegou ao seu CPF.
+     * RF12b — o CPF existente jamais cria segundo registro. Em vez de parar o
+     * atendimento, a resposta devolve o cadastro que já existe, e a tela segue
+     * para o animal: o veterinário não precisa de nada do tutor para continuar.
      *
-     * No caminho desenhado o profissional já verificou o CPF pela busca antes
-     * de abrir o formulário; chegar aqui com CPF existente é a janela entre a
-     * verificação e o envio. O log não pode depender de qual dos dois caminhos
-     * revelou a existência.
+     * Encontrar pelo CPF um tutor que a clínica ainda não acompanha fica
+     * registrado (RF18b), pela mesma razão da busca de V03: o titular vê em T14
+     * que este prestador chegou ao seu CPF.
      */
-    private function conduzirAoVinculo(User $profissional, Prestador $prestador, Tutor $existente): JsonResponse
+    private function conduzirAoCadastroExistente(User $profissional, Prestador $prestador, Tutor $existente): JsonResponse
     {
-        // Com animal do tutor já sob autorização vigente, o profissional o
-        // conhece pelo próprio âmbito — anunciar a existência não acrescenta
-        // nada, e registrá-la de novo encheria T14 de linhas sem informação.
-        $jaConhecido = Animal::query()
-            ->sobAutorizacaoVigenteDe($prestador)
+        $jaAcompanhado = Animal::query()
+            ->vinculadoA($prestador)
             ->where('tutor_id', $existente->id)
             ->exists();
 
-        if (! $jaConhecido) {
+        if (! $jaAcompanhado) {
             RegistroDeAcesso::create([
                 'prestador_id' => $prestador->id,
                 'user_id' => $profissional->id,
@@ -130,7 +123,12 @@ class CadastroDeTutorController extends Controller
 
         return response()->json([
             'situacao' => 'cpf_existente',
-            'message' => 'Já existe um cadastro com este CPF na plataforma. Para vincular este tutor ao atendimento, solicite a autorização.',
-        ], 409);
+            'message' => 'Este CPF já tem cadastro no Imunia. Siga para o cadastro do animal.',
+            'tutor' => [
+                'id' => $existente->id,
+                'nome' => $existente->nome,
+                'cpf' => $existente->cpf,
+            ],
+        ]);
     }
 }

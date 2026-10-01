@@ -56,11 +56,7 @@ class RetificarVacinacaoRequest extends FormRequest
 
         abort_if($vacinacao === null, 404, 'Aplicação não encontrada.');
 
-        abort_if(
-            ! $this->animal->autorizacoes()->where('prestador_id', $this->prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de retificar.',
-        );
+        $this->prestador->vincular($this->animal);
 
         // RN27, e para o registro pregresso também RN25: o lançamento do tutor
         // não tem aplicador, porque não houve ato clínico a atribuir a ninguém,

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\AnexoAtendimento;
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\User;
@@ -22,11 +21,9 @@ use Illuminate\Support\Str;
  * Duas decisões governam esta classe, e ambas são de conformidade, não de
  * conveniência:
  *
- * 1. **A ausência de autorização é um estado de tela, não um erro** (P2, RF35c).
- *    Sem autorização vigente a rota responde 200 com espécie, nome e código — e
- *    nada mais. Nem o nome do tutor, nem a contagem de registros, nem a data do
- *    último atendimento, que já seriam informação clínica sobre um animal que
- *    ninguém autorizou este prestador a acompanhar.
+ * 1. **Abrir a ficha é começar a acompanhar o animal.** Quem chega aqui chegou
+ *    pelo código — da busca, do QR ou do cadastro —, e o atendimento não espera
+ *    pelo tutor: a ficha sai inteira e o animal entra na carteira do prestador.
  *
  * 2. **A gravação do log é condição da exibição** (RF52b). O registro de acesso
  *    acontece antes de a resposta ser montada, e não depois de enviada: se a
@@ -44,7 +41,6 @@ class FichaClinicaService
     public function __construct(
         private readonly CalendarioVacinalService $calendario,
         private readonly HistoricoConsolidadoService $historico,
-        private readonly SolicitacoesDeAcessoService $solicitacoes,
     ) {}
 
     /**
@@ -52,70 +48,8 @@ class FichaClinicaService
      */
     public function montar(User $profissional, Prestador $prestador, Animal $animal): array
     {
-        $autorizacao = $this->autorizacaoVigente($animal, $prestador);
+        $prestador->vincular($animal);
 
-        if ($autorizacao === null) {
-            return $this->fichaSemAutorizacao($profissional, $prestador, $animal);
-        }
-
-        return $this->fichaAutorizada($profissional, $prestador, $animal, $autorizacao);
-    }
-
-    private function autorizacaoVigente(Animal $animal, Prestador $prestador): ?Autorizacao
-    {
-        return $animal->autorizacoes()
-            ->where('prestador_id', $prestador->id)
-            ->vigente()
-            ->latest('expira_em')
-            ->first();
-    }
-
-    /**
-     * O estado P2. Identificação mínima, a explicação do porquê e um caminho
-     * único — pedir a autorização a quem pode dá-la.
-     *
-     * O acesso fica registrado (RF52, RN49) e a tela o anuncia: o profissional
-     * abriu a ficha de um animal fora do seu âmbito, e o tutor verá que abriu.
-     * Registrar aqui, e não só na busca de V03, é o que impede que a ficha seja
-     * a porta de trás do log — chegar por endereço direto não pode custar menos
-     * do que chegar pela busca.
-     *
-     * @return array<string, mixed>
-     */
-    private function fichaSemAutorizacao(User $profissional, Prestador $prestador, Animal $animal): array
-    {
-        $this->registrarAcesso($profissional, $prestador, $animal, RegistroDeAcesso::FICHA_SEM_AUTORIZACAO);
-
-        return [
-            'acesso' => 'sem_autorizacao',
-
-            // RF35c e RF18a — espécie, nome e código. A ausência do tutor não é
-            // omissão de tela: é o conteúdo do estado.
-            'animal' => [
-                'codigo' => $animal->codigo,
-                'nome' => $animal->nome,
-                'especie' => $animal->especie,
-            ],
-            'autorizacao' => null,
-
-            // V10 — o pedido já feito e ainda sem resposta, para a tela trocar
-            // o botão de solicitar pela etiqueta de espera. É ato do próprio
-            // prestador, não dado do tutor.
-            'solicitacao_pendente' => $this->solicitacoes->pendenciaParaAnimal($prestador, $animal),
-
-            'acesso_registrado' => true,
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function fichaAutorizada(
-        User $profissional,
-        Prestador $prestador,
-        Animal $animal,
-        Autorizacao $autorizacao,
-    ): array {
         $animal->loadMissing(['tutor.user', 'obitoRegistradoPor']);
 
         $carteira = $this->calendario->montarCarteira($animal);
@@ -134,9 +68,9 @@ class FichaClinicaService
         }
 
         return [
-            'acesso' => 'autorizado',
+            'acesso' => 'completo',
             'animal' => $this->identificar($animal),
-            'autorizacao' => $this->apresentarAutorizacao($autorizacao),
+            'vinculo' => $this->apresentarVinculo($animal, $prestador),
 
             // O aviso em `--consent-wash` que a tela exibe **antes** do
             // conteúdo. Viaja como dado porque a frase depende de haver
@@ -144,7 +78,7 @@ class FichaClinicaService
             // percorrer o histórico inteiro por conta própria.
             'aviso_outro_prestador' => $deOutroPrestador,
 
-            'alertas' => $this->alertas($animal, $autorizacao, $carteira, $atendimentos),
+            'alertas' => $this->alertas($animal, $carteira, $atendimentos),
             'resumo' => $this->resumo($prestador, $carteira, $atendimentos),
             'carteira' => $carteira,
             'historico' => $this->historico->montar($animal),
@@ -187,8 +121,7 @@ class FichaClinicaService
 
                 // RF14b — tutor cadastrado pelo prestador que ainda não ativou
                 // o acesso é sinalizado nas telas do prestador. Enquanto não
-                // ativa, não recebe lembrete nem concede autorização, e o
-                // profissional precisa saber disso antes de contar com ele.
+                // ativa, não recebe lembrete de dose por e-mail.
                 'ativado' => $animal->tutor->user?->ativado_em !== null,
             ],
 
@@ -203,19 +136,17 @@ class FichaClinicaService
     }
 
     /**
-     * @return array<string, mixed>
+     * Desde quando, e por qual ato, este prestador acompanha o animal.
+     *
+     * @return array{desde: string|null, origem: string|null}
      */
-    private function apresentarAutorizacao(Autorizacao $autorizacao): array
+    private function apresentarVinculo(Animal $animal, Prestador $prestador): array
     {
-        return [
-            'concedida_em' => $autorizacao->concedida_em->toDateString(),
-            'expira_em' => $autorizacao->expira_em->toDateString(),
-            'dias_restantes' => $autorizacao->diasRestantes(),
+        $vinculo = $prestador->animaisVinculados()->whereKey($animal->id)->first()?->pivot;
 
-            // A mesma antecedência de T12: o alerta que a clínica vê e o âmbar
-            // que o tutor vê acendem no mesmo dia, ou um dos dois estaria
-            // pedindo renovação que o outro ainda não julga necessária.
-            'a_expirar' => $autorizacao->situacao() === 'a_expirar',
+        return [
+            'desde' => $vinculo?->vinculado_em ? Carbon::parse($vinculo->vinculado_em)->toDateString() : null,
+            'origem' => $vinculo?->origem,
         ];
     }
 
@@ -235,7 +166,6 @@ class FichaClinicaService
      */
     private function alertas(
         Animal $animal,
-        Autorizacao $autorizacao,
         array $carteira,
         Collection $atendimentos,
     ): array {
@@ -247,7 +177,6 @@ class FichaClinicaService
             'administrativos' => array_values(array_filter([
                 $this->alertaDeObito($animal),
                 $this->alertaDeCadastroPreliminar($animal),
-                $this->alertaDeAutorizacao($animal, $autorizacao),
                 $this->alertaDeRetorno($animal, $atendimentos),
                 $this->alertaDeTutorNaoAtivado($animal),
             ])),
@@ -405,42 +334,6 @@ class FichaClinicaService
     }
 
     /**
-     * @return array<string, mixed>|null
-     */
-    private function alertaDeAutorizacao(Animal $animal, Autorizacao $autorizacao): ?array
-    {
-        $dias = $autorizacao->diasRestantes();
-
-        if ($autorizacao->situacao() !== 'a_expirar') {
-            return null;
-        }
-
-        return [
-            'chave' => 'autorizacao-a-expirar',
-            'tom' => 'atencao',
-            'icone' => 'key-round',
-            'titulo' => 'Autorização a expirar',
-            'texto' => sprintf(
-                'Expira em %s, %s.',
-                $autorizacao->expira_em->format('d/m/Y'),
-                match (true) {
-                    $dias <= 0 => 'hoje',
-                    $dias === 1 => 'amanhã',
-                    default => "em {$dias} dias",
-                },
-            ),
-
-            // RN37 e RF36 — o prestador pede; só o titular concede. Dizer isso
-            // na própria tarja evita a expectativa de um botão que renove.
-            'nota' => 'A renovação é ato do tutor: o prestador pode pedi-la, nunca concedê-la.',
-            'acao' => [
-                'rotulo' => 'Pedir renovação',
-                'destino' => "/clinica/autorizacoes/nova?animal={$animal->codigo}",
-            ],
-        ];
-    }
-
-    /**
      * RF34 — retorno programado em aberto. RF34c encerra-o automaticamente
      * quando há atendimento novo depois da data prevista, e é essa a conta
      * feita aqui: o retorno cumprido some da ficha sem que ninguém precise
@@ -499,12 +392,12 @@ class FichaClinicaService
             'tom' => 'atencao',
             'icone' => 'user-round',
             'titulo' => 'Tutor ainda não ativou o acesso',
-            // RF14 — enquanto não ativa, o tutor não recebe lembrete e não
-            // concede autorização. As duas consequências importam à conduta da
-            // clínica, e por isso são ditas, e não deixadas subentendidas.
+            // RF14 — enquanto não ativa, o tutor não recebe lembrete. Nada do
+            // atendimento depende disso; é só a clínica saber que, por ora, o
+            // aviso de dose é com ela.
             'texto' => sprintf(
                 '%s recebeu o convite e ainda não definiu a senha. Até lá não recebe lembretes '
-                .'de dose nem consegue autorizar prestadores.',
+                .'de dose por e-mail.',
                 $animal->tutor->nome,
             ),
             'nota' => null,
@@ -566,8 +459,8 @@ class FichaClinicaService
      * A aba Anexos: os exames e documentos de todos os atendimentos, do mais
      * recente para o mais antigo (RF32).
      *
-     * O endereço de cada arquivo é o da rota clínica, que confere a autorização
-     * do prestador ativo a cada pedido (RF32c). Não é a rota de T08: aquela
+     * O endereço de cada arquivo é o da rota clínica, que confere o contexto
+     * clínico do prestador ativo a cada pedido (RF32c). Não é a rota de T08: aquela
      * pergunta pela titularidade do tutor, e o veterinário não é titular de
      * animal nenhum.
      *
@@ -603,9 +496,7 @@ class FichaClinicaService
     }
 
     /**
-     * O anexo pedido pela aba Anexos (RF32c). A conferência acontece a cada
-     * pedido, e não uma vez na montagem da ficha: uma autorização revogada
-     * entre abrir a tela e clicar no arquivo tem que fechar o arquivo.
+     * O anexo pedido pela aba Anexos (RF32c).
      *
      * A leitura de anexo produzido por outro prestador é acesso a registro
      * alheio como qualquer outro, e gera a sua linha de log (RN49). Abrir o
@@ -619,11 +510,7 @@ class FichaClinicaService
         Animal $animal,
         int $anexo,
     ): AnexoAtendimento {
-        abort_if(
-            $this->autorizacaoVigente($animal, $prestador) === null,
-            403,
-            'Este animal não está sob autorização vigente para o prestador ativo.',
-        );
+        $prestador->vincular($animal);
 
         /** @var AnexoAtendimento|null $arquivo */
         $arquivo = AnexoAtendimento::query()

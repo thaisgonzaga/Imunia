@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Prestador;
 use App\Models\RegistroDeAcesso;
 use App\Models\Tutor;
@@ -16,9 +15,9 @@ use Tests\TestCase;
  *
  * O que estes testes protegem: o cadastro nasce vinculado ao tutor certo (o
  * CPF com dígito conferido, nunca um id), a caracterização carimba autor e
- * data (RF19c), a duplicidade alerta antes de criar (RF20a) sem revelar fora
- * do âmbito mais do que RF18a admite — e revelando fica registrada (RF18b) —,
- * e a consolidação completa o cadastro preliminar sem jamais criar um segundo
+ * data (RF19c) e põe o animal na carteira da clínica, a duplicidade alerta
+ * antes de criar (RF20a) — e, fora da carteira, fica registrada (RF18b) —, e a
+ * consolidação completa o cadastro preliminar sem jamais criar um segundo
  * (RN19).
  */
 class CadastroDeAnimalNaClinicaTest extends TestCase
@@ -51,15 +50,6 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
     private function helena(string $cpf = self::CPF_VALIDO): Tutor
     {
         return Tutor::factory()->create(['nome' => 'Helena Ramos', 'cpf' => $cpf]);
-    }
-
-    private function autorizar(Animal $animal, Prestador $prestador): Autorizacao
-    {
-        return Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
     }
 
     /**
@@ -137,6 +127,28 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $this->assertStringNotContainsString('Helena', $resposta->getContent());
     }
 
+    /**
+     * Cadastrar e atender são o mesmo balcão: o animal cadastrado aqui já é
+     * da carteira da clínica, com a origem que diz como entrou nela.
+     */
+    public function test_o_cadastro_poe_o_animal_na_carteira_da_clinica(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $this->helena();
+
+        $this->cadastrar($marcelo)->assertCreated();
+
+        $animal = Animal::query()->sole();
+
+        $this->assertTrue($clinica->acompanha($animal));
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $clinica->id,
+            'origem' => Prestador::VINCULO_POR_CADASTRO,
+        ]);
+    }
+
     public function test_nascimento_estimado_guarda_o_primeiro_dia_e_a_imprecisao(): void
     {
         $marcelo = $this->marcelo($this->clinica());
@@ -191,7 +203,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
 
     /* Duplicidade (RF20a) ---------------------------------------------------- */
 
-    public function test_duplicidade_fora_do_ambito_revela_o_minimo_e_fica_registrada(): void
+    public function test_duplicidade_fora_da_carteira_traz_o_cartao_e_fica_registrada(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
@@ -200,37 +212,41 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
 
         $resposta = $this->cadastrar($marcelo)->assertStatus(409);
 
-        // O mínimo de RF18a: nome e espécie. Sem código — o alerta não pode
-        // virar a busca que o profissional não fez.
+        // O cartão completo, com o código que leva à ficha: o tutor está no
+        // balcão, e o caminho é atender o cadastro que já existe.
+        $resposta->assertJsonPath('duplicado.codigo', $theo->codigo);
         $resposta->assertJsonPath('duplicado.nome', 'Theo');
         $resposta->assertJsonPath('duplicado.especie', 'cao');
-        $resposta->assertJsonPath('duplicado.ambito', 'fora_do_ambito');
-        $this->assertStringNotContainsString($theo->codigo, $resposta->getContent());
+        $resposta->assertJsonPath('duplicado.ambito', 'autorizado');
 
-        // RF18b por analogia: a revelação presta contas ao titular.
+        // RF18b por analogia: o encontro de animal que a clínica não
+        // acompanhava presta contas ao titular.
         $registro = RegistroDeAcesso::query()->sole();
         $this->assertSame(RegistroDeAcesso::ALERTA_DE_DUPLICIDADE, $registro->natureza);
         $this->assertSame($helena->id, $registro->tutor_id);
         $this->assertSame($theo->id, $registro->animal_id);
 
         $this->assertSame(1, Animal::query()->count());
+
+        // O alerta não é ficha aberta: não vincula.
+        $this->assertFalse($clinica->acompanha($theo));
     }
 
-    public function test_duplicidade_no_ambito_traz_o_cartao_completo_sem_registro(): void
+    public function test_duplicidade_na_carteira_traz_o_cartao_completo_sem_registro(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $helena = $this->helena();
         $theo = Animal::factory()->create(['tutor_id' => $helena->id, 'nome' => 'Théo', 'especie' => 'cao']);
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
         $resposta = $this->cadastrar($marcelo)->assertStatus(409);
 
         $resposta->assertJsonPath('duplicado.codigo', $theo->codigo);
         $resposta->assertJsonPath('duplicado.ambito', 'autorizado');
 
-        // O que o âmbito já mostra não é revelação, e não gera linha (mesma
-        // condição da busca de V03).
+        // O que a clínica já acompanha não é revelação, e não gera linha
+        // (mesma condição da busca de V03).
         $this->assertSame(0, RegistroDeAcesso::query()->count());
     }
 
@@ -281,21 +297,37 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
 
     /* Consolidação (RF19, RF20b) --------------------------------------------- */
 
-    public function test_caracterizar_exige_autorizacao_vigente(): void
+    /**
+     * O código é identificador exato: caracterizar alcança qualquer animal,
+     * e alcançá-lo já o põe na carteira da clínica.
+     */
+    public function test_caracterizar_animal_sem_vinculo_o_alcanca_e_vincula(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $preliminar = Animal::factory()->create(['tutor_id' => $this->helena()->id]);
 
         $this->actingAs($marcelo)
-            ->getJson("/api/clinica/animais/{$preliminar->codigo}/caracterizar")
-            ->assertForbidden();
+            ->postJson("/api/clinica/animais/{$preliminar->codigo}/caracterizar", ['raca' => 'SRD'])
+            ->assertOk();
+
+        $this->assertFalse($preliminar->fresh()->preliminar());
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $preliminar->id,
+            'prestador_id' => $clinica->id,
+            'origem' => Prestador::VINCULO_POR_ATENDIMENTO,
+        ]);
+    }
+
+    public function test_caracterizar_codigo_inexistente_e_404(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
 
         $this->actingAs($marcelo)
-            ->postJson("/api/clinica/animais/{$preliminar->codigo}/caracterizar", ['raca' => 'SRD'])
-            ->assertForbidden();
+            ->getJson('/api/clinica/animais/IM-9Z9Z-9Z9Z/caracterizar')
+            ->assertNotFound();
 
-        $this->assertTrue($preliminar->fresh()->preliminar());
+        $this->assertDatabaseCount('animal_prestador', 0);
     }
 
     public function test_caracterizar_completa_o_preliminar_sem_segundo_cadastro(): void
@@ -311,7 +343,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
             'nascimento_em' => '2024-06-01',
             'nascimento_exato' => false,
         ]);
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
         $opcoes = $this->actingAs($marcelo)
             ->getJson("/api/clinica/animais/{$theo->codigo}/caracterizar")
@@ -371,7 +403,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
             'caracterizado_em' => now()->subMonths(3),
             'caracterizado_por_user_id' => $joana->id,
         ])->save();
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
         // A leitura diz o que está gravado e por quem — é o que a tela mostra
         // antes de oferecer a reescrita.
@@ -418,7 +450,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
             'tutor_id' => $this->helena()->id,
             'raca' => 'SRD',
         ]);
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
         $this->actingAs($marcelo)
             ->postJson("/api/clinica/animais/{$theo->codigo}/caracterizar", [
@@ -437,7 +469,7 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $helena = $this->helena();
         $theo = Animal::factory()->create(['tutor_id' => $helena->id, 'nome' => 'Théo', 'especie' => 'cao']);
-        $this->autorizar($theo, $clinica);
+        $clinica->vincular($theo);
 
         $this->actingAs($marcelo)
             ->postJson("/api/clinica/animais/{$theo->codigo}/caracterizar", [

@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Animal;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -19,7 +18,8 @@ use Tests\TestCase;
  * Três garantias são o assunto da suíte:
  *
  * 1. **Quem escreve é quem tem inscrição** (RN21), no prestador que escolheu,
- *    sobre animal cujo tutor autorizou (RN37) — a mesma porta de V07 e V08.
+ *    sobre qualquer animal cujo código tenha à mão — a mesma porta de V07 e
+ *    V08, que põe o animal na carteira do prestador.
  * 2. **Registrado o óbito, cessa a previsão** (RF22a): nenhuma dose prevista
  *    na ficha, nenhuma linha na rechamada de V02 — e o histórico permanece
  *    inteiro (RF22b), agora com a entrada do óbito (RF35).
@@ -64,19 +64,10 @@ class RegistroDeObitoTest extends TestCase
         ]);
     }
 
-    private function autorizar(Animal $animal, Prestador $prestador, string $estado = 'vigente'): Autorizacao
+    /** O animal já na carteira do prestador (`animal_prestador`). */
+    private function acompanhar(Animal $animal, Prestador $prestador): void
     {
-        $factory = Autorizacao::factory();
-
-        if ($estado !== 'vigente') {
-            $factory = $factory->{$estado}();
-        }
-
-        return $factory->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $animal->tutor->user_id,
-        ]);
+        $prestador->vincular($animal);
     }
 
     /* Âmbito ---------------------------------------------------------------- */
@@ -102,7 +93,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = User::factory()->create();
         $usuario->prestadores()->attach($prestador, ['papel' => 'admin_prestador']);
@@ -112,12 +103,12 @@ class RegistroDeObitoTest extends TestCase
             ->assertForbidden();
     }
 
-    /** RN21 — vínculo, prestador e autorização em ordem; falta a inscrição. */
+    /** RN21 — vínculo, prestador e carteira em ordem; falta a inscrição. */
     public function test_veterinario_sem_crmv_no_vinculo_nao_registra(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $usuario = User::factory()->create();
         $usuario->prestadores()->attach($prestador, [
@@ -134,21 +125,25 @@ class RegistroDeObitoTest extends TestCase
     }
 
     /**
-     * RN37 — sem autorização vigente não há registro. O óbito não tem a
-     * exceção do atendimento de V08: ele muda o estado do animal para o tutor
-     * e para todo prestador, não o prontuário de uma clínica.
+     * O código basta: o óbito de um animal que a clínica ainda não acompanha
+     * é registrado, e o registro o põe na carteira do prestador.
      */
-    public function test_sem_autorizacao_vigente_o_registro_e_recusado(): void
+    public function test_animal_fora_da_carteira_recebe_o_obito_e_passa_a_ser_vinculado(): void
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador, 'revogada');
+
+        $this->assertFalse($prestador->acompanha($animal));
 
         $this->actingAs($this->marcelo($prestador))
             ->postJson("/api/clinica/animais/{$animal->codigo}/obito", ['em' => today()->toDateString()])
-            ->assertForbidden();
+            ->assertCreated();
 
-        $this->assertNull($animal->fresh()->obito_em);
+        $this->assertSame(today()->toDateString(), $animal->fresh()->obito_em->toDateString());
+        $this->assertDatabaseHas('animal_prestador', [
+            'animal_id' => $animal->id,
+            'prestador_id' => $prestador->id,
+        ]);
     }
 
     public function test_animal_inexistente_responde_404(): void
@@ -166,7 +161,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $marcelo = $this->marcelo($prestador);
 
         $resposta = $this->actingAs($marcelo)
@@ -197,7 +192,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $this->actingAs($this->marcelo($prestador))
             ->postJson("/api/clinica/animais/{$animal->codigo}/obito", ['em' => today()->toDateString()])
@@ -211,7 +206,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $this->actingAs($this->marcelo($prestador))
             ->postJson("/api/clinica/animais/{$animal->codigo}/obito", [
@@ -229,7 +224,7 @@ class RegistroDeObitoTest extends TestCase
         $animal = $this->animalDe('Helena Ramos', 'Théo', [
             'nascimento_em' => today()->subYears(2)->toDateString(),
         ]);
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
 
         $this->actingAs($this->marcelo($prestador))
             ->postJson("/api/clinica/animais/{$animal->codigo}/obito", [
@@ -249,8 +244,8 @@ class RegistroDeObitoTest extends TestCase
         $clinicaDoRegistro = $this->clinica();
         $outraClinica = $this->clinica('Hospital Vida Animal');
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $clinicaDoRegistro);
-        $this->autorizar($animal, $outraClinica);
+        $this->acompanhar($animal, $clinicaDoRegistro);
+        $this->acompanhar($animal, $outraClinica);
 
         $marcelo = $this->marcelo($clinicaDoRegistro);
 
@@ -294,7 +289,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $marcelo = $this->marcelo($prestador);
 
         $antirrabica = Imunobiologico::factory()->antirrabica()->create();
@@ -332,7 +327,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $marcelo = $this->marcelo($prestador);
 
         $antirrabica = Imunobiologico::factory()->antirrabica()->create();
@@ -364,7 +359,7 @@ class RegistroDeObitoTest extends TestCase
     {
         $prestador = $this->clinica();
         $animal = $this->animalDe('Helena Ramos', 'Théo');
-        $this->autorizar($animal, $prestador);
+        $this->acompanhar($animal, $prestador);
         $marcelo = $this->marcelo($prestador);
 
         $this->actingAs($marcelo)

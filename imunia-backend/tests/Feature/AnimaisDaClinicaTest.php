@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Animal;
 use App\Models\Atendimento;
-use App\Models\Autorizacao;
 use App\Models\Imunobiologico;
 use App\Models\Prestador;
 use App\Models\ProtocoloVacinal;
@@ -38,18 +37,13 @@ class AnimaisDaClinicaTest extends TestCase
         return $usuario;
     }
 
-    private function animalAutorizado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
+    private function animalVinculado(Prestador $prestador, string $nome = 'Théo', array $atributos = []): Animal
     {
         $tutor = Tutor::factory()->create(['nome' => "Tutor de {$nome}"]);
-        $animal = Animal::factory()->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
 
-        Autorizacao::factory()->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $prestador->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
-
-        return $animal;
+        return Animal::factory()
+            ->acompanhadoPor($prestador)
+            ->create([...$atributos, 'tutor_id' => $tutor->id, 'nome' => $nome]);
     }
 
     private function antirrabica(): Imunobiologico
@@ -106,20 +100,19 @@ class AnimaisDaClinicaTest extends TestCase
     }
 
     /**
-     * RN48 — o que traz o animal para a relação é a autorização vigente do
-     * tutor, e nada mais: nem o atendimento passado, nem a vacina aplicada
-     * aqui mesmo.
+     * RN48 — o que traz o animal para a relação é o vínculo com o prestador, e
+     * nada mais: nem o atendimento passado, nem a vacina aplicada aqui mesmo.
      */
-    public function test_animal_sem_autorizacao_vigente_nao_figura_na_relacao(): void
+    public function test_animal_nao_vinculado_nao_figura_na_relacao(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $this->animalAutorizado($clinica, 'Théo');
+        $this->animalVinculado($clinica, 'Théo');
 
-        $semAutorizacao = Animal::factory()->create(['nome' => 'Bidu']);
-        $this->aplicar($semAutorizacao, $clinica, $antirrabica, now()->subMonths(2));
+        $semVinculo = Animal::factory()->create(['nome' => 'Bidu']);
+        $this->aplicar($semVinculo, $clinica, $antirrabica, now()->subMonths(2));
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/animais');
 
@@ -128,19 +121,13 @@ class AnimaisDaClinicaTest extends TestCase
         $resposta->assertJsonPath('itens.0.nome', 'Théo');
     }
 
-    public function test_autorizacao_revogada_ou_expirada_deixa_a_relacao_vazia(): void
+    public function test_vinculo_com_outro_prestador_deixa_a_relacao_vazia(): void
     {
         $clinica = $this->clinica();
+        $hospital = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica);
 
-        foreach (['revogada', 'expirada'] as $estado) {
-            $animal = Animal::factory()->create(['nome' => "Animal {$estado}"]);
-            Autorizacao::factory()->{$estado}()->create([
-                'animal_id' => $animal->id,
-                'prestador_id' => $clinica->id,
-                'concedida_por_user_id' => $animal->tutor->user_id,
-            ]);
-        }
+        $this->animalVinculado($hospital, 'Amora');
 
         $this->actingAs($marcelo)
             ->getJson('/api/clinica/animais')
@@ -158,7 +145,7 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         foreach (['Pipoca', 'Amora', 'Théo'] as $nome) {
-            $this->animalAutorizado($clinica, $nome);
+            $this->animalVinculado($clinica, $nome);
         }
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/animais');
@@ -171,15 +158,15 @@ class AnimaisDaClinicaTest extends TestCase
 
     /**
      * A linha traz o que decide a leitura da lista: quem é o animal, de quem é,
-     * a situação da carteira e até quando a autorização vale (RN39).
+     * a situação da carteira e desde quando ele está na carteira do prestador.
      */
-    public function test_a_linha_traz_situacao_da_carteira_e_vencimento_da_autorizacao(): void
+    public function test_a_linha_traz_situacao_da_carteira_e_inicio_do_vinculo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $atrasado = $this->animalAutorizado($clinica, 'Pipoca');
+        $atrasado = $this->animalVinculado($clinica, 'Pipoca');
         $this->aplicar($atrasado, $clinica, $antirrabica, now()->subMonths(14));
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/animais');
@@ -188,34 +175,32 @@ class AnimaisDaClinicaTest extends TestCase
         $resposta->assertJsonPath('itens.0.tutor', 'Tutor de Pipoca');
         $resposta->assertJsonPath('itens.0.preliminar', true); // RN17
         $resposta->assertJsonPath('itens.0.situacao.tipo', 'atrasada');
-        $resposta->assertJsonPath('itens.0.autorizacao.a_expirar', false);
-        $resposta->assertJsonPath(
-            'itens.0.autorizacao.expira_em',
-            now()->addDays(Autorizacao::PRAZO_DIAS)->toDateString(),
-        );
+        $resposta->assertJsonPath('itens.0.vinculo.desde', now()->toDateString());
+        $resposta->assertJsonMissingPath('itens.0.autorizacao');
     }
 
     /**
-     * RN39 — a antecedência de aviso é a mesma da ficha e de T12: a coluna
-     * fica âmbar quando faltam quinze dias ou menos.
+     * O vínculo é idempotente: o primeiro fica, com a data de quando nasceu, e
+     * as passagens seguintes não o renovam.
      */
-    public function test_autorizacao_dentro_da_antecedencia_vem_marcada_como_a_expirar(): void
+    public function test_o_inicio_do_vinculo_e_o_do_primeiro_vinculo(): void
     {
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
         $tutor = Tutor::factory()->create();
         $animal = Animal::factory()->create(['tutor_id' => $tutor->id, 'nome' => 'Mel']);
-        Autorizacao::factory()->aExpirar(10)->create([
-            'animal_id' => $animal->id,
-            'prestador_id' => $clinica->id,
-            'concedida_por_user_id' => $tutor->user_id,
-        ]);
 
-        $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/animais');
+        $this->travelTo(now()->subDays(40));
+        $clinica->vincular($animal, Prestador::VINCULO_POR_CADASTRO);
+        $desde = now()->toDateString();
+        $this->travelBack();
 
-        $resposta->assertJsonPath('itens.0.autorizacao.a_expirar', true);
-        $resposta->assertJsonPath('itens.0.autorizacao.dias_restantes', 10);
+        $clinica->vincular($animal);
+
+        $this->actingAs($marcelo)
+            ->getJson('/api/clinica/animais')
+            ->assertJsonPath('itens.0.vinculo.desde', $desde);
     }
 
     /**
@@ -228,9 +213,9 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $this->animalAutorizado($clinica, 'Théo');
+        $this->animalVinculado($clinica, 'Théo');
 
-        $emDia = $this->animalAutorizado($clinica, 'Amora');
+        $emDia = $this->animalVinculado($clinica, 'Amora');
         $this->aplicar($emDia, $clinica, $antirrabica, now()->subDays(20));
 
         $atuando = $this->actingAs($marcelo);
@@ -259,7 +244,7 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $falecido = $this->animalAutorizado($clinica, 'Bidu');
+        $falecido = $this->animalVinculado($clinica, 'Bidu');
         $this->aplicar($falecido, $clinica, $antirrabica, now()->subMonths(14));
         $falecido->forceFill(['obito_em' => now()->subDays(3)->toDateString()])->save();
 
@@ -286,7 +271,7 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $animal = $this->animalAutorizado($clinica, 'Pipoca');
+        $animal = $this->animalVinculado($clinica, 'Pipoca');
 
         $this->aplicar($animal, $clinica, $antirrabica, now()->subMonths(3));
         Atendimento::factory()->create([
@@ -308,7 +293,7 @@ class AnimaisDaClinicaTest extends TestCase
             'aplicado_em' => now()->subDay(),
         ]);
 
-        $nuncaVeio = $this->animalAutorizado($clinica, 'Amora');
+        $nuncaVeio = $this->animalVinculado($clinica, 'Amora');
 
         $resposta = $this->actingAs($marcelo)->getJson('/api/clinica/animais');
 
@@ -324,10 +309,10 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
         $antirrabica = $this->antirrabica();
 
-        $cao = $this->animalAutorizado($clinica, 'Pipoca', ['especie' => 'cao']);
+        $cao = $this->animalVinculado($clinica, 'Pipoca', ['especie' => 'cao']);
         $this->aplicar($cao, $clinica, $antirrabica, now()->subMonths(14));
 
-        $gata = $this->animalAutorizado($clinica, 'Mel', ['especie' => 'gato']);
+        $gata = $this->animalVinculado($clinica, 'Mel', ['especie' => 'gato']);
         $this->aplicar($gata, $clinica, $antirrabica, now()->subDays(20));
 
         $atuando = $this->actingAs($marcelo);
@@ -360,8 +345,8 @@ class AnimaisDaClinicaTest extends TestCase
         $hospital = $this->clinica('Hospital Bicho Bom');
         $marcelo = $this->marcelo($clinica, $hospital);
 
-        $this->animalAutorizado($clinica, 'Théo');
-        $this->animalAutorizado($hospital, 'Amora');
+        $this->animalVinculado($clinica, 'Théo');
+        $this->animalVinculado($hospital, 'Amora');
 
         $this->actingAs($marcelo)->getJson('/api/clinica/animais')
             ->assertJsonPath('prestador.nome', 'Clínica Vet Amigo')
@@ -391,7 +376,7 @@ class AnimaisDaClinicaTest extends TestCase
         $marcelo = $this->marcelo($clinica);
 
         foreach (range(1, 26) as $ordem) {
-            $this->animalAutorizado($clinica, sprintf('Animal %02d', $ordem));
+            $this->animalVinculado($clinica, sprintf('Animal %02d', $ordem));
         }
 
         $atuando = $this->actingAs($marcelo);

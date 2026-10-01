@@ -53,15 +53,7 @@ class RetificarAtendimentoRequest extends FormRequest
 
         abort_if($atendimento === null, 404, 'Atendimento não encontrado.');
 
-        // RN48 — sem autorização vigente do tutor não há registro a ler nem a
-        // corrigir. A autoria não dispensa o consentimento: o vínculo que
-        // permite ao prestador acompanhar este animal é do tutor, e pode ter
-        // sido revogado desde a consulta (RF39).
-        abort_if(
-            ! $this->animal->autorizacoes()->where('prestador_id', $this->prestador->id)->vigente()->exists(),
-            403,
-            'Este animal não está sob autorização vigente do tutor. Solicite o acesso antes de retificar.',
-        );
+        $this->prestador->vincular($this->animal);
 
         // RN27 — e a recusa não diz mais do que precisa. Que o registro existe,
         // quem o assinou e por que a ação não cabe são respostas que a tela do
