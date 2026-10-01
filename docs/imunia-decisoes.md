@@ -1,7 +1,7 @@
 ---
 title: "Imunia --- Documento de Decisões de Projeto"
 subtitle: "Base de conhecimento consolidada para o Trabalho de Conclusão de Curso"
-date: "Agosto de 2026 --- versão 1.1"
+date: "Outubro de 2026 --- versão 1.2"
 lang: pt-BR
 ---
 
@@ -27,11 +27,18 @@ Somam-se dois agravantes: a fragmentação do histórico clínico entre diferent
 
 ## 2.2 Proposta
 
-Plataforma web que centraliza, em ambiente único, o gerenciamento de tutores, animais, vacinações e prontuários médicos, oferecendo carteira de vacinação digital, lembretes automáticos e continuidade do histórico clínico entre estabelecimentos, mediante autorização do tutor.
+Plataforma web que centraliza, em ambiente único, o gerenciamento de tutores, animais, vacinações e prontuários médicos, oferecendo carteira de vacinação digital, lembretes automáticos e continuidade do histórico clínico entre estabelecimentos. O veterinário realiza todo o atendimento sem depender de ação prévia do tutor; o tutor é convidado por e-mail a acompanhar o que foi registrado.
 
 ## 2.3 Diferencial
 
-A inversão da responsabilidade sobre o dado clínico. O médico-veterinário é o único autorizado a registrar informação clínica, o que reduz erros de cadastro e interpretação comuns quando o próprio tutor realiza os registros. O tutor possui acesso em modo leitura, além do controle sobre quem pode acessar o histórico do seu animal.
+Um histórico único e contínuo do animal entre estabelecimentos, registrado pelo profissional sem atrito e acompanhado pelo tutor com transparência.
+
+1. **Histórico do animal, não da clínica.** Tutor e animal são cadastros globais; o histórico acompanha o animal de um estabelecimento a outro, com a autoria de cada registro preservada.
+2. **Responsabilidade sobre o dado clínico.** O médico-veterinário é o único autorizado a registrar informação clínica, o que reduz erros de cadastro e interpretação comuns quando o próprio tutor realiza os registros.
+3. **Sem atrito no balcão.** O veterinário cadastra o tutor e o animal, registra e encerra o atendimento sem que o tutor precise criar conta, autorizar ou fazer qualquer ação antes.
+4. **Transparência para o tutor.** O tutor, convidado por e-mail, acompanha em modo de consulta o que foi registrado, vê no livro de acessos quais estabelecimentos alcançaram dados produzidos por outros e pode exportar o histórico em PDF verificável.
+
+*Alterado em 01/10/2026.* A versão anterior deste item incluía "o controle [do tutor] sobre quem pode acessar o histórico do seu animal". O controle prévio foi substituído pela transparência posterior; a razão está em §3.2 e §9.33.
 
 ## 2.4 Escopo excluído
 
@@ -64,17 +71,24 @@ O inquilino é o **prestador**, entidade única que abrange clínicas, hospitais
 | `atendimentos` | Por prestador | Possui `prestador_id`; autoria preservada |
 | `vacinacoes` | Por prestador | Possui `prestador_id` |
 | `prontuarios` | Por prestador | Possui `prestador_id` |
-| `autorizacoes_acesso` | Vínculo | Livro de consentimento (ver seção 4) |
+| `animal_prestador` | Vínculo | Carteira de pacientes da clínica, criada automaticamente (ver seção 4) |
+| `registros_de_acesso` | Vínculo | Livro de acessos visível ao tutor (ver seção 4) |
 
-**Consequência.** O dado nunca pertence a uma cidade ou a uma instância isolada: ele reside na plataforma. A mudança de cidade do tutor não exige importação, migração ou integração — exige apenas autorização.
+**Consequência.** O dado nunca pertence a uma cidade ou a uma instância isolada: ele reside na plataforma. A mudança de cidade do tutor não exige importação, migração ou integração: o novo estabelecimento localiza o animal por identificador exato e passa a acompanhá-lo.
 
-## 3.2 Compartilhamento de histórico controlado pelo tutor
+*Alterado em 01/10/2026:* a tabela trazia `autorizacoes_acesso` como livro de consentimento, e a frase acima terminava em "exige apenas autorização". A tabela foi apagada junto com o modelo de autorização (§9.33).
 
-**Decisão.** O tutor detém controle total sobre quem acessa o histórico do seu animal. Pelo sistema, ele consulta quais prestadores utilizam a plataforma e concede autorização nominal ao escolhido.
+## 3.2 Histórico compartilhado entre clínicas, com transparência para o tutor
 
-**Justificativa.** O modelo coloca o titular dos dados como origem do consentimento, atendendo à Lei Geral de Proteção de Dados. Distingue-se favoravelmente do compartilhamento automático adotado por concorrentes, no qual o histórico circula entre profissionais sem ato de vontade do tutor.
+**Decisão (01/10/2026).** Toda clínica cadastrada alcança o histórico completo de um animal quando o localiza por identificador exato — código ou QR Code do animal, micro-chip ou CPF do tutor — e passa a acompanhá-lo automaticamente quando o cadastra ou o atende. Não há autorização, pedido de acesso, prazo nem revogação. Cada registro exibe a clínica e o profissional que o produziram. O tutor é usuário convidado: recebe por e-mail o convite para criar a senha e acompanhar, em modo de consulta, o que foi registrado; ali encontra o livro de acessos, que mostra quais clínicas alcançaram dados produzidos por outras, e a exportação em PDF verificável.
 
-As regras detalhadas dessa funcionalidade estão na seção 4.
+**Justificativa.** O valor do sistema para o atendimento depende de o histórico estar disponível no momento em que o animal está no balcão. O modelo anterior exigia que o tutor criasse conta, escolhesse o prestador num diretório e confirmasse a autorização por código antes que o veterinário enxergasse qualquer coisa — e o veterinário, que é quem registra e quem precisa do histórico, ficava sem caminho próprio quando o tutor não tinha conta, não lembrava a senha ou simplesmente não estava disposto a fazer isso naquele momento. A simplificação põe o fluxo do veterinário em cinco passos (cadastrar tutor, cadastrar animal, atender, registrar, finalizar) e trata o acesso do tutor como camada complementar de acompanhamento e transparência.
+
+**O que se perdeu, dito por inteiro.** O tutor deixa de decidir previamente quem acessa o histórico do seu animal. A contrapartida adotada é de transparência posterior, e não de consentimento: (a) a busca por nome alcança só os animais que a clínica já acompanha, de modo que alcançar um animal novo exige um identificador que, na prática, vem do tutor ou do próprio animal; (b) cada alcance de dado produzido por outra clínica, e cada localização de animal fora da carteira, grava linha no livro de acessos, visível ao tutor; (c) o acesso é sempre de um prestador identificado, por profissional autenticado. O texto do TCC não deve apresentar o modelo novo como equivalente ao anterior do ponto de vista do controle do titular: é uma troca deliberada, em favor da fluidez do atendimento, cuja adequação à LGPD precisa ser fundamentada na base legal própria (tutela da saúde e execução do serviço contratado pela clínica, por exemplo) e não em consentimento — fundamentação que ainda está por escrever.
+
+*Decisão anterior, superada em 01/10/2026:* "O tutor detém controle total sobre quem acessa o histórico do seu animal. Pelo sistema, ele consulta quais prestadores utilizam a plataforma e concede autorização nominal ao escolhido", justificada como consentimento na origem, em contraste com o compartilhamento automático dos concorrentes.
+
+As regras detalhadas do modelo estão na seção 4.
 
 ## 3.3 Autenticação por login e senha
 
@@ -95,11 +109,11 @@ A justificativa a ser redigida no TCC deve evitar a formulação "senha por exig
 
 **Justificativa.** A prática replica o padrão consolidado de prontuário eletrônico na medicina humana e preserva autoria e responsabilidade técnica do profissional. É uma das decisões com melhor sustentação acadêmica do projeto.
 
-**Consequência sobre a autorização.** A permissão concedida pelo tutor desmembra-se em três níveis distintos, que devem constar do texto de forma explícita:
+**Consequência sobre o acesso clínico.** O acesso do prestador ao animal desmembra-se em três níveis distintos, que devem constar do texto de forma explícita (até 01/10/2026 o quadro descrevia a permissão concedida pelo tutor; os níveis não mudaram):
 
 | Nível | Alcance |
 |---|---|
-| Leitura | O prestador autorizado visualiza todo o histórico anterior, de qualquer origem |
+| Leitura | O prestador visualiza todo o histórico anterior, de qualquer origem |
 | Escrita | Cria registros novos, atribuídos a ele e ao seu prestador |
 | Edição | Inexistente sobre registro alheio; correções apenas por retificação |
 
@@ -124,43 +138,50 @@ Os três concorrentes analisados enviam lembretes por WhatsApp. A ausência dess
 
 **Justificativa.** A fonte cumpre função dupla: referência técnica para a implementação e fonte citável na fundamentação teórica.
 
-# 4. Regras da funcionalidade de compartilhamento
+# 4. Regras do histórico compartilhado e do acesso do tutor
 
-## 4.1 Fluxo principal
+*Seção reescrita em 01/10/2026.* A versão anterior descrevia o compartilhamento controlado pelo tutor: diretório de prestadores, autorização nominal confirmada por código enviado ao e-mail, autorização sempre dirigida a um prestador, revogação que não alcançava os registros do próprio prestador, prazo de noventa dias renováveis, registro de acesso e exportação em PDF. Diretório, autorização, prazo e revogação foram removidos (§9.33); registro de acesso e PDF continuam, com as regras abaixo.
 
-1. O tutor consulta, pelo sistema, quais prestadores utilizam a plataforma.
-2. Escolhe um prestador e concede autorização nominal.
-3. O sistema exige confirmação do tutor por código enviado ao e-mail cadastrado.
-4. Confirmada, cria-se o vínculo em `autorizacoes_acesso`.
-5. O prestador autorizado passa a visualizar consultas, exames, diagnósticos e tratamentos registrados por outros profissionais, e pode acrescentar registros referentes ao atendimento atual.
+## 4.1 Fluxo do atendimento
 
-## 4.2 Entidade de destino da autorização
+1. O veterinário cadastra o tutor — nome, CPF e e-mail. CPF já cadastrado não gera segundo cadastro: o fluxo segue para o cadastro do animal. E-mail de conta existente sem papel de tutor recebe esse papel (um e-mail, uma conta); e-mail de outro tutor é recusado.
+2. Cadastra o animal; a caracterização é privativa do veterinário.
+3. Realiza o atendimento e registra vacinação, prontuário, exames e documentos, consultando o histórico completo do animal.
+4. Finaliza. Nenhum passo depende de ação do tutor.
 
-**Regra.** A autorização aponta sempre para um **prestador** — a mesma entidade que serve de inquilino na arquitetura descrita na seção 3.1. O veterinário autônomo é modelado como prestador de um único integrante. Veterinários vinculados a um prestador herdam o acesso enquanto durar o vínculo empregatício.
+## 4.2 Vínculo automático clínica–animal (carteira de pacientes)
 
-**Motivo.** Um mesmo veterinário pode atuar em diversos estabelecimentos. Se a autorização fosse concedida à pessoa física, não haveria como determinar qual `prestador_id` carimbaria o atendimento registrado.
+**Regra.** O vínculo em `animal_prestador` nasce quando a clínica cadastra o animal (origem "cadastro") ou o alcança por identificador exato em qualquer rota clínica — ficha aberta pelo código ou QR Code, vacinação, atendimento, óbito, retificação, caracterização, exportação, abertura de anexo (origem "atendimento"). Ninguém o concede nem o revoga. Os vínculos iniciais foram herdados das autorizações vigentes e dos registros já feitos.
 
-## 4.3 Revogação
+**Motivo.** O vínculo não é permissão; é a carteira de pacientes da clínica. Ele delimita o que entra nas listas — painel, pendências vacinais, relação de animais, atalho de recentes, busca por nome — e não o que a clínica pode ler. Sem ele, as listas teriam de escolher entre mostrar a plataforma inteira ou nada.
 
-**Regra.** A revogação encerra o acesso do prestador ao histórico produzido por terceiros. Não alcança os registros produzidos pelo próprio prestador, que permanecem sob sua guarda.
+**O destino continua sendo o prestador.** Como antes, o vínculo e cada registro apontam para um prestador, e não para a pessoa física: um mesmo veterinário pode atuar em vários estabelecimentos, e o `prestador_id` de cada registro é o do contexto ativo em que foi feito.
 
-**Motivo.** A guarda do prontuário é obrigação legal do estabelecimento perante o Conselho Federal de Medicina Veterinária, e não faculdade extinguível pelo tutor. Deve-se consultar a resolução vigente do CFMV sobre guarda de prontuário para citação precisa.
+## 4.3 Alcance da busca e leitura do histórico
 
-**Prazo.** As autorizações possuem validade determinada — sugere-se noventa dias, renováveis — evitando o acúmulo silencioso de acessos vitalícios.
+**Regra.** CPF do tutor, código do animal (ou QR Code) e micro-chip alcançam qualquer cadastro da plataforma e mostram os dados completos, com a marca "ainda não acompanhado por esta clínica" quando for o caso. A busca por nome alcança só a carteira. A clínica vê o histórico inteiro do animal, com a autoria de cada registro; a retificação continua privativa do autor (§3.4).
 
-## 4.4 Registro de acesso
+**Motivo.** Identificador exato é o que o tutor apresenta no balcão; nome não identifica ninguém, e alcançar a plataforma por nome seria varredura.
 
-**Regra.** Toda visualização de prontuário originado de outro prestador é registrada em log: quem acessou, o que acessou e quando.
+## 4.4 Registro de acesso (livro de acessos)
 
-**Motivo.** Constitui a evidência de conformidade prevista na LGPD e permite ao tutor auditar quem consultou os dados do seu animal. É também um dos artefatos mais demonstráveis na apresentação à banca.
+**Regra.** Grava-se linha — clínica, profissional, CRMV, data e hora, o que foi acessado — quando a clínica: localiza por CPF, código ou micro-chip um animal fora da sua carteira; recebe o alerta de cadastro possivelmente duplicado; lê registro produzido por outra clínica; ou exporta PDF que contém registro alheio. O tutor consulta o livro; cada linha diz se aquela clínica acompanha o animal, e o filtro lista as clínicas que o acompanham.
 
-## 4.5 Exportação verificável em PDF
+**Motivo.** Sem autorização prévia, o livro é a contrapartida de transparência do modelo e a evidência de que cada acesso a dado de terceiros tem autor identificado. Continua sendo um dos artefatos mais demonstráveis na apresentação à banca.
 
-**Regra.** Quando não houver prestador cadastrado na localidade, o tutor exporta o histórico completo em PDF e o compartilha diretamente com o profissional que realizará o atendimento.
+## 4.5 Convite do tutor
 
-Cada exportação gera identificador próprio e *hash* do conteúdo, impressos como QR Code que aponta para rota pública de verificação (`/verificar/{codigo}`), a qual informa se o documento confere e quando foi emitido. Sem esse mecanismo, o arquivo é apenas um documento editável por qualquer pessoa.
+**Regra.** O convite sai quando a clínica cadastra o **primeiro** animal do tutor, com validade de sete dias, e pode ser reenviado pela própria página quando vence. Novo animal de tutor ainda não ativado reemite o convite pendente (novo token, prazo renovado); tutor já ativo recebe apenas o aviso de novo animal cadastrado, se o e-mail estiver verificado. O aceite define a senha, registra a aceitação dos termos e abre a sessão. Logo após o cadastro, a ficha mostra ao veterinário para qual e-mail o convite foi e a frase de balcão sugerida. Não existe autocadastro público de tutor, e o tutor não cadastra animal.
 
-O rodapé deve advertir que, ao compartilhar o arquivo, o tutor assume a responsabilidade pela difusão daqueles dados, os quais saem do domínio de controle da plataforma.
+**Motivo.** O convite junto do primeiro animal dá ao e-mail um conteúdo concreto ("Théo foi cadastrado no Imunia…") e deixa claro que o atendimento não depende do aceite. Tutor não ativado não recebe lembretes por e-mail.
+
+**O que o tutor faz.** Consulta animais, carteira e histórico; edita a identificação e a foto do animal; lança histórico pregresso (não verificado); exporta PDF; consulta o livro de acessos, as notificações e os dados da própria conta.
+
+## 4.6 Exportação verificável em PDF
+
+**Regra.** O tutor e a clínica exportam o histórico em PDF — o tutor, por exemplo, para levar a um profissional que não usa a plataforma. Cada exportação gera identificador próprio e *hash* do conteúdo, impressos como QR Code que aponta para rota pública de verificação (`/verificar/{codigo}`), a qual informa se o documento confere e quando foi emitido. Sem esse mecanismo, o arquivo é apenas um documento editável por qualquer pessoa. A exportação pela clínica que leva registro de outra clínica grava linha no livro de acessos.
+
+O rodapé deve advertir que, ao compartilhar o arquivo, quem o emitiu assume a responsabilidade pela difusão daqueles dados, os quais saem do domínio de controle da plataforma.
 
 # 5. Tecnologias e convenções
 
@@ -190,7 +211,7 @@ Limitações a serem declaradas honestamente no texto, acompanhadas de suas miti
 |---|---|
 | Clínicas que não utilizam a plataforma | Exportação verificável em PDF; campo de histórico pregresso preenchido manualmente e marcado como não verificado |
 | Ausência de padrão de interoperabilidade veterinária no Brasil | Declarada como limitação; adoção de padrão remetida a Trabalhos Futuros |
-| Atendimento de urgência sem tutor disponível para autorizar | Declarada como limitação; mitigada pela exportação prévia em PDF |
+| Acesso clínico sem consentimento prévio do tutor (desde 01/10/2026; antes, a limitação era "atendimento de urgência sem tutor disponível para autorizar") | Declarada como troca deliberada; busca por nome restrita à carteira; livro de acessos visível ao tutor (§3.2, §4.4) |
 | Ausência do canal WhatsApp | Delimitação de escopo assumida; remetida a Trabalhos Futuros |
 
 # 7. Pendências de correção no documento do TCC
@@ -198,8 +219,8 @@ Limitações a serem declaradas honestamente no texto, acompanhadas de suas miti
 ## 7.1 Consistência com as decisões tomadas
 
 1. Substituir todas as ocorrências de "nomedosistema" por **Imunia**, no texto corrido e na tabela comparativa.
-2. Reescrever o item 4 da seção 2.3.1, removendo a passagem "sem necessidade de cadastro com senha, utilizando apenas o e-mail"; incorporar o modelo de autorização pelo tutor e a exportação em PDF.
-3. Na tabela comparativa da seção 2.3, alterar a linha "Histórico compartilhado entre clínicas" para **Sim (mediante autorização do tutor)**.
+2. Reescrever o item 4 da seção 2.3.1, removendo a passagem "sem necessidade de cadastro com senha, utilizando apenas o e-mail"; incorporar o acesso do tutor por convite, o livro de acessos e a exportação em PDF. *(Até 01/10/2026 este item pedia "o modelo de autorização pelo tutor".)*
+3. Na tabela comparativa da seção 2.3, alterar a linha "Histórico compartilhado entre clínicas" para **Sim (com registro de acesso visível ao tutor)**. *(Até 01/10/2026: "Sim (mediante autorização do tutor)".)*
 4. Acrescentar à mesma tabela duas linhas que expressam o diferencial real do sistema: "Registro clínico exclusivo do veterinário" e "Acesso do tutor somente leitura". Em ambas, os concorrentes marcam Não e o Imunia marca Sim.
 
 ## 7.2 Normalização e referências
@@ -300,6 +321,8 @@ Encontrado na mesma fatia. O mockup de X02 mostra seis campos numéricos e um se
 
 ## 9.6 Telas de exceção — o que E01–E03 exigiam e os documentos não fixavam
 
+*Superada em parte em 01/10/2026 (§9.33):* o último parágrafo, sobre a variante de E01 para "ausência de autorização do tutor", perdeu o objeto — o estado sem autorização (P2) deixou de existir em V03 e V06. O restante continua valendo.
+
 Encontrado na fatia E01–E03 (24/08/2026). O briefing especifica as três telas em quinze linhas (§8.1) e o mockup de `Admin Config Screens.dc.html` as desenha, mas quatro perguntas de implementação ficaram sem resposta em qualquer documento. Todas foram decididas nesta fatia:
 
 **De onde vem o identificador de ocorrência de E03.** O briefing manda exibi-lo "discretamente, em monoespaçada, para suporte", e adverte que "não é código de erro técnico". Nada diz quem o gera. Decidido: é o identificador da **requisição**, não da falha — gerado na entrada da API por `IdentificarOcorrencia` (dois blocos de quatro caracteres, o mesmo alfabeto sem ambíguos de `CodigoDoAnimal`, porque é ditado ao telefone) e injetado em `Log::withContext`, de modo que toda linha escrita durante aquela requisição o carregue. Gerá-lo só no momento da exceção daria ao usuário um número presente numa única linha do registro, e o suporte não teria como reconstruir o que veio antes. A resposta 500 é montada em `bootstrap/app.php` pelo `respond`, e não por `render`: a decisão é tomada sobre o **status já preparado** pelo framework, de modo que tudo o que o Laravel converte em 403, 404, 422 ou 429 conserva a mensagem própria do seu ponto do sistema, e só a falha genuinamente inesperada vira E03. Fora de produção o detalhe técnico continua na resposta, sob a chave `depuracao` — a tela de exceção existe para o usuário, não para esconder do desenvolvedor o que quebrou.
@@ -315,6 +338,8 @@ Encontrado na fatia E01–E03 (24/08/2026). O briefing especifica as três telas
 **O que não mudou, e por quê.** A segunda variante de E01 prevista no briefing — "quando a causa for ausência de autorização do tutor, o texto muda para o padrão de P2" — já estava implementada em V03 e V06, e continua lá. Ausência de autorização é estado de tela, não erro (P2): mandar o veterinário a uma parede quando ele podia estar solicitando acesso trocaria um caminho por um beco. E o estado de erro de carregamento de cada tela (§6.1, item 3) permanece dentro da tela que falhou, com a moldura e os blocos já carregados de pé — E03 é para quando não há tela.
 
 ## 9.7 V07a e V08a — a etapa que o briefing supunha e não descrevia
+
+*Superada em parte em 01/10/2026 (§9.33):* o âmbito, o atalho e a recusa passaram da autorização vigente para a carteira da clínica. O atalho lista os animais vinculados ao prestador ativo atendidos nos últimos trinta dias; não há mais recusa por falta de autorização nem "autorizado até" no cartão; a busca por identificador exato mostra o animal completo, sem o cartão de existência de RN12. Continuam valendo a etapa como tela, a ação no caminho, a reutilização da busca de V03 e a etiqueta da vacina pendente.
 
 Encontrado na fatia V07a–V08a (24/08/2026). O briefing manda o botão "Registrar" do cabeçalho abrir "V07 ou V08" (§8.3, V01), mas aquelas duas telas têm o código do animal no endereço: `/clinica/animais/:codigo/vacinar`. Falta, portanto, uma etapa que o texto pressupõe sem descrever — e que o mockup de `Clinical Entry Screens.dc.html` desenha sob o rótulo V07a · V08a. As decisões desta fatia:
 
@@ -382,6 +407,8 @@ Encontrado na fatia V08 (24/08/2026). O esquema de `atendimentos` e `anexos_aten
 
 ## 9.10 V09 — a única escrita sobre registro que já existe, e que não escreve sobre ele
 
+*Superada em parte em 01/10/2026 (§9.33):* o parágrafo "A autoria não dispensa o consentimento" deixou de valer — sem autorização, não há revogação que tire do autor o alcance ao próprio registro. A rota clínica de V09 parte agora do vínculo automático, que a própria abertura cria. A retificação privativa do autor (RN27) e o registro de acesso a registro alheio continuam.
+
 Encontrado na fatia V09 (24/08/2026). Todas as fatias anteriores puderam tratar RN26 como ausência: não havia rota de alteração porque não havia correção alguma a fazer. Esta é a fatia em que a correção existe, e por isso é a que teve de demonstrar — e não apenas afirmar — que corrigir não é alterar.
 
 **A retificação vale para as duas espécies de registro clínico, e `vacinacoes` não tinha as colunas.** `atendimentos` tem `retifica_atendimento_id` e `motivo_retificacao` desde T08, que só lia; `vacinacoes` nasceu da carteira (T05) e do lançamento pregresso (T09), duas fases em que a correção não estava em questão. A assimetria era histórica, não conceitual: RN26 nunca distinguiu as duas, e RF33 fala de "registro clínico". As colunas novas repetem o nome das de `atendimentos` de propósito — é a mesma regra, e quem ler as duas tabelas deve reconhecê-la sem tradução.
@@ -418,6 +445,8 @@ O terceiro é de dado, não de código: **nenhum seeder preenchia `aplicador_use
 
 ## 9.11 P03 — a recusa por cadastro existente deixava escapar qual dado coincidia
 
+*Superada em 01/10/2026 (§9.33):* a tela pública de criação de conta de tutor (P03, `/criar-conta`) foi removida — o tutor entra apenas por convite. A análise do oráculo de enumeração continua válida como argumento para qualquer formulário público, e P04 segue sujeito a ela.
+
 O briefing §P03 descreve o estado como "**CPF já cadastrado** — mensagem 'Já existe uma conta com este CPF.' […] e nenhuma outra informação sobre a conta existente", e era isso o que a tela fazia: a frase nomeava o CPF e, logo abaixo, repetia o número formatado. Duas coisas estavam erradas nisso, e a segunda é a que o desenho não tinha visto.
 
 **Repetir o número era informação sobre a conta existente.** Quem digitou o CPF já o conhece — a linha não lhe dizia nada de novo. Para quem digitou o CPF de outra pessoa, ela confirmava o dígito verificador do documento que estava sendo testado, na tela, sem custo. A linha saiu.
@@ -431,6 +460,8 @@ O briefing §P03 descreve o estado como "**CPF já cadastrado** — mensagem 'J�
 **O botão de saída mudou de nome porque não pode mais mudar de campo.** Era "Corrigir CPF", e limpava o estado de validação do CPF; sem saber qual dado coincidiu, apontar um campo seria adivinhação. Passou a "Revisar meus dados", devolvendo o formulário preenchido como estava.
 
 ## 9.12 T18 — a tela que todas as molduras prometiam e nenhuma fatia tinha construído
+
+*Nota de 01/10/2026 (§9.33):* T11 e o autocadastro de P03, citados abaixo, foram removidos; `users.name` e `tutores.nome` nascem agora iguais no cadastro do tutor pela clínica (V04). As decisões sobre T18 não mudaram.
 
 Encontrado em uso (25/08/2026): clicar em "Conta" caía em E02. A moldura do tutor aponta para `/conta` desde a primeira fatia autenticada, a do veterinário também, e T11 oferece o mesmo endereço como saída — três promessas a uma tela que existia só no briefing. É o caso oposto ao de V09, onde o endereço que esperava a fatia estava errado; aqui ele estava certo e vazio.
 
@@ -454,6 +485,8 @@ Encontrado em uso (25/08/2026): clicar em "Conta" caía em E02. A moldura do tut
 
 ## 9.13 T15 — o documento que três telas prometiam e a verificação pública esperava
 
+*Superada em parte em 01/10/2026 (§9.33):* o último parágrafo e a referência a RN12 descrevem o âmbito da clínica como "autorização vigente"; hoje a exportação pela clínica parte do vínculo automático (ver a nota de §9.18). O âmbito do tutor — titularidade — não mudou.
+
 Encontrado em uso (31/08/2026): "Exportar PDF" em T04, T05 e T07 caía em E02 — o mesmo defeito que trouxe T18 à existência, agora em triplicata. A fatia de P09 já verificava documentos (RF47) que nenhuma fatia sabia emitir; o modelo `Exportacao` anotava, desde então, que a geração seria a fatia de T15. É esta.
 
 **A exportação é modal sobre a tela de origem, não rota própria — mas o endereço que circulou não vira "página não existe".** O briefing sempre disse modal (T15); os botões, escritos antes da fatia, apontavam para `/animais/:codigo/exportar`. Os três viraram botões que abrem o modal, e a rota antiga redireciona ao perfil com `?exportar=1`, que o abre na chegada: um endereço que já esteve num botão pode estar num favorito.
@@ -470,6 +503,8 @@ Encontrado em uso (31/08/2026): "Exportar PDF" em T04, T05 e T07 caía em E02 �
 
 ## 9.14 V04 — o cadastro que começa por descobrir se deve existir
 
+*Superada em 01/10/2026 (§9.33):* a verificação por CPF já não revela só a existência — mostra o titular e os animais com dados completos, com a marca "ainda não acompanhado por esta clínica" quando for o caso, e o CPF existente leva ao cadastro do animal, gravando o encontro no livro de acessos se a clínica não acompanhava nenhum animal desse tutor. A ação "Solicitar autorização ao tutor" e o destino V10 foram removidos. O convite deixou de sair no cadastro do tutor: sai no cadastro do primeiro animal (§4.5). E-mail de conta existente sem papel de tutor passou a receber o papel em vez de ser recusado; e-mail de outro tutor continua recusado no campo. Continuam valendo a reutilização da busca de V03, a conta nascida sem senha acessível e o `termos_aceitos_em` nulo até o aceite.
+
 Encontrado na fatia V04 (31/08/2026). Os botões "Cadastrar tutor" de V01 e V03 já apontavam para `/clinica/tutores/novo` e caíam em E02. As decisões da fatia:
 
 **A verificação de CPF não tem rota própria — é a busca de V03.** O "Verificar" da primeira etapa chama `GET /api/clinica/buscar`, pela mesma razão de V07a (§9.7): a regra de revelar só a existência (RN12) e o registro de acesso que a precede (RF18b) já moram ali, e uma segunda consulta com regra própria seria uma segunda chance de errar a regra. As três respostas da busca são os três estados da tela: `sem_resultado` abre o formulário; `existencia.tipo === 'tutor'` é o estado crítico de RF13; `autorizados` não vazio significa que não há o que cadastrar — a tela mostra os animais e leva à ficha.
@@ -484,6 +519,8 @@ Encontrado na fatia V04 (31/08/2026). Os botões "Cadastrar tutor" de V01 e V03 
 
 ## 9.15 Relação de animais da clínica — o destino da barra lateral que o briefing desenhou sem catalogar
 
+*Superada em parte em 01/10/2026 (§9.33):* a lista passou a ser dos animais vinculados ao prestador ativo (carteira), e não dos que estão sob autorização vigente; a coluna de vencimento da autorização e o aviso de quinze dias saíram. O vazio diz "Nenhum animal acompanhado ainda — os animais entram aqui quando você os cadastra ou atende". Continuam valendo a natureza de lista de navegação, a ausência de registro de acesso, as demais colunas e a grade.
+
 Encontrado na fatia da relação de animais (31/08/2026). O item "Animais" da moldura do veterinário (§5.3) apontava para `/clinica/animais` e caía em E02 desde a fatia de V01 — endereço definitivo primeiro, tela depois. Mas a tabela de telas do briefing não tem tela nesse endereço: V05 é o cadastro (`/clinica/animais/novo`) e V06 é a ficha (`/clinica/animais/:codigo`). A tela nasceu, portanto, sem código de briefing, e as decisões dela são estas:
 
 **É lista de navegação, não busca.** Uma linha por animal sob autorização vigente do prestador ativo (RN48, o âmbito de V01 e V02), em ordem alfabética. Achar um animal determinado continua sendo papel de V03 — que responde também sobre o que está fora do âmbito, com a parcimônia de RN12 e o log de RF18b — e é por isso que a tela não tem campo de texto: um campo de nome aqui seria uma segunda busca com regra própria, a segunda chance de errar a única regra que não admite erro. A urgência também não ordena esta lista: ela tem tela própria (V02), a um clique na mesma barra lateral.
@@ -495,6 +532,8 @@ Encontrado na fatia da relação de animais (31/08/2026). O item "Animais" da mo
 **`minmax(0, …fr)` na grade da tabela, e a razão de ser.** Cabeçalho e corpo são grades independentes (`thead tr` e `tbody tr`), e faixa `fr` seca não desce abaixo do min-content — em 768 px o cabeçalho em caixa alta ("SITUAÇÃO VACINAL") travava larguras diferentes das células e desalinhava a coluna do próprio título, coisa que a medição por `getBoundingClientRect` pegou e a leitura da árvore não pegaria. V02 escapou por sorte de conteúdo; a regra vale para toda tabela-grade futura.
 
 ## 9.16 V10 — o pedido que quatro telas prometiam, e o CPF que não cabe numa tabela nominal
+
+*Superada em 01/10/2026 (§9.33):* V10, as solicitações de acesso (RF38), a tabela `solicitacoes_acesso`, a tela T13 e o endereço `/clinica/autorizacoes/nova` foram removidos. Mantida aqui como registro histórico da decisão.
 
 Construída na fatia de V10 (31/08/2026), fechando o "Não encontramos esta página" dos botões "Solicitar autorização ao tutor" de V03, V04, V06 e V07a. As decisões:
 
@@ -511,6 +550,8 @@ Construída na fatia de V10 (31/08/2026), fechando o "Não encontramos esta pág
 **O endereço que circulou não vira 404.** `/clinica/autorizacoes/nova` é redirect (mesmo raciocínio de `/animais/:codigo/exportar`): com `?animal=`, ficha do animal com o modal aberto por `?solicitar=1` — parâmetro que a tela remove do endereço na chegada, para recarregar não reabrir pedido já decidido; sem contexto, a busca, que é onde o pedido nasce. O modal é sobre a tela de origem (V10 do briefing), e a rota própria existe só como compatibilidade com o endereço já impresso nos botões.
 
 ## 9.17 V05 — o cadastro que o veterinário faz inteiro, e a caracterização que não vaza
+
+*Superada em parte em 01/10/2026 (§9.33):* o parágrafo "O cadastro do veterinário nasce caracterizado; o âmbito, não" deixou de valer — o cadastro feito pela clínica cria o vínculo automático (origem "cadastro") e, se for o primeiro animal do tutor, dispara o convite (§4.5); não há estado P2 nem pedido de V10. O alerta de duplicidade passou a identificar o animal parecido em qualquer caso, gravando linha no livro de acessos quando ele não é da carteira. A menção a T03 (cadastro de animal pelo tutor) também perdeu o objeto: T03 foi removida, e o cadastro preliminar só subsiste nos registros anteriores. Continuam valendo a tela de duas portas, a exigência de titular resolvido, a data exata (RN14) e as exclusões de peso e foto.
 
 Construída na fatia de V05 (01/09/2026), fechando o "Cadastrar animal" que V01, V03, V04 e a relação de animais prometiam — e o `/clinica/animais/:codigo/caracterizar` que a tarja "Cadastro preliminar" de V06 prometia desde a fatia da ficha. As decisões:
 
@@ -530,6 +571,8 @@ Construída na fatia de V05 (01/09/2026), fechando o "Cadastrar animal" que V01,
 
 ## 9.18 Exportação pela clínica — o segundo ator de RF46, e a linha de log que a fatia de T15 anunciou
 
+*Superada em parte em 01/10/2026 (§9.33):* a verificação de âmbito deixou de ser "autorização vigente do prestador ativo" — exportar é uma das rotas clínicas que alcançam o animal por identificador exato e criam o vínculo automático; não há mais o 403 por falta de autorização nem o fechamento do arquivo por revogação. Continuam valendo o mesmo documento e o mesmo resumo para tutor e clínica, a linha `exportacao_de_registro_alheio` gravada antes da emissão, e o contexto no endereço do download.
+
 Encontrado em uso (01/09/2026): "Exportar PDF" na ficha do veterinário (V06) caía em E02 — exatamente como a fatia de T15 deixou anotado que cairia ("é fatia própria, não um `if` a mais nesta"). É esta.
 
 **A porta é outra; o documento é o mesmo.** `POST /api/clinica/animais/{codigo}/exportacoes` reusa `EmitirExportacaoRequest` e a montagem de `ExportacaoDeHistoricoService` — mesmo conteúdo, mesmo resumo, mesma verificação pública, e o teste prova que a emissão do veterinário e a do tutor sobre o mesmo recorte assinam o mesmo resumo (RN47: duas emissões do mesmo documento). O que muda é a verificação de âmbito: autorização vigente do prestador ativo, não titularidade — e a falta dela é 403 que nomeia o caminho (a régua de V07), não o 404 de RN12, porque negar a existência de quem o profissional já encontrou o mandaria procurar de novo.
@@ -542,6 +585,8 @@ Encontrado em uso (01/09/2026): "Exportar PDF" na ficha do veterinário (V06) ca
 
 ## 9.19 V12 — o registro que é atributo do animal, e o calendário que cessa na fonte
 
+*Superada em parte em 01/10/2026 (§9.33):* o óbito não exige mais autorização vigente; registrá-lo é rota clínica que cria o vínculo automático. A comparação com o `ja_pendente` de V10 perdeu o termo, e `?solicitar=1` saiu da lista de redirects. O restante continua valendo.
+
 Encontrado em uso (01/09/2026): "Registrar óbito" na ficha (V06) caía em E02 — o endereço circulou no menu antes de a fatia existir, como manda o padrão da casa. É esta.
 
 **O óbito escreve no animal, não numa tabela de registros.** As colunas nasceram com V06 (que lê o estado); V12 acrescenta a causa (opcional por desenho — exigi-la produziria "indeterminada" digitado) e a autoria completa: prestador do âmbito e CRMV copiado do vínculo no ato, porque o vínculo pode encerrar-se e o registro continua respondendo por quem o assinou (RN27, RN22). Não há serviço próprio: cinco colunas num `update` são o fluxo simples que o padrão de P03 admite inline. A escrita é condicionada ao banco (`whereNull('obito_em')`), não à leitura — dois modais abertos ao mesmo tempo não sobrescrevem a autoria um do outro; o segundo recebe 409 com `situacao: 'ja_registrado'`, data e autor, o mesmo desenho do `ja_pendente` de V10. E exige autorização vigente **sem** a exceção do atendimento de V08: o óbito muda o estado do animal para o tutor e para todo prestador, não o prontuário de uma clínica.
@@ -553,6 +598,8 @@ Encontrado em uso (01/09/2026): "Registrar óbito" na ficha (V06) caía em E02 �
 **No frontend, modal sobre V06 com a estrutura de P3 — e a ficha recarrega no registro, não no fechamento.** `RegistrarObitoModal` segue o par solicitar/retificar: folha inferior no celular, 480 px a partir de `md`, `ConfirmDialog` empilhado com "O que acontece"/"O que não acontece" nos textos do briefing. O `@registrado` dispara `carregar()` imediatamente — quando o modal se despede, a tarja, o selo e a supressão das ações já estão atrás dele. Aberto sobre animal que já tem óbito (endereço guardado, aba antiga), não oferece formulário: informa o que consta, que é o estado "já registrado" do briefing. O endereço `/clinica/animais/:codigo/obito` virou redirect com `?obito=1`, preservando a query, como o de exportar. Limitação herdada do padrão: o redirect só abre o modal quando a ficha **monta** — `push` para a mesma rota reusa o componente e não roda `carregar()`; vale igualmente para `?solicitar=1` e `?exportar=1`, e a correção, se vier, é das três de uma vez.
 
 ## 9.20 Relação de registros da clínica — o destino da barra lateral cujo âmbito é a autoria
+
+*Superada em parte em 01/10/2026 (§9.33):* o âmbito pela autoria continua, e o par com a relação de animais também — mas o outro lado do par passou a ser a carteira (vínculo automático), não a autorização. Sem revogação nem vencimento, não há mais linha "sob guarda" sem endereço: toda linha abre o registro, e a frase de T12 citada como argumento deixou de existir com T12.
 
 Encontrado em uso (01/09/2026): "Registros" na barra lateral do veterinário caía em E02 desde a fatia de V01 — o último dos quatro destinos da moldura sem tela, anotado no próprio `VetShell` como fatia própria. É esta. Como a relação de animais (§9.15), nasceu sem código de briefing, e as decisões são estas:
 
@@ -569,6 +616,8 @@ Encontrado em uso (01/09/2026): "Registros" na barra lateral do veterinário ca�
 **Sem registro de acesso, com um motivo a mais que o de §9.15.** Toda linha desta resposta é produção do próprio prestador; o livro de T14 conta ao tutor o acesso ao que é de terceiros (RN49), do qual não há nenhum aqui.
 
 ## 9.21 Memória de contexto — e a administração ao alcance da barra da clínica
+
+*Superada em parte em 01/10/2026 (§9.33):* a contagem de `vinculosDe()` e o `AvisoOutroContexto` passaram a falar de animais acompanhados em cada contexto (carteira), e não de animais sob autorização vigente; o estado `sem_autorizacoes` virou o vazio da carteira. A memória de contexto e a administração na barra da clínica não mudaram.
 
 Encontrado em uso (02/09/2026): um animal recém-autorizado à clínica ficou invisível para o veterinário que também atende como autônomo. Não era regra de acesso — era o contexto: o padrão caía sempre no primeiro vínculo, e os destinos da barra lateral, que nunca carregaram `?prestador=`, devolviam o profissional ao consultório a cada navegação, desfazendo em silêncio a troca que ele tinha acabado de fazer.
 
@@ -652,6 +701,8 @@ Pedido a fatia (04/09/2026): semear o catálogo com as vacinas essenciais e não
 
 ## 9.26 T17 — o sino do cabeçalho do tutor ganha destino
 
+*Nota de 01/10/2026 (§9.33):* o âmbito previsto para a versão clínica de T17 — "autorização vigente do prestador ativo" — seria hoje a carteira da clínica. A versão do tutor não mudou, exceto que tutor não ativado não recebe lembretes por e-mail.
+
 Encontrado em uso (17/09/2026): o sino caía em E02. §9.12 já o registrava como pendente da fatia de T17; é esta.
 
 **A rota fica sob `/conta`, mas tem área — ao contrário de T18.** O briefing abre T17 também ao veterinário (RF45a), só que com outro âmbito: autorização vigente do prestador ativo, e não titularidade. É fatia própria, pelo mesmo motivo que a exportação pela clínica não foi um `if` em T15. Até lá a rota declara `area: 'tutor'`, e quem não é tutor recebe E01 com a frase certa, em vez de uma tela que se monta para ouvir 403.
@@ -667,6 +718,8 @@ Encontrado em uso (17/09/2026): o sino caía em E02. §9.12 já o registrava com
 **Helena continua sem notificação alguma no cenário.** O seeder a deixa assim de propósito: o Théo é o "nunca notificado" de V02. T17 com dados pode ser vista pelas contas de Antônio Prado e Ruan Teixeira; Sofia Nunes também tem uma notificação, mas nunca ativou o acesso (RF14b).
 
 ## 9.27 Um e-mail, uma conta — o veterinário que também é tutor
+
+*Superada em parte em 01/10/2026 (§9.33):* os caminhos de acréscimo do papel de tutor por iniciativa da própria pessoa — o autocadastro de P03 e `POST /api/conta/tutor` — foram removidos. O papel de tutor só nasce quando uma clínica cadastra o tutor (V04) informando o e-mail: se a conta já existe sem papel de tutor, o papel é anexado a ela. A regra central — um e-mail, uma conta, papéis acumuláveis (RN05) — continua, e é por esse caminho que a Larissa das personas é tutora e veterinária com um endereço só.
 
 Encontrado em uso (23/09/2026): não havia como ser tutor e veterinário com o mesmo endereço de correio. Os dois autocadastros criavam conta nova e recusavam o endereço repetido — P03 com a frase neutra de §9.11, P04 com `unique:users,email` —, de modo que acumular papéis exigia dois endereços. É o caso da Larissa das personas, que §2 já apresenta como o motivo de RN05 existir, e o modelo inteiro já o suportava: `papeis()` soma vínculos de prestador e registro de tutor, `tutores.user_id` é único, e o convite de equipe de A03 reaproveita a conta de quem já é tutor desde a primeira fatia. Faltavam os dois caminhos de autocadastro, e faltava o caminho inverso do convite.
 
@@ -694,6 +747,8 @@ Quatro citações que pareciam suspeitas **não** foram alteradas, porque estão
 
 ## 9.28 A tela pública de cadastro não lê a sessão de quem a preenche
 
+*Superada em parte em 01/10/2026 (§9.33):* o último parágrafo cita `POST /api/conta/tutor` como caminho que continua de pé; ele foi removido (ver a nota de §9.27). A decisão sobre P04 não mudou.
+
 Encontrado em uso (23/09/2026), no mesmo dia de §9.27 e por causa dela: quem cadastrava um profissional autônomo em P04 já não via os campos de e-mail e senha, e lia, no terceiro passo, que o estabelecimento seria cadastrado "na conta que você já usa" — com o endereço de quem estava no navegador. A pergunta de quem encontrou foi a certa: como o sistema sabe que aquela é a conta do profissional que está sendo cadastrado?
 
 **Não sabe, e não tinha como saber.** O que a tela lia era o cookie de sessão do navegador, não o formulário. §9.27 tratou a sessão como prova de titularidade, e ela prova apenas quem está logado ali — que é a mesma pessoa com frequência, mas não sempre: quem cadastra pode estar abrindo o consultório de um colega, ou o de um cliente, no próprio computador. Nesses casos o cadastro criava `admin_prestador` **e** `veterinario` na conta de quem apenas digitou, e carimbava nela o CRMV de outra pessoa — que é justamente o que RN22 manda preservar em cada registro assinado.
@@ -706,6 +761,8 @@ Encontrado em uso (23/09/2026), no mesmo dia de §9.27 e por causa dela: quem ca
 
 ## 9.29 T18 não anuncia mais os papéis da conta
 
+*Superada em parte em 01/10/2026 (§9.33):* `/conta/tutor` deixou de ser alcançável — o papel de tutor vem do cadastro feito pela clínica. A decisão sobre T18 não mudou.
+
 Pedido em uso (23/09/2026): a seção "O que esta conta é" saiu da tela de conta — a relação de papéis vigentes e as duas ofertas que §9.27 acrescentara ali.
 
 **A tela voltou a ser o que o título dela diz.** T18 responde por dados pessoais, senha e sessão (RF04, RF06): o que se edita da própria conta. A relação de papéis não se edita, e a oferta de cadastrar um estabelecimento aparecia justamente a quem não atende — quem entrou para ver a carteira do próprio cão lia, no fim da tela, um convite a abrir clínica.
@@ -715,6 +772,8 @@ Pedido em uso (23/09/2026): a seção "O que esta conta é" saiu da tela de cont
 **O que se perde, dito por inteiro.** A acumulação de papéis (RN05) fica sem lugar onde se explique sozinha — era esse o argumento de §9.27 para a seção —, e quem chega a T18 sem ter passado por uma porta de entrada não encontra mais a explicação. `GET /api/conta` continua devolvendo `conta.papeis`, agora sem leitor no frontend: o contrato não mudou para não fazer de uma retirada de tela uma mudança de API.
 
 ## 9.30 O leitor de QR Code que V03 anunciava e nenhuma fatia tinha construído
+
+*Nota de 01/10/2026 (§9.33):* as referências a RN48 e RN12 descrevem o âmbito e a parcimônia da busca anteriores; hoje a busca por código mostra o animal completo, marcado quando ainda não acompanhado, e o registro de acesso continua. A leitura do QR Code como entrada do campo não mudou.
 
 Encontrado em uso (29/09/2026), no celular: o botão de QR Code ao lado do campo de busca caía em E02. Ele apontava para `/clinica/buscar/qr` desde a fatia de V03 — "a leitura em si é fatia própria, e até lá a ligação responde por ela", dizia o comentário —, e V07a/V08a herdaram o mesmo botão com a mesma promessa. É esta a fatia.
 
@@ -747,6 +806,22 @@ Pedido em uso (29/09/2026): raça, pelagem e os demais campos de caracterizaçã
 **Uma tela, três vocabulários.** `CadastrarAnimalView` continua sendo a mesma tela pelas mesmas duas rotas; o que mudou é que o modo consolidação distingue completar (cadastro preliminar) de editar (já caracterizado): título "Editar caracterização", nota que avisa que salvar reescreve autor e data, a assinatura de quem registrou por último (`caracterizado_em` e `caracterizado_por` passaram a viajar na leitura de `/caracterizar`) e botão "Salvar caracterização". Formulário, validação e rota não mudaram — o trait `ValidaCaracterizacaoDoAnimal` já era o mesmo.
 
 **O que a manutenção não pode fazer, agora está em teste.** Criar um segundo cadastro (RN19), conservar a assinatura antiga sobre o dado novo (RF19c: a caracterização passa a ser de quem alterou, não de quem preencheu primeiro) e acusar o próprio micro-chip como conflito. E óbito não trava a edição: caracterização é cadastro, não registro clínico, e corrigir um micro-chip transcrito errado continua sendo correção de cadastro depois da morte do animal — RF22a encerra calendário e lembretes, não a ficha.
+
+## 9.33 O veterinário atende sem o tutor; o tutor é convidado a acompanhar
+
+Decidido em 01/10/2026, a pedido da Thais, e já implementado no código. É a maior mudança de modelo desde §3.2, e por isso várias entradas anteriores trazem agora a marca "Superada em 01/10/2026" — nenhuma foi apagada, porque o percurso das decisões é parte do que o TCC precisa contar.
+
+**O problema que motivou a mudança.** O desenho anterior punha o tutor na origem de todo acesso clínico: criar conta, escolher o prestador no diretório (T10), conceder autorização com código enviado por e-mail (T11), acompanhar prazo de noventa dias, renovar e revogar (T12), responder a pedidos de acesso (T13, V10). Cada passo tinha razão defensável, mas a soma deles caía sobre o veterinário, que é quem registra e quem precisa do histórico: no balcão, o tutor frequentemente não tem conta, não lembra a senha ou não quer resolver isso naquela hora, e o atendimento ficava em P2 — "sem autorização" — esperando por alguém que não estava ali para isso. Um sistema cujo valor depende de o profissional registrar tudo não pode tornar o registro mais caro do que a ficha de papel.
+
+**O modelo novo.** O fluxo do veterinário é cadastrar tutor, cadastrar animal, atender, registrar e finalizar, sem ação prévia do tutor (§4.1). O vínculo clínica–animal é automático e funciona como carteira de pacientes, não como permissão (§4.2). A busca por identificador exato alcança qualquer cadastro; por nome, só a carteira (§4.3). A clínica lê o histórico inteiro, com autoria por registro. O tutor é usuário convidado: o convite sai com o primeiro animal, e o acesso dele é de consulta e acompanhamento — carteira, histórico, livro de acessos, PDF, notificações —, mais a manutenção da identificação e da foto do animal e o lançamento do pregresso (§4.5).
+
+**Removidos.** Diretório de prestadores (T10, RF11); concessão de autorização com código (T11, RF36, RF37); minhas autorizações, revogação, renovação e prazo (T12, RF39–RF41); solicitações de acesso (T13, V10, RF38); RN37–RN41; o código de autorização de RN45; o estado "sem autorização" (P2, RF35c, RF18a); RN12 (revelar só a existência); a parte de RN16 que encerrava autorizações na transferência; os alertas de autorização a expirar; o autocadastro público de tutor (P03), o cadastro de animal pelo tutor (T03) e o acréscimo do papel de tutor pela própria conta (`/conta/tutor`). As tabelas `autorizacoes_acesso`, `confirmacoes_de_autorizacao` e `solicitacoes_acesso` foram apagadas; os vínculos iniciais de `animal_prestador` foram herdados das autorizações vigentes e dos registros existentes.
+
+**Mantidos.** Tutor e animal globais (RN10, RN19); registro clínico exclusivo do veterinário com CRMV (RN21); imutabilidade e retificação privativa do autor (RN26, RN27); papel administrativo sem dado clínico (RN08); livro de acessos (T14, RN49), agora como contrapartida de transparência; exportação verificável em PDF para tutor e clínica (T15, P09); cadastro público de clínica (P04), equipe e convite de veterinário (A03); óbito, anexos, notificações e lembretes.
+
+**Por que transparência, e não consentimento.** As duas coisas não são equivalentes, e o texto do TCC não deve sugerir que sejam. O tutor perde o poder de impedir previamente que uma clínica veja o histórico; ganha a garantia de saber quem viu. A troca foi aceita porque o acesso continua restrito a profissionais autenticados de prestadores identificados, porque alcançar um animal fora da carteira exige identificador exato — que, na prática, vem do tutor ou do próprio animal —, e porque cada alcance a dado de terceiros deixa linha que o tutor lê. A fundamentação pela LGPD precisa ser refeita sobre outra base legal que não o consentimento; ela ainda não está escrita e não deve ser improvisada no texto.
+
+**Onde a tese mudou.** §2.3 (diferencial), §3.1 (posse dos dados), §3.2 (inteira), §3.4 (consequência sobre o acesso), §4 (inteira), §6 (limitações) e §7.1 (itens 2 e 3). O diferencial deixa de ser "o tutor controla quem acessa" e passa a ser "histórico único e contínuo do animal entre clínicas, registrado pelo profissional sem atrito, com transparência para o tutor".
 
 ---
 

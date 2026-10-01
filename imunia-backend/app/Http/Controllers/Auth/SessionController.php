@@ -76,12 +76,12 @@ class SessionController extends Controller
             // Sem papel pedido, ou com papel que a conta tem, é o painel de
             // sempre. Com papel que ela não tem, a rota cai na precedência —
             // não para levar a pessoa até lá, mas para que a tela tenha uma
-            // saída a oferecer a quem decidir não criar o cadastro que falta.
+            // saída a oferecer a quem entrou pela porta errada.
             'rota_inicial' => $rotaDoPapel ?? $usuario->rotaInicial(),
             // O papel que a porta prometia e a conta não tem. Não é erro: a
-            // credencial estava certa, e o que falta é um cadastro que a
-            // própria pessoa pode criar ali mesmo, sem segunda conta e sem
-            // segundo endereço de correio (RN05).
+            // credencial estava certa, e o que falta é um papel que a pessoa
+            // não cria sozinha: o de tutor chega quando uma clínica cadastra
+            // um animal neste e-mail (RN05), e a tela explica isso.
             'papel_ausente' => $papelPedido !== null && $rotaDoPapel === null ? $papelPedido : null,
         ];
     }

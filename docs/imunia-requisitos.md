@@ -1,7 +1,7 @@
 ---
 title: "Imunia --- Documento de Requisitos"
 subtitle: "Etapa 3 do Trabalho de Conclusão de Curso: engenharia de requisitos"
-date: "Agosto de 2026 --- versão 1.3"
+date: "Outubro de 2026 --- versão 1.4"
 lang: pt-BR
 ---
 
@@ -61,13 +61,13 @@ A matriz de rastreabilidade do documento de estudo de caso empregou numeração 
 | RF04 | RF28 | Carteira de vacinação digital |
 | RF05 | RF42 | Lembretes automáticos por correio eletrônico |
 | RF06 | RF31, RF33 | Prontuário imutável com retificação |
-| RF07 | RF36 | Autorização nominal concedida pelo tutor |
+| RF07 | RF36 | Autorização nominal concedida pelo tutor *(removido na versão 1.4)* |
 | RF08 | RF52 | Registro de acesso ao histórico de outro prestador |
 | RF09 | RF46, RF47 | Exportação em PDF com verificação por QR Code |
 | RF10 | RF29 | Histórico pregresso não verificado |
 | RF12 | RF34 | Retorno programado |
 | RF13 | RF49 | Painel de pendências vacinais |
-| RF14 | RF39 | Revogação de autorização |
+| RF14 | RF39 | Revogação de autorização *(removido na versão 1.4)* |
 
 ## 1.5 Registro de alterações
 
@@ -89,13 +89,22 @@ Em consequência das inclusões, os requisitos anteriormente numerados de RF20 a
 
 A numeração não foi alterada, e nenhum requisito foi acrescentado ou removido.
 
+**Versão 1.4 (01/10/2026).** Reestruturação do modelo de acesso, para que o atendimento não dependa de nenhum ato prévio do tutor. O médico-veterinário passa a conduzir o fluxo inteiro — cadastrar o tutor, cadastrar o animal, registrar o atendimento —, e o tutor torna-se **usuário convidado**: recebe por correio eletrônico o convite para criar a senha e acompanha o que a clínica registrou. Sai o compartilhamento controlado pelo tutor; a clínica passa a acompanhar o animal por **vínculo automático**, que nasce do cadastro ou do atendimento e não é permissão concedida nem revogável. O que o tutor perde em controle prévio recebe em transparência: o registro de acessos (RF52, RF53) foi ampliado e continua sendo dele, ao lado do convite e do PDF verificável. Em detalhe:
+
+1. **Removidos**, com o número mantido e a marcação correspondente: RF11 (diretório de prestadores), RF36 a RF41 (concessão, confirmação por código, solicitação, revogação, expiração e consulta de autorizações), RN12 (exibição restrita à existência do cadastro) e RN37 a RN41 (regras da autorização). A seção 4.8 permanece apenas como registro da remoção, e a seção 6.5 passa a tratar do acompanhamento pela clínica.
+2. **Reescritos:** RF12 (o cadastro do tutor passa a ser feito só pela clínica, sem autocadastro, e o e-mail de conta existente recebe o papel de tutor), RF13 (CPF já cadastrado conduz ao cadastro do animal, sem segundo registro), RF14 (convite enviado com o primeiro animal, reemitido no seguinte; título ajustado para "Convidar o tutor a ativar o acesso"), RF15, RF16 (cadastro do animal só pela clínica), RF18, RF20, RF21, RF35, RF48, RF49, RF51, RF52 e RF53, além de critérios pontuais de RF01, RF07, RF08, RF22, RF32, RF44, RF45, RF46, RF54 e RF55; e as regras RN05, RN10, RN16, RN17, RN19, RN42, RN45, RN48 e RN49.
+3. **Acrescentadas** três regras: RN52 (vínculo automático entre clínica e animal), RN53 (alcance da busca por identificador exato e por nome) e RN54 (o atendimento não depende de ato do tutor). RNF14, que media em passos a concessão de autorização, foi removido; RNF11 e RNF26 tiveram o texto ajustado.
+4. A matriz de permissões (§3.2), a persona da tutora (§2.2), a rastreabilidade (§7), o escopo mínimo (§8) e as pendências (§10) foram atualizados em conformidade. As pendências 3 e 7 deixaram de existir com o novo modelo.
+
+O tutor e o animal continuam globais (RN10, RN19), e a imutabilidade, a autoria e a retificação do registro clínico não mudaram. Nenhum requisito foi renumerado.
+
 ---
 
 # 2. Personas
 
 ## 2.1 Nota sobre o uso de personas
 
-As personas abaixo não são invenção livre: derivam dos atores do cenário construído na Etapa 2, e cada uma corresponde a um papel efetivamente previsto no modelo de autorização do sistema. Sob o enquadramento do *scenario-based design*, personas são instrumento reconhecido de elicitação e de comunicação de requisitos, não elemento decorativo. Cabe, contudo, a mesma advertência da etapa anterior: são construções do autor, e o texto da monografia deve nomeá-las como tais.
+As personas abaixo não são invenção livre: derivam dos atores do cenário construído na Etapa 2, e cada uma corresponde a um papel efetivamente previsto no modelo de permissões do sistema. Sob o enquadramento do *scenario-based design*, personas são instrumento reconhecido de elicitação e de comunicação de requisitos, não elemento decorativo. Cabe, contudo, a mesma advertência da etapa anterior: são construções do autor, e o texto da monografia deve nomeá-las como tais.
 
 O valor analítico das personas neste projeto está concentrado em um ponto específico — elas tornam evidente **onde passa a fronteira de quem pode dizer algo sobre o animal**. Helena identifica os seus animais e nada mais registra; Dr. Marcelo e Dra. Larissa caracterizam, examinam e prescrevem; Camila, que opera o balcão da mesma clínica em que Dr. Marcelo atende, não é usuária do sistema. Essa fronteira, que poderia parecer burocrática, é a tradução em software da responsabilidade técnica exigida pela norma profissional.
 
@@ -114,7 +123,7 @@ O valor analítico das personas neste projeto está concentrado em um ponto espe
 
 **Frustrações.** Já perdeu uma carteira de vacinação; já pagou por doses provavelmente desnecessárias; já foi obrigada a servir de intermediária técnica entre dois veterinários, papel para o qual não tem qualificação.
 
-**Implicação de projeto.** Helena pode chegar ao sistema por conta própria, antes de qualquer clínica: cadastra-se, registra Théo e Nina com nome, espécie e fotografia, e lança o histórico pregresso de que dispõe. O que ela **não** faz é caracterizar o animal — raça, pelagem, peso e situação reprodutiva são preenchidos pelo veterinário no primeiro atendimento. A distinção é deliberada e sustenta o diferencial do sistema: o tutor identifica o seu animal, o profissional o descreve. Helena é, ademais, usuária de baixa frequência e alta dependência de notificação. A interface do tutor precisa ser compreensível sem treinamento e operável no celular, e o sistema não pode pressupor que ela retorne espontaneamente — é o lembrete que traz Helena de volta, não o contrário. Ela é, também, a única pessoa autorizada a decidir quem vê o histórico dos seus animais, e essa decisão precisa ser tomável em poucos passos, sob o balcão da clínica, com o animal no colo.
+**Implicação de projeto.** Helena não precisa fazer nada para que Théo seja atendido. Na primeira consulta, o veterinário a cadastra com nome, CPF e endereço de correio eletrônico, cadastra Théo e registra o atendimento; ela ouve no balcão que receberá um convite por e-mail para acompanhar o que for registrado, e o atendimento não depende de que o aceite. Aceito o convite, Helena cria a senha e passa a ver a carteira, o histórico e os lembretes; pode corrigir o nome e a fotografia do animal e lançar o histórico pregresso de que dispõe. O que ela **não** faz é cadastrar o animal ou caracterizá-lo — raça, pelagem, peso e situação reprodutiva são do veterinário. A distinção sustenta o diferencial do sistema: o profissional registra, o tutor acompanha. Helena é, ademais, usuária de baixa frequência e alta dependência de notificação. A interface do tutor precisa ser compreensível sem treinamento e operável no celular, e o sistema não pode pressupor que ela retorne espontaneamente — é o lembrete que traz Helena de volta, não o contrário. O que o sistema lhe deve não é uma decisão a tomar sob o balcão, com o animal no colo, mas transparência: saber quem consultou o histórico dos seus animais, quando e a partir de qual clínica (RF53).
 
 ## 2.3 Dr. Marcelo Antunes — o médico-veterinário
 
@@ -195,7 +204,7 @@ Esta distinção precisa ficar explícita no texto da monografia, sob pena de le
 | Dr. Marcelo, na condição de tutor do próprio cão | `veterinario` no prestador **e** `tutor` sobre os seus animais, sem que um papel confira privilégio ao outro |
 | Recepção e pessoal administrativo do estabelecimento | Nenhum — não são usuários do sistema (§2.4) |
 
-O ponto que provavelmente causou a dúvida é o do profissional autônomo, e ele merece formulação precisa. **Prestador é entidade, não pessoa**: é o inquilino da arquitetura multi-inquilino, a unidade sob a qual os registros clínicos são carimbados e a quem o tutor concede autorização. **Veterinário é pessoa**: é quem possui CRMV, assina o ato clínico e responde tecnicamente por ele.
+O ponto que provavelmente causou a dúvida é o do profissional autônomo, e ele merece formulação precisa. **Prestador é entidade, não pessoa**: é o inquilino da arquitetura multi-inquilino, a unidade sob a qual os registros clínicos são carimbados e que acompanha os animais que cadastra ou atende. **Veterinário é pessoa**: é quem possui CRMV, assina o ato clínico e responde tecnicamente por ele.
 
 Na Clínica Vet Amigo, entidade e pessoa não coincidem — a clínica é o prestador, e Dr. Marcelo é um entre os profissionais que nela atuam. No atendimento domiciliar da Dra. Larissa, entidade e pessoa coincidem: ela é, ao mesmo tempo, o prestador e o único veterinário. O sistema não a obriga a criar duas contas nem a fingir ser duas pessoas; ela possui **uma conta com dois papéis**, sobre um prestador de um único integrante. É exatamente a generalização adotada na Etapa 1 (§3.1), e é o que evita que o veterinário autônomo fique sem lugar no modelo.
 
@@ -206,7 +215,9 @@ Resta a pergunta inversa: se o responsável técnico acumula os dois papéis, po
 
 ## 3.2 Matriz de permissões
 
-Na versão 1.0 deste documento, algumas células traziam o símbolo "—", com o sentido de "não se aplica a este papel" — por exemplo, a linha de visualização do histórico do **próprio** animal, que descreve a posição do tutor e não tem correspondente na posição do veterinário. A notação era ambígua e podia ser lida como negativa, o que seria falso: o tutor visualiza integralmente o histórico dos seus animais, e o veterinário visualiza o histórico dos animais que lhe foram autorizados. A matriz foi refeita para admitir apenas **Sim** e **Não**, com o âmbito de cada permissão declarado em coluna própria.
+Na versão 1.0 deste documento, algumas células traziam o símbolo "—", com o sentido de "não se aplica a este papel" — por exemplo, a linha de visualização do histórico do **próprio** animal, que descreve a posição do tutor e não tem correspondente na posição do veterinário. A notação era ambígua e podia ser lida como negativa, o que seria falso: o tutor visualiza integralmente o histórico dos seus animais, e o veterinário visualiza o histórico dos animais que atende. A matriz foi refeita para admitir apenas **Sim** e **Não**, com o âmbito de cada permissão declarado em coluna própria.
+
+Na versão 1.4, o âmbito do veterinário deixou de ser a autorização concedida pelo tutor e passou a ser o **animal alcançado por identificador exato** — código, QR Code ou micro-chip, ou o CPF do tutor —, com o vínculo automático de RN52 nascendo do próprio ato clínico. As linhas de concessão e de solicitação de autorização foram retiradas, e a de cadastro do animal deixou de incluir o tutor.
 
 Cada célula responde a uma única pergunta: *este papel pode executar esta operação, dentro do âmbito indicado?*
 
@@ -214,18 +225,17 @@ Cada célula responde a uma única pergunta: *este papel pode executar esta oper
 
 | Operação | Âmbito da permissão | Tutor | Veterinário | Admin. da conta | Não autenticado |
 |---|---|:---:|:---:|:---:|:---:|
-| Visualizar histórico clínico do animal | Tutor: seus animais. Veterinário: animais com autorização vigente | Sim | Sim | Não | Não |
-| Cadastrar animal (identificação: nome, espécie e fotografia) | Tutor: seus animais. Veterinário: animais em atendimento | Sim | Sim | Não | Não |
-| Completar a caracterização do animal (raça, pelagem, peso, situação reprodutiva, micro-chip) | Animais com autorização vigente | Não | Sim | Não | Não |
-| Registrar vacinação | Animais com autorização vigente | Não | Sim | Não | Não |
-| Registrar atendimento e prontuário | Animais com autorização vigente | Não | Sim | Não | Não |
+| Visualizar histórico clínico do animal | Tutor: seus animais. Veterinário: animal alcançado por identificador exato ou acompanhado pelo prestador (RN52, RN53), com o histórico inteiro e a origem de cada registro | Sim | Sim | Não | Não |
+| Cadastrar animal | No atendimento, para tutor já cadastrado | Não | Sim | Não | Não |
+| Corrigir a identificação do animal (nome e fotografia) | Exclusivamente os seus animais | Sim | Não | Não | Não |
+| Completar e manter a caracterização do animal (raça, pelagem, peso, situação reprodutiva, micro-chip) | Animal alcançado por identificador exato; o ato cria o vínculo de RN52 | Não | Sim | Não | Não |
+| Registrar vacinação | Animal alcançado por identificador exato; o ato cria o vínculo de RN52 | Não | Sim | Não | Não |
+| Registrar atendimento e prontuário | Animal alcançado por identificador exato; o ato cria o vínculo de RN52 | Não | Sim | Não | Não |
 | Retificar registro clínico | Exclusivamente os de sua própria autoria | Não | Sim | Não | Não |
 | Editar ou excluir registro de outro profissional | Nenhum | Não | Não | Não | Não |
-| Lançar histórico pregresso não verificado | Tutor: seus animais. Veterinário: animais autorizados | Sim | Sim | Não | Não |
-| Cadastrar tutor | Tutor: autocadastro. Veterinário: no atendimento | Sim | Sim | Não | Não |
-| Conceder e revogar autorização de acesso | Exclusivamente sobre os seus animais | Sim | Não | Não | Não |
-| Solicitar autorização ao tutor | Animais em atendimento no prestador | Não | Sim | Não | Não |
-| Consultar painel de pendências vacinais | Animais sob autorização vigente do prestador | Não | Sim | Não | Não |
+| Lançar histórico pregresso não verificado | Tutor: seus animais. Veterinário: conforme o âmbito de visualização | Sim | Sim | Não | Não |
+| Cadastrar tutor | No atendimento | Não | Sim | Não | Não |
+| Consultar painel de pendências vacinais | Animais acompanhados pelo prestador (RN48) | Não | Sim | Não | Não |
 | Consultar o registro de acessos ao histórico | Exclusivamente sobre os seus animais | Sim | Não | Não | Não |
 | Gerenciar usuários e dados do prestador | O próprio prestador | Não | Não | Sim | Não |
 | Cadastrar vacina no acervo próprio da clínica e definir o agendamento dela | O próprio prestador | Não | Não | Sim | Não |
@@ -235,9 +245,9 @@ Cada célula responde a uma única pergunta: *este papel pode executar esta oper
 
 Cinco leituras dessa matriz merecem registro no texto da monografia, por constituírem o diferencial do sistema em relação aos concorrentes analisados:
 
-1. **A coluna do tutor não contém nenhuma permissão de escrita clínica.** Ele cadastra o animal e o identifica; quem o caracteriza e quem registra o ato é o profissional. É a inversão de responsabilidade sobre o dado, enunciada na Etapa 1 (§2.3).
+1. **A coluna do tutor não contém nenhuma permissão de escrita clínica.** Ele corrige o nome e a fotografia do animal e lança o histórico pregresso, sempre marcado como não verificado; quem cadastra, caracteriza e registra o ato é o profissional. É a inversão de responsabilidade sobre o dado, enunciada na Etapa 1 (§2.3).
 2. **A linha de edição de registro alheio é negativa para todos os papéis, sem exceção.** Não existe usuário privilegiado capaz de alterar o registro de outro profissional — nem mesmo quem administra a conta do prestador.
-3. **A concessão de autorização é exclusiva do tutor.** Prestadores podem solicitar; apenas o titular concede.
+3. **Nenhuma linha do veterinário depende de ato prévio do tutor.** Até a versão 1.3, a clínica só via o histórico mediante autorização concedida pelo tutor; a partir da 1.4, o profissional atende sem esperar ninguém, e a contrapartida passou da permissão para a transparência: o tutor é o único papel que consulta o registro de acessos aos seus animais (RF53). É essa linha da matriz, e não mais uma linha de concessão, que traduz a posição do titular: ele não decide quem atende o animal, mas sabe quem consultou o histórico.
 4. **O catálogo mantido pela plataforma é negativo para todos os papéis.** Quem administra uma clínica cadastra as vacinas que ela usa e define o prazo do lembrete de cada uma, mas não altera nem inativa o que veio das diretrizes da WSAVA: aquele cálculo responde por todas as clínicas, e não por uma. É a mesma forma da linha de edição de registro alheio — a permissão não existe para ninguém, e não apenas está ausente de um papel. Quando a conduta do profissional diverge do protocolo, o caminho é a ordem da dose escolhida no ato do registro (RN36), que o sistema sugere e não impõe.
 5. **A coluna administrativa é negativa em toda operação que envolva tutor, animal ou registro clínico.** À primeira vista, uma coluna quase vazia sugere papel supérfluo; é o contrário. O papel existe para que a administração da conta seja possível **sem** que ela abra qualquer porta para o dado do animal. Do desenho decorre a garantia enunciada em §3.1: toda informação clínica da plataforma provém de médico-veterinário identificado, e toda informação de identificação provém do veterinário ou do próprio tutor.
 
@@ -254,7 +264,7 @@ O sistema deve autenticar o usuário mediante endereço de correio eletrônico e
 
 A entrada pode indicar **com qual papel** o usuário pretende trabalhar. A credencial é a mesma e a conta é única (RN05); a indicação não seleciona conta nem restringe acesso, apenas determina o painel de destino — sem ela, quem acumula papéis seria sempre conduzido ao de maior precedência, inclusive quando veio exercer o outro.
 
-*Critérios de aceitação:* a) credenciais válidas estabelecem sessão e direcionam o usuário ao painel do papel indicado na entrada; na ausência de indicação, ao painel de maior precedência entre os papéis que a conta exerce; b) credenciais inválidas retornam mensagem genérica; c) nenhum token de autenticação é gravado em `localStorage`; d) após o limite de tentativas de RN03, novas tentativas são recusadas pelo período definido; e) a indicação de papel não condiciona a autenticação: credencial válida de conta que não exerce o papel indicado estabelece sessão do mesmo modo, e o sistema oferece a criação do cadastro correspondente, na forma de RF12, em lugar de recusar o acesso.
+*Critérios de aceitação:* a) credenciais válidas estabelecem sessão e direcionam o usuário ao painel do papel indicado na entrada; na ausência de indicação, ao painel de maior precedência entre os papéis que a conta exerce; b) credenciais inválidas retornam mensagem genérica; c) nenhum token de autenticação é gravado em `localStorage`; d) após o limite de tentativas de RN03, novas tentativas são recusadas pelo período definido; e) a indicação de papel não condiciona a autenticação: credencial válida de conta que não exerce o papel indicado estabelece sessão do mesmo modo, e o sistema informa que a conta não exerce aquele papel em lugar de recusar o acesso; o papel de tutor não é criado pela própria pessoa, e nasce do cadastro feito pela clínica (RF12).
 
 **RF02 — Encerrar sessão**
 *Ator:* todos os papéis · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN01
@@ -300,14 +310,14 @@ O sistema deve permitir que o usuário consulte e atualize seus dados pessoais d
 
 O sistema deve permitir o cadastro de prestador com razão social ou nome, tipo (clínica, hospital veterinário ou profissional autônomo), CNPJ, endereço com município e unidade federativa, contato e responsável técnico com número de CRMV. O cadastro cria simultaneamente o primeiro usuário administrador.
 
-*Critérios de aceitação:* a) o tipo determina os rótulos exibidos na interface, sem alterar o modelo de dados; b) o município informado alimenta o diretório de RF11; c) prestador sem responsável técnico identificado não pode registrar informação clínica; d) o CNPJ é exigido dos três tipos, o profissional autônomo inclusive, e o cadastro não aceita CPF em seu lugar.
+*Critérios de aceitação:* a) o tipo determina os rótulos exibidos na interface, sem alterar o modelo de dados; b) *(removido em 01/10/2026, com o diretório de RF11)*; c) prestador sem responsável técnico identificado não pode registrar informação clínica; d) o CNPJ é exigido dos três tipos, o profissional autônomo inclusive, e o cadastro não aceita CPF em seu lugar.
 
 **RF08 — Manter os dados do prestador**
 *Ator:* administrador do prestador · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN07
 
 O sistema deve permitir a atualização dos dados cadastrais do prestador, preservando histórico das alterações relevantes para a identificação do estabelecimento em documentos já emitidos.
 
-*Critérios de aceitação:* a) documentos exportados anteriormente conservam a denominação vigente à época da emissão; b) a alteração de município reflete-se no diretório.
+*Critérios de aceitação:* a) documentos exportados anteriormente conservam a denominação vigente à época da emissão; b) *(removido em 01/10/2026, com o diretório de RF11)*.
 
 **RF09 — Vincular médico-veterinário ao prestador**
 *Ator:* administrador do prestador · *Prioridade:* Essencial · *Origem:* §4.2 · *Regras:* RN05, RN09
@@ -324,66 +334,60 @@ O sistema deve permitir o encerramento do vínculo entre profissional e prestado
 *Critérios de aceitação:* a) após o encerramento, o profissional não acessa dado algum do prestador; b) os registros anteriores continuam exibindo nome e CRMV do autor; c) o encerramento não remove nem anonimiza autoria.
 
 **RF11 — Consultar o diretório de prestadores**
-*Ator:* tutor · *Prioridade:* Essencial · *Origem:* §3.2, §4.1 · *Regras:* RN12
 
-O sistema deve permitir que o tutor consulte quais prestadores utilizam a plataforma, com filtro por município e por nome, exibindo apenas informação pública de identificação e contato.
-
-*Critérios de aceitação:* a) o diretório não expõe quantidade de animais, de atendimentos ou qualquer dado operacional do prestador; b) a consulta é o ponto de partida do fluxo de autorização de RF36.
+**Removido em 01/10/2026** — o diretório só existia como ponto de partida da autorização concedida pelo tutor (RF36), que deixou de existir.
 
 ## 4.3 Tutores
 
 **RF12 — Cadastrar tutor**
-*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN05, RN10, RN11
+*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN05, RN10, RN11, RN54
 
-O sistema deve admitir três origens para o cadastro do tutor, produzindo o mesmo registro global nos três casos:
+O sistema deve permitir que o médico-veterinário, no atendimento, cadastre o tutor informando nome completo, CPF e endereço de correio eletrônico. É o primeiro passo do fluxo do profissional — cadastrar o tutor, cadastrar o animal, registrar o atendimento — e não exige nenhuma ação do titular. O cadastro admite duas formas, que produzem o mesmo registro global:
 
-- **Autocadastro.** O próprio tutor cria sua conta informando nome completo, CPF, endereço de correio eletrônico e senha, sem depender de convite de prestador algum.
-- **Cadastro pelo prestador.** No atendimento, o veterinário ou o administrador cadastra o tutor com os mesmos dados, e o titular recebe convite de ativação na forma de RF14.
-- **Acréscimo do papel a conta existente.** O usuário que já possui conta — tipicamente o médico-veterinário que é tutor dos próprios animais — acrescenta o cadastro de tutor à conta que já tem, informando apenas o CPF e prestando o mesmo consentimento exigido no autocadastro. Nome, endereço de correio eletrônico e senha são os da conta, e não se repetem.
+- **Conta nova.** O endereço informado não pertence a conta alguma: cria-se a conta, ainda sem senha utilizável, e o registro do tutor sobre ela. A senha é definida pelo titular ao aceitar o convite de RF14.
+- **Acréscimo do papel a conta existente.** O endereço já pertence a conta sem o papel de tutor — tipicamente o médico-veterinário que é tutor dos próprios animais —: o papel de tutor é anexado a essa conta, sem criar segunda conta e sem convite, pois ela já tem senha.
 
-O tutor é entidade global: não possui `prestador_id` e não pertence ao estabelecimento que o cadastrou, qualquer que tenha sido a origem.
+O tutor é entidade global: não possui `prestador_id` e não pertence ao estabelecimento que o cadastrou. Não há autocadastro: o papel de tutor nasce sempre do cadastro feito por uma clínica.
 
-*Critérios de aceitação:* a) o CPF é único em toda a plataforma e validado quanto aos dígitos verificadores; b) a tentativa de cadastro com CPF já existente, feita por prestador, conduz ao fluxo de RF13, e jamais cria segundo registro; c) o autocadastro dispara imediatamente a verificação de endereço de RF05; d) tutor autocadastrado não recebe acesso a dado algum de prestador, e nenhum prestador passa a enxergá-lo por força do cadastro; e) o endereço de correio eletrônico é único na plataforma, e nenhuma das três origens cria segunda conta para endereço já cadastrado; f) o acréscimo do papel a conta existente exige sessão autenticada do titular, produz no máximo um cadastro de tutor por conta e recusa, com a mesma reserva do autocadastro, o CPF que já pertença a outro cadastro — sem distinguir em resposta ou em tela qual dado coincidiu.
+*Critérios de aceitação:* a) o CPF é único em toda a plataforma e validado quanto aos dígitos verificadores; b) o CPF já existente conduz ao fluxo de RF13 e jamais cria segundo registro; c) o endereço de correio eletrônico é único na plataforma, e nenhuma das duas formas cria segunda conta para endereço já cadastrado; d) o endereço que já pertence a outro tutor é recusado, com orientação para conferi-lo com o titular; e) nenhuma mensagem é enviada ao tutor no ato do cadastro — o convite sai com o primeiro animal, na forma de RF14; f) o aceite dos termos não é registrado pelo veterinário em nome do titular, e fica para a ativação do acesso.
 
-O autocadastro abre um caminho de adoção que não existia na versão anterior deste documento e que convém explicitar no Capítulo 4: o tutor pode começar a usar o sistema **antes** de qualquer clínica, registrando seus animais e o histórico pregresso de que disponha, e levando a plataforma ao profissional no atendimento seguinte. A adesão deixa de depender exclusivamente do estabelecimento, o que mitiga parcialmente a limitação de dependência de rede declarada na Etapa 2.
-
-A terceira origem não acrescenta funcionalidade nova: ela dá caminho ao que §3.1 já afirmava ao listar "Dr. Marcelo, na condição de tutor do próprio cão" entre as acumulações previstas. Sem ela, exercer os dois papéis exigiria dois endereços de correio eletrônico, e a plataforma passaria a tratar como duas pessoas quem é uma só — com consequências sobre o registro de acessos de RF18, sobre a autoria preservada de RF10 e sobre a unicidade do CPF exigida no critério (a) deste requisito.
+O autocadastro do tutor, previsto desde a versão 1.1, foi retirado na versão 1.4. Ele abria um caminho de adoção pelo tutor, mas criava também um tutor sem clínica, com cadastros preliminares e lembretes calculados sobre informação não verificada (antiga pendência 7 de §10). No modelo atual, a adesão depende do estabelecimento, e a limitação de dependência de rede declarada na Etapa 2 volta a valer sem essa mitigação.
 
 **RF13 — Localizar tutor já existente na plataforma**
-*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1, P4 · *Regras:* RN11, RN12
+*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1, P4 · *Regras:* RN11, RN49, RN53
 
-Quando o CPF informado já constar da base, o sistema deve informar a existência do cadastro e permitir o vínculo do tutor ao atendimento em curso, **sem** expor dado algum do tutor ou de seus animais antes da autorização prevista em RF36.
+Quando o CPF informado no cadastro de RF12 já constar da base, o sistema deve informar que o cadastro existe, apresentar o titular e conduzir o profissional diretamente ao cadastro do animal (RF16), sem criar segundo registro e sem interromper o atendimento.
 
-*Critérios de aceitação:* a) a tela informa apenas que existe cadastro para aquele CPF; b) nome, contato e relação de animais permanecem ocultos até a concessão de autorização; c) o fluxo encaminha diretamente à solicitação de acesso de RF38.
+*Critérios de aceitação:* a) nenhum segundo registro de tutor é criado, e o endereço de correio eletrônico digitado não altera o cadastro existente; b) a tela identifica o titular encontrado e segue para o cadastro do animal; c) se a clínica não acompanha nenhum animal daquele tutor, o encontro é gravado no registro de acessos de RF52, visível ao titular.
 
-Este requisito é o ponto de maior risco de vazamento por desenho de interface de todo o sistema. A tentação natural é exibir os dados do tutor encontrado para confirmar que se trata da mesma pessoa; fazê-lo converteria o CPF em chave de consulta a dados pessoais de terceiros, exatamente a falha que a substituição da autenticação por e-mail (§3.3) pretendeu eliminar.
+Até a versão 1.3, este requisito ocultava todo dado do tutor encontrado até a autorização, por receio de converter o CPF em chave de consulta a dados de terceiros. O risco não desapareceu; mudou o modo de tratá-lo. O CPF, assim como o código e o micro-chip, é identificador exato, que o profissional obtém de quem está à sua frente (RN53), e todo encontro de clínica que ainda não acompanhava o titular fica registrado e visível a ele.
 
-**RF14 — Ativar o acesso do tutor**
-*Ator:* tutor · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN04, RN10
+**RF14 — Convidar o tutor a ativar o acesso**
+*Ator:* sistema, tutor · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN04, RN10, RN42, RN54
 
-Quando o cadastro tiver origem no prestador, o sistema deve enviar ao tutor convite de ativação, pelo qual ele define sua senha e passa a acessar o ambiente de consulta. O tutor cadastrado que não ativa o acesso permanece com registro clínico válido, produzido pelo prestador, mas não recebe lembretes, não concede autorizações e não cadastra animais. No autocadastro, a etapa é dispensada, pois a senha já foi definida pelo titular.
+Quando a clínica cadastrar o **primeiro** animal de um tutor, o sistema deve enviar-lhe, por correio eletrônico, convite para criar a senha e acompanhar as informações do animal, deixando claro que o atendimento não depende do aceite. O tutor que aceita o convite define a senha, aceita os termos de uso e entra no ambiente de consulta já autenticado. O tutor que não o aceita permanece com cadastro e registro clínico válidos, produzidos pela clínica, mas não acessa a plataforma e não recebe lembretes.
 
-*Critérios de aceitação:* a) o convite expira e pode ser reenviado; b) tutor não ativado é sinalizado nas telas do prestador; c) a ativação verifica automaticamente o endereço, dispensando RF05.
+Logo após o cadastro do animal, a ficha mostra ao veterinário o endereço para o qual o convite foi enviado, com uma frase sugerida para o balcão: *"Nós utilizamos o Imunia para registrar e acompanhar as informações do seu pet. Caso queira acompanhar tudo o que for registrado, você receberá um e-mail para criar seu acesso e poderá consultar as informações por lá."*
+
+*Critérios de aceitação:* a) o convite vale sete dias e, vencido, pode ser reenviado pela própria página do convite; b) o cadastro de novo animal para tutor ainda não ativado reemite o convite pendente, com novo código e prazo renovado; c) o tutor já ativado não recebe novo convite, mas apenas o aviso de novo animal cadastrado, se o seu endereço estiver verificado (RN42); d) a ativação verifica automaticamente o endereço, dispensando RF05; e) a falha no envio do convite não desfaz o cadastro do animal.
 
 **RF15 — Manter os dados do tutor**
-*Ator:* tutor, veterinário · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN06, RN10
+*Ator:* tutor · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN06, RN10
 
-O sistema deve permitir a atualização dos dados do tutor pelo próprio titular e pelos prestadores autorizados. Toda alteração é registrada com autor, data e hora.
+O sistema deve permitir a atualização dos dados do tutor pelo próprio titular. Toda alteração é registrada com autor, data e hora.
 
-*Critérios de aceitação:* a) o CPF, uma vez cadastrado, não é editável por prestador; b) alterações realizadas por prestador ficam visíveis ao tutor.
+*Critérios de aceitação:* a) a clínica informa os dados no cadastro de RF12 e não os altera depois; o CPF, uma vez cadastrado, não é editável por ela; b) a alteração do endereço de correio eletrônico observa RF06.
 
 ## 4.4 Animais
 
 **RF16 — Cadastrar animal com dados de identificação**
-*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* P4 · *Regras:* RN13, RN17, RN20
+*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* P4 · *Regras:* RN13, RN17, RN20, RN52
 
-O sistema deve permitir o cadastro de animal com os dados de **identificação**: nome, espécie — exclusivamente cão ou gato — e fotografia. O cadastro pode ser realizado pelo próprio tutor ou pelo prestador no atendimento. Assim como o tutor, o animal é entidade global, sem `prestador_id`.
+O sistema deve permitir que o médico-veterinário, no atendimento, cadastre o animal de tutor já cadastrado (RF12, RF13) com os dados de **identificação** — nome e espécie, exclusivamente cão ou gato — e, no mesmo ato, os da caracterização de RF19 de que disponha. Assim como o tutor, o animal é entidade global, sem `prestador_id`; o cadastro cria o vínculo de acompanhamento entre a clínica e o animal (RN52) e dispara o convite ou o aviso de RF14.
 
-Facultativamente, o tutor pode informar sexo e data de nascimento estimada, campos que ficam assinalados como **declarados pelo tutor** e sujeitos a confirmação profissional na forma de RF19.
+Cadastrado pelo profissional, o animal não é preliminar: campo de caracterização deixado em branco é escolha do veterinário, e não pendência. A condição de **preliminar** subsiste apenas nos animais que tutores cadastraram até a versão 1.3, quando havia cadastro pelo tutor, e permanece visível em todas as telas e nos documentos exportados até que um médico-veterinário complete a caracterização. O tutor não cadastra animais; ele corrige o nome e mantém a fotografia dos seus.
 
-O cadastro realizado pelo tutor permanece assinalado como **preliminar** até que um médico-veterinário complete a caracterização, e essa condição é visível em todas as telas e nos documentos exportados.
-
-*Critérios de aceitação:* a) espécies distintas de cão e gato são recusadas; b) a fotografia observa as restrições de formato e tamanho de RN20 e pode ser substituída pelo tutor a qualquer tempo; c) o cadastro gera o código único de RF17, seja qual for a origem; d) o cadastro preliminar exibe indicação inequívoca de que a caracterização está pendente; e) nenhum campo privativo do veterinário é apresentado ao tutor como editável, nem aceito pela interface de programação quando submetido por ele.
+*Critérios de aceitação:* a) espécies distintas de cão e gato são recusadas; b) a fotografia observa as restrições de formato e tamanho de RN20 e pode ser substituída pelo tutor a qualquer tempo; c) o cadastro gera o código único de RF17; d) o cadastro preliminar remanescente exibe indicação inequívoca de que a caracterização está pendente; e) nenhum campo privativo do veterinário é apresentado ao tutor como editável, nem aceito pela interface de programação quando submetido por ele; f) o tutor não dispõe de caminho, na interface ou na API, para cadastrar animal.
 
 O item (e) não é redundância. A ocultação do campo na interface é conveniência; a recusa no servidor é a garantia. É a aplicação concreta de RNF09 e o tipo de detalhe que distingue, na defesa, um controle de acesso projetado de um controle de acesso aparente.
 
@@ -395,11 +399,11 @@ O sistema deve atribuir a cada animal, no ato do cadastro, identificador único,
 *Critérios de aceitação:* a) o código não é derivado de sequência previsível; b) o código não muda em nenhuma circunstância prevista no sistema; c) o código consta de toda exportação em PDF.
 
 **RF18 — Localizar animal por código**
-*Ator:* veterinário · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN12, RN15
+*Ator:* veterinário · *Prioridade:* Importante · *Origem:* §3.1 · *Regras:* RN15, RN49, RN52, RN53
 
-O sistema deve permitir a localização de animal pelo código único, exibindo apenas a informação mínima de identificação quando não houver autorização vigente, e encaminhando ao fluxo de solicitação de RF38.
+O sistema deve permitir a localização de animal pelo código único, inclusive por leitura do QR Code, em qualquer cadastro da plataforma, exibindo os dados completos do animal e assinalando quando ele ainda não é acompanhado pela clínica ativa. Abrir a ficha a partir do código cria o vínculo de acompanhamento de RN52.
 
-*Critérios de aceitação:* a) sem autorização, exibem-se somente espécie, nome e indicação de que há histórico disponível mediante autorização; b) a consulta sem autorização é registrada em log.
+*Critérios de aceitação:* a) o resultado assinala, de forma visível, o animal ainda não acompanhado pela clínica; b) a localização de animal que a clínica não acompanha é gravada no registro de acessos de RF52, visível ao tutor.
 
 **RF19 — Completar e manter a caracterização do animal**
 *Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §2.3 (documento de decisões), P8 · *Regras:* RN06, RN14, RN18
@@ -413,11 +417,11 @@ Completada a caracterização, cessa a condição de cadastro preliminar de RF16
 **Observação para a modelagem (Etapa 5).** O peso não é atributo estável do animal: é medição, varia ao longo da vida e tem valor clínico justamente na série. Recomenda-se modelá-lo como medição datada, vinculada ao atendimento em que foi aferida, exibindo-se no cadastro o valor mais recente com a respectiva data. Tratá-lo como campo único sobrescrevível destruiria informação clínica útil e, mais grave, contrariaria a decisão de imutabilidade do registro (RN22).
 
 **RF20 — Consolidar cadastro preliminar do tutor**
-*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* P4 · *Regras:* RN17, RN19
+*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* P4 · *Regras:* RN17, RN19, RN49, RN52
 
-Quando o animal já houver sido cadastrado pelo tutor, o sistema deve conduzir o prestador ao registro existente — localizado pelo código único, pela relação de animais do tutor autorizado ou pelo micro-chip — em vez de permitir a criação de um segundo cadastro. Antes de confirmar qualquer cadastro novo, o sistema alerta sobre duplicidade provável quando houver, para o mesmo tutor, animal ativo de mesma espécie e nome semelhante.
+Quando o animal já possuir cadastro na plataforma — feito por outra clínica ou, até a versão 1.3, pelo próprio tutor —, o sistema deve conduzir o profissional ao registro existente, localizado pelo código único, pelo micro-chip ou pela relação de animais do tutor encontrado por CPF, em vez de permitir a criação de um segundo cadastro. Antes de confirmar qualquer cadastro novo, o sistema alerta sobre duplicidade provável quando houver, para o mesmo tutor, animal ativo de mesma espécie e nome semelhante. Sendo o registro existente preliminar, o veterinário o completa na forma de RF19.
 
-*Critérios de aceitação:* a) o alerta de duplicidade precede a confirmação e identifica o cadastro possivelmente equivalente; b) a consolidação preserva o código único do cadastro mais antigo e todo o histórico pregresso já lançado pelo tutor; c) a consolidação é permitida enquanto um dos cadastros não possuir registro clínico.
+*Critérios de aceitação:* a) o alerta de duplicidade precede a confirmação e identifica o cadastro possivelmente equivalente; b) a consolidação preserva o código único do cadastro mais antigo e todo o histórico pregresso já lançado; c) a consolidação é permitida enquanto um dos cadastros não possuir registro clínico; d) o alerta que revela animal ainda não acompanhado pela clínica é gravado no registro de acessos de RF52.
 
 **Limitação declarada.** Havendo registro clínico em ambos os cadastros duplicados, a fusão automática não é oferecida: implicaria reatribuir autoria e prestador de origem de registros imutáveis, o que a decisão de §3.4 impede. A hipótese deve constar da seção de limitações da monografia, com encaminhamento a Trabalhos Futuros. É a razão pela qual a prevenção da duplicidade, no item (a), importa mais do que a sua correção posterior.
 
@@ -426,7 +430,7 @@ Quando o animal já houver sido cadastrado pelo tutor, o sistema deve conduzir o
 
 O sistema deve permitir a transferência da titularidade do animal a outro tutor cadastrado, mediante confirmação de ambas as partes, preservando integralmente o histórico clínico.
 
-*Critérios de aceitação:* a) a transferência exige aceite do tutor de destino; b) o histórico anterior permanece acessível ao novo tutor; c) o tutor anterior perde o acesso a partir da transferência, e as autorizações por ele concedidas são encerradas.
+*Critérios de aceitação:* a) a transferência exige aceite do tutor de destino; b) o histórico anterior permanece acessível ao novo tutor; c) o tutor anterior perde o acesso a partir da transferência; d) os vínculos de acompanhamento das clínicas (RN52) não são afetados, pois não dependem do tutor.
 
 A adoção é evento corriqueiro no domínio — Théo e Nina são ambos animais adotados — e a ausência deste requisito produziria, na prática, cadastro duplicado a cada mudança de responsável, reintroduzindo a fragmentação que o sistema pretende eliminar.
 
@@ -435,7 +439,7 @@ A adoção é evento corriqueiro no domínio — Théo e Nina são ambos animais
 
 O sistema deve permitir o registro do óbito do animal, com data, cessando o cálculo do calendário e a emissão de lembretes, e preservando integralmente o histórico pelo prazo de guarda legal.
 
-*Critérios de aceitação:* a) nenhuma notificação é emitida após o registro do óbito; b) o histórico permanece consultável pelo tutor e pelos prestadores autorizados; c) o registro não pode ser excluído, apenas retificado na forma de RF33.
+*Critérios de aceitação:* a) nenhuma notificação é emitida após o registro do óbito; b) o histórico permanece consultável pelo tutor e pelas clínicas, no âmbito de RN53; c) o registro não pode ser excluído, apenas retificado na forma de RF33.
 
 ## 4.5 Catálogo de imunobiológicos e protocolos
 
@@ -517,7 +521,7 @@ O sistema deve registrar o atendimento contendo data e hora, animal, motivo da c
 
 O sistema deve permitir a anexação de arquivos em formato PDF ou imagem ao atendimento, com descrição e data do exame.
 
-*Critérios de aceitação:* a) tipos e tamanhos de arquivo são restritos conforme RN28; b) o anexo herda a imutabilidade do registro ao qual se vincula; c) os arquivos não são acessíveis por ligação direta sem verificação de autorização.
+*Critérios de aceitação:* a) tipos e tamanhos de arquivo são restritos conforme RN28; b) o anexo herda a imutabilidade do registro ao qual se vincula; c) os arquivos não são acessíveis por ligação direta, e cada abertura verifica o acesso do usuário.
 
 Este requisito responde diretamente ao episódio de novembro de 2025 do cenário: o segundo profissional não repetiria o raspado cutâneo se tivesse acesso ao laudo do primeiro.
 
@@ -538,59 +542,41 @@ O sistema deve permitir a vinculação, ao atendimento, de data prevista de reto
 Corresponde à alternativa (b) da seção 5.7 do documento de estudo de caso, ali recomendada: resolve o problema P7 reaproveitando a infraestrutura de notificação já construída, sem incorporar a complexidade de um módulo completo de agenda, cuja ausência é delimitação de escopo assumida.
 
 **RF35 — Visualizar o histórico consolidado do animal**
-*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* P4, P6 · *Regras:* RN12, RN37
+*Ator:* tutor, veterinário · *Prioridade:* Essencial · *Origem:* P4, P6 · *Regras:* RN27, RN49, RN52, RN53
 
-O sistema deve apresentar, em ordem cronológica única, todos os atendimentos, vacinações, exames e retificações do animal, independentemente do prestador de origem, respeitada a autorização vigente, com identificação do prestador e do profissional responsável por cada item.
+O sistema deve apresentar, em ordem cronológica única, todos os atendimentos, vacinações, exames e retificações do animal, independentemente do prestador de origem, com identificação do prestador e do profissional responsável por cada item. A clínica que alcança o animal na forma de RN53 vê o histórico inteiro, sem depender de autorização do tutor; o que ela não pode é retificar registro de outra (RN27).
 
-*Critérios de aceitação:* a) a origem de cada registro é sempre exibida; b) a visualização de registro produzido por outro prestador é gravada em log conforme RF52; c) na ausência de autorização, nada além da identificação do animal é exibido.
+*Critérios de aceitação:* a) a origem de cada registro é sempre exibida; b) a visualização de registro produzido por outro prestador é gravada em log conforme RF52; c) a retificação é oferecida apenas nos registros de autoria do profissional, na forma de RF33.
+
+É este requisito que sustenta o diferencial do sistema na versão 1.4: o histórico do animal é único e contínuo entre clínicas, registrado pelo profissional sem atrito e acompanhado pelo tutor com transparência — o convite de RF14, o registro de acessos de RF53 e o documento verificável de RF46.
 
 ## 4.8 Autorização e compartilhamento
 
+Seção removida na versão 1.4 (01/10/2026). O acesso da clínica ao histórico deixou de depender de autorização concedida pelo tutor e passou a seguir o vínculo automático de RN52 e o alcance por identificador exato de RN53; a transparência que a autorização pretendia dar ao titular está em RF52 e RF53. Os números abaixo são mantidos para preservar a rastreabilidade com as versões anteriores e com o texto da monografia.
+
 **RF36 — Conceder autorização nominal a prestador**
-*Ator:* tutor · *Prioridade:* Essencial · *Origem:* §3.2, §4.1 · *Regras:* RN37, RN38, RN39
 
-O sistema deve permitir que o tutor selecione, no diretório de RF11, um prestador e conceda autorização de acesso ao histórico de um animal determinado, com escolha explícita do animal quando houver mais de um.
-
-*Critérios de aceitação:* a) a autorização é sempre nominal e por animal, jamais genérica; b) a concessão exige a confirmação de RF37; c) a autorização recebe prazo de validade conforme RN39; d) o ato é registrado com data, hora e origem.
+**Removido em 01/10/2026** — a clínica atende sem esperar autorização do tutor; o acesso segue RN52 e RN53.
 
 **RF37 — Confirmar a autorização por código enviado ao tutor**
-*Ator:* tutor · *Prioridade:* Essencial · *Origem:* §4.1 · *Regras:* RN38
 
-O sistema deve exigir, para efetivar a concessão, a confirmação por código de uso único enviado ao endereço de correio eletrônico verificado do tutor.
-
-*Critérios de aceitação:* a) o código expira em prazo curto e admite número limitado de tentativas; b) tutor com endereço não verificado não conclui a concessão; c) o código é enviado exclusivamente ao endereço cadastrado, jamais informado em tela.
-
-O requisito existe para impedir o cenário em que o próprio balcão da clínica, de posse do dispositivo do tutor ou de sua atenção momentânea, conduza a concessão sem ato de vontade consciente do titular. É a materialização, em fluxo de interface, da exigência de consentimento livre e informado.
+**Removido em 01/10/2026** — sem concessão de autorização, não há código a confirmar.
 
 **RF38 — Solicitar acesso ao tutor**
-*Ator:* veterinário · *Prioridade:* Importante · *Origem:* §4.1 · *Regras:* RN37, RN38
 
-O sistema deve permitir que o prestador solicite autorização ao tutor de um animal, enviando-lhe notificação com a identificação do solicitante. A solicitação não confere acesso algum até a concessão.
-
-*Critérios de aceitação:* a) a solicitação pendente não revela dado algum ao solicitante; b) a solicitação expira se não respondida no prazo parametrizado; c) o tutor visualiza quem solicitou, quando e para qual animal.
+**Removido em 01/10/2026** — a clínica não precisa pedir acesso; o encontro com cadastro que ela não acompanhava fica no registro de acessos (RF52).
 
 **RF39 — Revogar autorização**
-*Ator:* tutor · *Prioridade:* Essencial · *Origem:* §4.3 · *Regras:* RN40, RN41
 
-O sistema deve permitir a revogação, a qualquer tempo e sem justificativa, da autorização concedida a um prestador. A revogação encerra imediatamente o acesso ao histórico produzido por terceiros e não alcança os registros produzidos pelo próprio prestador revogado, que permanecem sob sua guarda.
-
-*Critérios de aceitação:* a) o efeito é imediato, sem necessidade de nova sessão do prestador; b) o prestador revogado continua acessando exclusivamente os registros de sua própria autoria; c) a revogação é registrada e comunicada ao prestador; d) a interface explica ao tutor, antes da confirmação, exatamente o que a revogação alcança e o que não alcança.
-
-A explicação exigida em (d) não é cortesia: sem ela, o tutor pode supor que a revogação apaga o prontuário mantido pela clínica, o que não é verdadeiro nem juridicamente possível, dada a obrigação de guarda perante o Conselho Federal de Medicina Veterinária.
+**Removido em 01/10/2026** — o vínculo de acompanhamento não é permissão e não se revoga; a guarda do prontuário pela clínica autora continua obrigatória.
 
 **RF40 — Expirar e renovar autorizações**
-*Ator:* sistema, tutor · *Prioridade:* Importante · *Origem:* §4.3 · *Regras:* RN39
 
-O sistema deve encerrar automaticamente as autorizações ao término do prazo de validade, notificando o tutor com antecedência e oferecendo renovação em ato único.
-
-*Critérios de aceitação:* a) a autorização expirada não confere acesso algum; b) o aviso prévio é enviado conforme RN39; c) a renovação estende o prazo sem exigir novo fluxo completo de concessão.
+**Removido em 01/10/2026** — sem autorização, não há prazo de noventa dias nem renovação.
 
 **RF41 — Consultar autorizações concedidas**
-*Ator:* tutor · *Prioridade:* Importante · *Origem:* §4.1, §4.4 · *Regras:* RN41
 
-O sistema deve apresentar ao tutor a relação de autorizações vigentes, expiradas e revogadas, por animal, com data de concessão, prazo e situação.
-
-*Critérios de aceitação:* a) a revogação é acionável diretamente da relação; b) o histórico de autorizações encerradas permanece consultável.
+**Removido em 01/10/2026** — substituído, como instrumento do tutor, pelo registro de acessos de RF53, que indica as clínicas que acompanham cada animal.
 
 ## 4.9 Notificações
 
@@ -613,14 +599,14 @@ O sistema deve enviar ao tutor lembrete do retorno programado em RF34, na antece
 
 O sistema deve permitir ao tutor o descadastro individual por tipo de notificação, sem que isso desative as comunicações transacionais indispensáveis ao funcionamento da conta.
 
-*Critérios de aceitação:* a) o descadastro é granular por tipo, e não global; b) confirmações de conta, redefinição de senha e códigos de autorização não são passíveis de descadastro; c) o descadastro é acessível a partir da própria mensagem recebida.
+*Critérios de aceitação:* a) o descadastro é granular por tipo, e não global; b) confirmações de conta, redefinição de senha e convite de acesso não são passíveis de descadastro; c) o descadastro é acessível a partir da própria mensagem recebida.
 
 **RF45 — Consultar o histórico de notificações**
 *Ator:* tutor, veterinário · *Prioridade:* Desejável · *Origem:* P2, P7 · *Regras:* RN43
 
 O sistema deve registrar e permitir a consulta das notificações emitidas, com destinatário, tipo, data e situação de envio.
 
-*Critérios de aceitação:* a) o prestador consulta apenas notificações referentes a animais sob autorização vigente; b) o registro é a fonte de verdade da idempotência de RN43.
+*Critérios de aceitação:* a) o prestador consulta apenas notificações referentes a animais que acompanha (RN52); b) o registro é a fonte de verdade da idempotência de RN43.
 
 Além de recurso de transparência, este registro é o que permite responder à pergunta que, no cenário, ninguém conseguia responder: este tutor já foi avisado, e quando.
 
@@ -631,7 +617,7 @@ Além de recurso de transparência, este registro é o que permite responder à 
 
 O sistema deve gerar documento em PDF com o histórico do animal — identificação, código único, vacinações, atendimentos e origem de cada registro —, contendo identificador próprio da emissão, resumo criptográfico do conteúdo e QR Code que remete à rota pública de verificação.
 
-*Critérios de aceitação:* a) cada emissão possui identificador distinto e é registrada com autor e data; b) registros não verificados são assinalados como tais também no documento; c) o rodapé adverte o tutor de que, ao compartilhar o arquivo, assume a responsabilidade pela difusão daqueles dados, que saem do domínio de controle da plataforma; d) o documento é gerado em prazo compatível com o critério de RNF04.
+*Critérios de aceitação:* a) cada emissão possui identificador distinto e é registrada com autor e data; b) registros não verificados são assinalados como tais também no documento; c) o rodapé adverte o tutor de que, ao compartilhar o arquivo, assume a responsabilidade pela difusão daqueles dados, que saem do domínio de controle da plataforma; d) o documento é gerado em prazo compatível com o critério de RNF04; e) a exportação feita por clínica que inclua registro produzido por outro prestador é gravada no registro de acessos de RF52.
 
 O prazo importa por razão normativa: a Resolução CFMV nº 1.321/2020, alterada pela Resolução nº 1.653/2025, estabelece prazo de até cinco dias úteis para o fornecimento de cópia do prontuário ao responsável. A geração instantânea converte uma obrigação cumprida com dificuldade em obrigação cumprida por construção — argumento de conformidade que merece figurar no Capítulo 4.
 
@@ -645,18 +631,18 @@ O sistema deve disponibilizar rota pública que, informado o identificador da em
 ## 4.11 Painéis e consultas
 
 **RF48 — Painel do veterinário**
-*Ator:* veterinário · *Prioridade:* Importante · *Origem:* §2.2 (documento de decisões) · *Regras:* RN09, RN48
+*Ator:* veterinário · *Prioridade:* Importante · *Origem:* §2.2 (documento de decisões) · *Regras:* RN09, RN48, RN52
 
-O sistema deve apresentar ao veterinário painel com os animais por ele atendidos e as informações registradas nos últimos trinta dias, com acesso direto ao histórico de cada um.
+O sistema deve apresentar ao veterinário painel com os animais acompanhados pelo prestador ativo e as informações registradas nos últimos trinta dias, com acesso direto ao histórico de cada um.
 
-*Critérios de aceitação:* a) o painel abrange exclusivamente o contexto do prestador ativo; b) o intervalo é ajustável pelo usuário.
+*Critérios de aceitação:* a) o painel abrange exclusivamente os animais vinculados ao prestador ativo (RN52); b) o intervalo é ajustável pelo usuário; c) sem animal vinculado, o painel explica que os animais passam a figurar ali quando a clínica os cadastra ou atende.
 
 **RF49 — Painel de pendências vacinais do prestador**
-*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* P7 · *Regras:* RN37, RN48
+*Ator:* veterinário · *Prioridade:* Essencial · *Origem:* P7 · *Regras:* RN48, RN52
 
-O sistema deve apresentar consulta agregada dos animais sob autorização vigente do prestador cujas doses previstas estejam vencidas ou próximas do vencimento, com filtros por período, espécie e imunobiológico, e indicação da última notificação enviada.
+O sistema deve apresentar consulta agregada dos animais acompanhados pelo prestador cujas doses previstas estejam vencidas ou próximas do vencimento, com filtros por período, espécie e imunobiológico, e indicação da última notificação enviada.
 
-*Critérios de aceitação:* a) a consulta responde no tempo definido em RNF03; b) o resultado é exportável para acompanhamento da rechamada ativa; c) animais sem autorização vigente não figuram no resultado.
+*Critérios de aceitação:* a) a consulta responde no tempo definido em RNF03; b) o resultado é exportável para acompanhamento da rechamada ativa; c) animais não vinculados ao prestador ativo não figuram no resultado, ainda que ele já os tenha localizado por identificador exato.
 
 Este é o requisito que converte a rechamada por amostragem, descrita no cenário, em rechamada por critério. É também o de maior apelo demonstrativo perante a banca, por responder, em segundos, a pergunta que o arquivo de papel tornava computacionalmente inviável.
 
@@ -667,28 +653,37 @@ O sistema deve apresentar ao tutor, em tela inicial, seus animais, as próximas 
 
 *Critérios de aceitação:* a) a tela é operável em telefone celular sem rolagem horizontal; b) doses atrasadas recebem destaque visual distinto das doses futuras.
 
-**RF51 — Buscar animais e tutores no âmbito do prestador**
-*Ator:* veterinário · *Prioridade:* Importante · *Origem:* P7 · *Regras:* RN12, RN48
+**RF51 — Buscar animais e tutores**
+*Ator:* veterinário · *Prioridade:* Importante · *Origem:* P7 · *Regras:* RN48, RN49, RN53
 
-O sistema deve permitir a busca de animais e tutores por nome, CPF, código do animal ou micro-chip, restrita ao âmbito de autorização do prestador ativo.
+O sistema deve permitir a busca de animais e tutores por nome, CPF do tutor, código do animal (inclusive por QR Code) ou micro-chip. A busca por identificador exato — CPF, código ou micro-chip — alcança qualquer cadastro da plataforma e exibe os dados completos; a busca por nome alcança apenas os animais acompanhados pelo prestador ativo.
 
-*Critérios de aceitação:* a) resultados fora do âmbito de autorização não são exibidos; b) a busca por CPF observa a restrição de RF13.
+*Critérios de aceitação:* a) o resultado por identificador exato assinala o animal ainda não acompanhado pela clínica; b) a busca por CPF apresenta também o titular, ainda que ele não tenha animal cadastrado; c) a busca por nome não retorna animal fora da carteira do prestador ativo; d) a localização, por identificador exato, de animal ou tutor que a clínica não acompanha é gravada no registro de acessos de RF52.
+
+A assimetria entre as duas formas de busca é deliberada. O identificador exato é algo que o profissional obtém de quem está à sua frente — o CPF dito no balcão, o QR Code da carteira, a leitura do micro-chip —, enquanto o nome não identifica ninguém e, aberto à plataforma inteira, permitiria a varredura de cadastros alheios.
 
 ## 4.12 Auditoria e direitos do titular
 
 **RF52 — Registrar acesso a histórico de outro prestador**
 *Ator:* sistema · *Prioridade:* Essencial · *Origem:* §4.4 · *Regras:* RN49
 
-O sistema deve registrar em log toda visualização de registro clínico originado de prestador distinto do ativo, gravando usuário, prestador, animal, natureza do dado acessado, data e hora.
+O sistema deve registrar em log, gravando usuário, prestador, animal ou tutor, natureza do acesso, data e hora:
 
-*Critérios de aceitação:* a) o log é imutável e não é editável por nenhum papel; b) a gravação é condição da exibição, não posterior a ela; c) o log distingue acesso a registro próprio de acesso a registro de terceiro.
+- toda visualização de registro clínico originado de prestador distinto do ativo;
+- toda localização, por CPF, código ou micro-chip, de tutor ou animal que a clínica ainda não acompanha (RF13, RF18, RF51);
+- todo alerta de cadastro duplicado que revele animal que a clínica não acompanha (RF20);
+- toda exportação em PDF, feita por clínica, que inclua registro produzido por outro prestador (RF46).
+
+*Critérios de aceitação:* a) o log é imutável e não é editável por nenhum papel; b) a gravação é condição da exibição, não posterior a ela; c) o log distingue acesso a registro próprio de acesso a registro de terceiro; d) cada entrada indica se, naquele momento, a clínica acompanhava o animal.
+
+Na versão 1.4, este requisito deixou de ser complemento da autorização e passou a ser a principal contrapartida do acesso amplo da clínica ao histórico: o que antes dependia de permissão prévia passa a ficar registrado e visível ao titular.
 
 **RF53 — Consultar o log de acessos ao próprio animal**
 *Ator:* tutor · *Prioridade:* Importante · *Origem:* §4.4 · *Regras:* RN49
 
-O sistema deve apresentar ao tutor quem acessou o histórico de cada um de seus animais, quando e sob qual autorização.
+O sistema deve apresentar ao tutor quem acessou o histórico de cada um de seus animais, ou chegou ao seu cadastro, quando, de que modo e se aquela clínica acompanha o animal.
 
-*Critérios de aceitação:* a) a relação identifica prestador, profissional, data e hora; b) a revogação de RF39 é acionável diretamente da tela.
+*Critérios de aceitação:* a) a relação identifica prestador, profissional com CRMV, natureza do acesso, data e hora; b) cada entrada indica se a clínica acompanha o animal; c) a relação pode ser filtrada pelas clínicas que acompanham os animais do tutor; d) a tela não oferece revogação, pois o acompanhamento não é permissão (RN52).
 
 Trata-se, simultaneamente, de evidência de conformidade e do artefato mais demonstrável na apresentação: exibir à banca a auditoria de acessos torna concreto o discurso de proteção de dados, que de outro modo permaneceria abstrato.
 
@@ -697,14 +692,14 @@ Trata-se, simultaneamente, de evidência de conformidade e do artefato mais demo
 
 O sistema deve permitir ao tutor obter, em formato legível por máquina, seus dados pessoais e os dados dos animais sob sua titularidade.
 
-*Critérios de aceitação:* a) a exportação abrange dados cadastrais, histórico clínico e registros de autorização; b) a solicitação e o atendimento são registrados.
+*Critérios de aceitação:* a) a exportação abrange dados cadastrais, histórico clínico e registro de acessos; b) a solicitação e o atendimento são registrados.
 
 **RF55 — Encerrar a conta com preservação do prontuário**
 *Ator:* tutor · *Prioridade:* Desejável · *Origem:* LGPD, art. 16, I · *Regras:* RN50, RN51
 
 O sistema deve permitir o encerramento da conta do tutor, com anonimização dos dados pessoais não sujeitos a obrigação legal de guarda, preservando os registros clínicos pelo prazo determinado pela norma profissional.
 
-*Critérios de aceitação:* a) o encerramento cessa todas as notificações e autorizações vigentes; b) os registros clínicos são preservados com a autoria do profissional e vínculo ao animal; c) a interface informa previamente, em linguagem clara, o que será apagado e o que será preservado, e por qual fundamento.
+*Critérios de aceitação:* a) o encerramento cessa todas as notificações; b) os registros clínicos são preservados com a autoria do profissional e vínculo ao animal; c) a interface informa previamente, em linguagem clara, o que será apagado e o que será preservado, e por qual fundamento.
 
 Há aqui tensão normativa real, e o texto da monografia ganha ao expô-la em vez de contorná-la: o direito à eliminação previsto na LGPD não é absoluto, cedendo diante do cumprimento de obrigação legal ou regulatória pelo controlador. A guarda mínima do prontuário exigida pelo Conselho Federal de Medicina Veterinária é exatamente essa hipótese. A solução adotada — anonimizar o titular, preservar o registro clínico — é a conciliação usual, e sustentá-la explicitamente demonstra compreensão da norma, não sua violação.
 
@@ -740,7 +735,7 @@ O RNF02 merece nota. Em arquitetura multi-inquilino com base compartilhada, o va
 | RNF08 | A sessão deve trafegar em *cookie* `httpOnly` com atributo `SameSite`, sem token em `localStorage`, com proteção contra falsificação de requisição entre sítios | Inspeção de cabeçalhos e teste de requisição forjada de origem externa |
 | RNF09 | A autorização deve ser verificada no servidor, em *Policies*, para toda operação, independentemente de a interface exibir ou ocultar o comando correspondente | Testes que invoquem diretamente os pontos de entrada da API com papel insuficiente |
 | RNF10 | Arquivos anexados não devem ser servidos por ligação direta e pública, mas por rota que verifique autorização a cada acesso | Teste de acesso ao arquivo por usuário não autorizado |
-| RNF11 | Tentativas de autenticação, de confirmação de código e de verificação pública devem ser limitadas por taxa | Teste de repetição automatizada com verificação da recusa |
+| RNF11 | Tentativas de autenticação, de cadastro de tutor pela clínica e de verificação pública devem ser limitadas por taxa | Teste de repetição automatizada com verificação da recusa |
 | RNF12 | Dados pessoais não devem ser gravados em registros de aplicação nem em mensagens de erro exibidas ao usuário | Inspeção de registros gerados em cenários de falha |
 
 ## 5.4 Usabilidade
@@ -748,7 +743,7 @@ O RNF02 merece nota. Em arquitetura multi-inquilino com base compartilhada, o va
 | Id. | Requisito | Critério de verificação |
 |---|---|---|
 | RNF13 | A interface do tutor deve ser projetada para telefone celular, operável sem rolagem horizontal em largura de 360 pixels | Inspeção em emulador e em dispositivo real |
-| RNF14 | A concessão de autorização deve ser concluída pelo tutor em, no máximo, quatro passos a partir da tela inicial | Contagem de passos em percurso guiado |
+| RNF14 | **Removido em 01/10/2026** — media em passos a concessão de autorização pelo tutor, que deixou de existir | — |
 | RNF15 | O registro de vacinação deve ser concluído pelo veterinário em até noventa segundos, incluindo o preenchimento de lote e validade | Medição com usuário em teste de percurso; valores repetidos do último registro oferecidos como padrão |
 | RNF16 | Toda informação exibida deve indicar sua origem e sua confiabilidade, distinguindo visualmente registro profissional de histórico pregresso não verificado | Inspeção de todas as telas que exibem registro clínico |
 | RNF17 | Mensagens de erro e de confirmação devem ser redigidas em português, em linguagem compreensível a leigo, sem termos técnicos da implementação | Revisão textual sistemática |
@@ -782,7 +777,7 @@ O RNF15 traduz, em critério mensurável, a tensão identificada na persona do D
 | Id. | Requisito | Critério de verificação |
 |---|---|---|
 | RNF25 | O registro de vacinação e de atendimento deve conter todos os elementos exigidos pela Resolução CFMV nº 1.321/2020, alterada pela Resolução nº 1.653/2025 | Confronto item a item entre os campos implementados e o texto da norma, apresentado em quadro no Capítulo 4 |
-| RNF26 | O tratamento de dados pessoais deve observar a Lei nº 13.709/2018, com base legal declarada, consentimento registrado para o compartilhamento, atendimento aos direitos do titular e medidas técnicas de segurança proporcionais ao risco | Inspeção documental e demonstração dos registros de consentimento e de acesso |
+| RNF26 | O tratamento de dados pessoais deve observar a Lei nº 13.709/2018, com base legal declarada, aceite dos termos registrado pelo próprio titular na ativação do acesso, atendimento aos direitos do titular e medidas técnicas de segurança proporcionais ao risco | Inspeção documental e demonstração do registro do aceite e do registro de acessos |
 
 **Observação sobre a natureza dos dados tratados.** Convém precisão terminológica no texto da monografia, sob pena de crítica fácil na defesa: os dados de saúde tratados pelo sistema referem-se a **animais**, e não constituem dado pessoal sensível na acepção do artigo 5º, inciso II, da LGPD, que trata de dado relativo à saúde de pessoa natural. O que atrai a incidência da lei são os dados do **tutor** — nome, CPF, contato e endereço —, dados pessoais comuns, aos quais o histórico clínico do animal se vincula de forma identificável. A afirmação correta, portanto, não é "o sistema trata dados sensíveis", mas "o sistema trata dados pessoais de tutores, vinculados a informação clínica de terceiros, o que exige controle de acesso, registro de consentimento e medidas de segurança proporcionais ao risco, na forma do artigo 46".
 
@@ -798,7 +793,7 @@ O RNF15 traduz, em critério mensurável, a tensão identificada na persona do D
 | RN02 | Sessões inativas expiram automaticamente, exigindo nova autenticação |
 | RN03 | Tentativas sucessivas de autenticação malsucedidas para a mesma origem ou o mesmo endereço são limitadas por taxa, com bloqueio temporário |
 | RN04 | Senhas observam extensão mínima e verificação contra repositórios públicos de senhas comprometidas; ligações de redefinição e códigos de confirmação são de uso único e possuem prazo de validade |
-| RN05 | A conta é única por endereço de correio eletrônico, e os papéis acumulam-se sobre ela: um mesmo usuário pode reunir os de tutor, de administrador do prestador e de médico-veterinário — os dois últimos inclusive sobre o mesmo prestador —, e pode manter vínculo com mais de um prestador, atuando sempre sob um contexto ativo determinado. Nenhum papel confere privilégio a outro, e o acréscimo de qualquer deles a uma conta existente exige sessão autenticada do titular |
+| RN05 | A conta é única por endereço de correio eletrônico, e os papéis acumulam-se sobre ela: um mesmo usuário pode reunir os de tutor, de administrador do prestador e de médico-veterinário — os dois últimos inclusive sobre o mesmo prestador —, e pode manter vínculo com mais de um prestador, atuando sempre sob um contexto ativo determinado. Nenhum papel confere privilégio a outro. O papel de tutor é anexado à conta existente quando uma clínica cadastra um tutor com aquele endereço (RF12), e só é recusado quando o endereço já pertence a outro tutor; os demais papéis acrescentam-se por convite do prestador ou pelo cadastro do próprio prestador |
 | RN06 | Toda alteração de dado cadastral registra autor, data e hora |
 
 ## 6.2 Prestadores, tutores e animais
@@ -808,16 +803,16 @@ O RNF15 traduz, em critério mensurável, a tensão identificada na persona do D
 | RN07 | O prestador é a unidade de inquilino do sistema e abrange clínica, hospital veterinário e profissional autônomo, distinguidos por atributo de tipo; não existe entidade distinta para clínica |
 | RN08 | Prestador que registra informação clínica possui responsável técnico identificado por nome e número de CRMV; o papel de administração da conta é atribuído ao responsável técnico ou a outro médico-veterinário da equipe e **não confere acesso a dados de tutores, de animais ou de registros clínicos** |
 | RN09 | O registro clínico é sempre atribuído simultaneamente ao profissional autor e ao prestador ativo no momento da criação; o encerramento do vínculo entre ambos não altera a atribuição já efetuada |
-| RN10 | Tutor e animal são entidades globais da plataforma, sem vínculo de propriedade com prestador algum |
+| RN10 | Tutor e animal são entidades globais da plataforma, sem vínculo de propriedade com prestador algum; o acompanhamento de um animal por uma clínica (RN52) não é propriedade nem permissão |
 | RN11 | O CPF identifica o tutor de forma única em toda a plataforma |
-| RN12 | A existência de cadastro na plataforma não autoriza a exibição de seu conteúdo: sem autorização vigente, o prestador conhece apenas a existência do registro, jamais os dados do tutor, do animal ou do histórico |
+| RN12 | **Removido em 01/10/2026** — restringia a clínica sem autorização a conhecer só a existência do cadastro; o alcance passou a ser o de RN53 |
 | RN13 | O sistema atende exclusivamente às espécies canina e felina |
 | RN14 | A data de nascimento pode ser exata ou estimada, e a natureza da informação é registrada e propagada a todo cálculo dela derivado |
 | RN15 | Cada animal possui identificador único, permanente e não sequencial, que o acompanha por toda a vida, independentemente de mudança de tutor, de prestador ou de município |
-| RN16 | A transferência de titularidade preserva integralmente o histórico do animal, encerra as autorizações concedidas pelo tutor anterior e exige aceite do tutor de destino |
-| RN17 | O cadastro do animal pode ser iniciado pelo próprio tutor, limitado aos dados de identificação, e permanece assinalado como preliminar até ser completado por médico-veterinário |
+| RN16 | A transferência de titularidade preserva integralmente o histórico do animal e exige aceite do tutor de destino |
+| RN17 | O cadastro do animal é feito pelo médico-veterinário, no atendimento. Os cadastros iniciados por tutores até a versão 1.3, limitados aos dados de identificação, permanecem assinalados como preliminares até serem completados por médico-veterinário |
 | RN18 | A caracterização do animal — raça, pelagem, situação reprodutiva, peso, micro-chip e confirmação de sexo e de data de nascimento — é privativa do médico-veterinário, por constituir observação clínica e zootécnica, e não informação de identificação |
-| RN19 | Cada animal possui um único cadastro ativo; o cadastro iniciado pelo tutor e o atendimento posterior em prestador consolidam-se por vínculo ao registro existente, nunca por duplicação |
+| RN19 | Cada animal possui um único cadastro ativo; a clínica que atende animal já cadastrado — por outra clínica ou, até a versão 1.3, pelo tutor — passa a acompanhá-lo por vínculo ao registro existente, nunca por duplicação |
 | RN20 | A fotografia do animal é dado de identificação, e não registro clínico: observa restrição de formato e de tamanho e pode ser mantida pelo próprio tutor a qualquer tempo |
 
 ## 6.3 Registro clínico
@@ -848,26 +843,31 @@ O RNF15 traduz, em critério mensurável, a tensão identificada na persona do D
 
 **Nota de verificação pendente.** Os parâmetros de RN33 a RN35 foram extraídos das diretrizes já citadas no Capítulo 2 da monografia. Dois pontos exigem confirmação antes da implementação: o protocolo aplicável a **animal adulto sem histórico conhecido** — a situação da gata Nina, no cenário —, que difere entre espécies e entre vacinas vivas modificadas e inativadas; e a periodicidade da antirrábica, cuja recomendação técnica internacional e a prática regulatória brasileira nem sempre coincidem. Ambos devem ser confirmados junto às diretrizes originais e, preferencialmente, com o médico-veterinário entrevistado.
 
-## 6.5 Autorização e compartilhamento
+## 6.5 Acompanhamento pela clínica e transparência
+
+Até a versão 1.3, esta seção tratava de autorização e compartilhamento controlados pelo tutor. As regras RN37 a RN41 foram removidas em 01/10/2026 e mantêm o número; as regras RN52 a RN54 foram acrescentadas.
 
 | Id. | Regra |
 |---|---|
-| RN37 | A autorização de acesso ao histórico é sempre nominal, dirigida a um prestador determinado e referente a um animal determinado; não existe autorização genérica nem automática |
-| RN38 | Somente o tutor concede autorização, e a concessão exige confirmação por código de uso único enviado ao seu endereço de correio eletrônico verificado |
-| RN39 | A autorização possui prazo de validade determinado — noventa dias, renováveis —, findo o qual se encerra automaticamente, com aviso prévio ao tutor |
-| RN40 | A revogação encerra o acesso ao histórico produzido por terceiros e não alcança os registros produzidos pelo próprio prestador revogado, que permanecem sob sua guarda por obrigação legal |
-| RN41 | Concessões, renovações, expirações e revogações são registradas de forma permanente e consultáveis pelo tutor |
+| RN37 | **Removido em 01/10/2026** — a autorização nominal por prestador e por animal deixou de existir |
+| RN38 | **Removido em 01/10/2026** — sem concessão, não há confirmação por código enviado ao tutor |
+| RN39 | **Removido em 01/10/2026** — sem autorização, não há prazo de noventa dias nem aviso de expiração |
+| RN40 | **Removido em 01/10/2026** — sem autorização, não há revogação; a guarda do prontuário pela clínica autora continua regida por RN51 |
+| RN41 | **Removido em 01/10/2026** — o histórico de concessões e revogações deu lugar ao registro de acessos de RN49 |
+| RN52 | A clínica passa a acompanhar um animal, por vínculo automático, quando o cadastra ou quando o alcança por identificador exato em ato clínico — abrir a ficha pelo código ou QR Code, registrar vacinação, atendimento ou óbito, retificar, caracterizar, exportar o histórico ou abrir anexo. O vínculo não é concedido nem revogado por ninguém, não é permissão e não transfere a propriedade do cadastro (RN10) |
+| RN53 | A busca por identificador exato — CPF do tutor, código do animal ou micro-chip — alcança qualquer cadastro da plataforma; a busca por nome alcança apenas os animais acompanhados pela clínica. A clínica que alcança o animal vê o histórico inteiro, com a origem de cada registro |
+| RN54 | O atendimento não depende de ato do tutor: cadastrar o tutor e o animal e registrar vacinação, atendimento e prontuário dispensam conta ativada, senha, aceite ou qualquer outra ação prévia do titular |
 
-A regra RN40 é a que exige maior cuidado de redação na monografia. Ela pode parecer uma restrição ao controle do titular, e é o oposto: a guarda do prontuário é obrigação do estabelecimento perante o Conselho Federal de Medicina Veterinária, não faculdade extinguível pelo tutor. O que o tutor controla é o acesso do prestador ao histórico **alheio** — e esse controle é integral.
+A troca do controle prévio pela transparência é a decisão desta versão que mais exige cuidado de redação na monografia. O tutor deixou de decidir quais clínicas veem o histórico; em compensação, a leitura de registro produzido por outra clínica e a chegada de clínica ao seu cadastro por identificador exato ficam registradas e visíveis a ele (RN49), e o histórico que o profissional consulta é inteiro, o que serve ao propósito do sistema de dar continuidade ao cuidado entre estabelecimentos. A guarda do prontuário segue obrigação do estabelecimento perante o Conselho Federal de Medicina Veterinária (RN51), como já era.
 
 ## 6.6 Notificações
 
 | Id. | Regra |
 |---|---|
-| RN42 | Somente tutores com endereço de correio eletrônico verificado recebem notificações |
+| RN42 | Somente tutores que ativaram o acesso e têm endereço de correio eletrônico verificado recebem lembretes e avisos; ao tutor ainda não ativado vai apenas o convite de RF14 |
 | RN43 | Cada notificação é emitida uma única vez por destinatário, evento e janela, garantida por registro persistente das notificações já emitidas |
 | RN44 | Para cada dose prevista emitem-se, no máximo, três comunicações: aviso prévio, aviso na data e alerta de atraso; o registro da aplicação encerra as pendentes |
-| RN45 | O descadastro é individual por tipo de notificação e não alcança as comunicações transacionais indispensáveis — confirmação de conta, redefinição de senha e código de autorização |
+| RN45 | O descadastro é individual por tipo de notificação e não alcança as comunicações transacionais indispensáveis — confirmação de conta, redefinição de senha e convite de acesso |
 
 ## 6.7 Exportação, auditoria e conformidade
 
@@ -875,8 +875,8 @@ A regra RN40 é a que exige maior cuidado de redação na monografia. Ela pode p
 |---|---|
 | RN46 | O documento exportado sai do domínio de controle da plataforma, e o rodapé adverte o tutor de que a responsabilidade pela difusão daqueles dados passa a ser sua |
 | RN47 | Cada exportação possui identificador próprio e resumo criptográfico do conteúdo; a verificação pública informa autenticidade e data de emissão, sem revelar conteúdo clínico ou dado pessoal |
-| RN48 | O painel de pendências e as consultas agregadas do prestador abrangem exclusivamente animais sob autorização vigente |
-| RN49 | Toda visualização de registro clínico originado de outro prestador é gravada em log imutável, consultável pelo tutor |
+| RN48 | O painel, as pendências vacinais, a relação de animais, a busca por nome e as demais consultas agregadas do prestador abrangem exclusivamente os animais a ele vinculados (RN52) |
+| RN49 | Toda visualização de registro clínico originado de outro prestador, toda localização por identificador exato de tutor ou animal que a clínica não acompanha, todo alerta de duplicidade que revele animal fora da carteira e toda exportação com registro de outro prestador são gravados em log imutável, consultável pelo tutor |
 | RN50 | O titular pode obter cópia de seus dados e requerer o encerramento da conta, com anonimização dos dados pessoais não sujeitos a obrigação legal de guarda |
 | RN51 | Os registros clínicos são preservados pelo prazo mínimo determinado pela norma profissional, contado do último atendimento, ainda que o animal venha a óbito ou que a conta do tutor seja encerrada |
 
@@ -891,9 +891,9 @@ A regra RN40 é a que exige maior cuidado de redação na monografia. Ela pode p
 | P1 — Complexidade do calendário vacinal | RF23, RF24, RF26, RF27 | RN31 a RN36 |
 | P2 — Ausência de lembrete confiável | RF05, RF42, RF44, RF50 | RN42 a RN45 |
 | P3 — Fragilidade do documento físico | RF28, RF46, RF47 | RN46, RN47 |
-| P4 — Fragmentação do histórico | RF13, RF16, RF17, RF18, RF20, RF21, RF35 | RN10, RN12, RN15, RN19 |
+| P4 — Fragmentação do histórico | RF12, RF13, RF16, RF17, RF18, RF20, RF21, RF35, RF51 | RN10, RN15, RN19, RN52, RN53 |
 | P5 — Perda de informação | RF29, RF33, RF46 | RN24, RN25, RN26, RN51 |
-| P6 — Descontinuidade do cuidado | RF31, RF32, RF35, RF36 a RF41 | RN37 a RN41 |
+| P6 — Descontinuidade do cuidado | RF14, RF31, RF32, RF35, RF52, RF53 | RN49, RN52, RN53, RN54 |
 | P7 — Ausência de controle de retornos | RF34, RF43, RF48, RF49, RF51 | RN29, RN48 |
 | P8 — Ausência de rastreabilidade | RF25, RF30, RF31, RF33, RF52, RF53 | RN21, RN22, RN26, RN27, RN49 |
 
@@ -901,8 +901,8 @@ A regra RN40 é a que exige maior cuidado de redação na monografia. Ela pode p
 
 | Decisão (Etapa 1) | Requisitos que dela dependem |
 |---|---|
-| §3.1 — Multi-inquilino com base compartilhada | RF07, RF09, RF13, RF16, RF17, RF20, RF35, RF49; RNF02 |
-| §3.2 — Compartilhamento controlado pelo tutor | RF11, RF36 a RF41, RF53 |
+| §3.1 — Multi-inquilino com base compartilhada | RF07, RF09, RF13, RF16, RF17, RF20, RF35, RF48, RF49, RF51; RNF02 |
+| §3.2 — Compartilhamento controlado pelo tutor *(substituído na versão 1.4 pelo acompanhamento automático com transparência ao tutor)* | RF14, RF35, RF51, RF52, RF53; RN52 a RN54 |
 | §3.3 — Autenticação por credenciais | RF01 a RF06, RF14; RNF07, RNF08, RNF09 |
 | §2.3 — Inversão da responsabilidade sobre o dado clínico | RF16, RF19, RF25, RF31, RF29 |
 | §3.4 — Imutabilidade do registro clínico | RF25, RF31, RF33, RF22; RNF25 |
@@ -915,15 +915,17 @@ Os dois quadros acima são, do ponto de vista da avaliação, os artefatos mais 
 
 # 8. Escopo mínimo demonstrável
 
-Cinquenta e quatro requisitos funcionais não cabem, integralmente, no prazo de um trabalho de conclusão de curso conduzido por um único autor. A priorização abaixo define o subconjunto que basta para demonstrar a proposta de forma íntegra — isto é, que percorre o arco completo do cenário, do cadastro do animal à exportação verificável — e serve de critério objetivo de corte quando o cronograma apertar.
+Os quarenta e oito requisitos funcionais vigentes — cinquenta e cinco numerados, dos quais sete foram removidos na versão 1.4 — não cabem, integralmente, no prazo de um trabalho de conclusão de curso conduzido por um único autor. A priorização abaixo define o subconjunto que basta para demonstrar a proposta de forma íntegra — isto é, que percorre o arco completo do cenário, do cadastro do animal à exportação verificável — e serve de critério objetivo de corte quando o cronograma apertar.
 
 **Núcleo indispensável (implementar primeiro, na ordem indicada):**
 
-RF01, RF02, RF07, RF09 → RF12, RF14, RF16, RF17, RF19, RF20 → RF23, RF24, RF25, RF26 → RF28, RF50 → RF05, RF42, RF44 → RF11, RF36, RF37, RF39 → RF31, RF33, RF35, RF52 → RF49 → RF46, RF47 → RF29.
+RF01, RF02, RF07, RF09 → RF12, RF13, RF14, RF16, RF17, RF19, RF20 → RF23, RF24, RF25, RF26 → RF28, RF50 → RF05, RF42, RF44 → RF31, RF33, RF35, RF52, RF53 → RF49 → RF46, RF47 → RF29.
 
 A ordem não é arbitrária: cada bloco produz uma fatia vertical funcionante, coerente com o roteiro de desenvolvimento adotado. Ao final do quarto bloco já existe demonstração completa do diferencial central — vacinação registrada por veterinário, calendário calculado, carteira visível ao tutor —, o que garante que, mesmo em cenário adverso de cronograma, exista sistema defensável.
 
-**Segundo bloco, se o prazo permitir:** RF03, RF04, RF06, RF08, RF10, RF13, RF15, RF18, RF22, RF27, RF32, RF34, RF38, RF40, RF41, RF43, RF48, RF51, RF53.
+**Segundo bloco, se o prazo permitir:** RF03, RF04, RF06, RF08, RF10, RF15, RF18, RF22, RF27, RF32, RF34, RF43, RF48, RF51.
+
+Na versão 1.4, o bloco da autorização (RF11, RF36, RF37, RF39) saiu do núcleo com a remoção desses requisitos; RF13 e RF53 subiram ao núcleo, por serem, respectivamente, o caminho do CPF já cadastrado no fluxo do veterinário e o instrumento de transparência que substitui a autorização.
 
 **Remetidos a Trabalhos Futuros, salvo folga inesperada:** RF21, RF30, RF45, RF54, RF55.
 
@@ -951,16 +953,16 @@ Registram-se as funcionalidades deliberadamente excluídas, com a respectiva jus
 
 # 10. Pendências e decisões em aberto
 
-1. **Convenção de idioma dos identificadores.** Há inconsistência entre a convenção declarada — inglês para código, tabelas e colunas — e os identificadores efetivamente empregados nos documentos anteriores, todos em português (`prestadores`, `animais`, `vacinacoes`, `autorizacoes_acesso`, `prestador_id`). É necessário optar por uma das duas antes da Etapa 5, e a decisão deve ser aplicada retroativamente aos documentos, sob pena de a modelagem nascer ambígua. A recomendação é manter o português para o domínio, dada a densidade de termos técnicos veterinários sem tradução consagrada, e declarar a convenção explicitamente na monografia.
+1. **Convenção de idioma dos identificadores.** Há inconsistência entre a convenção declarada — inglês para código, tabelas e colunas — e os identificadores efetivamente empregados nos documentos anteriores, todos em português (`prestadores`, `animais`, `vacinacoes`, `animal_prestador`, `prestador_id`). É necessário optar por uma das duas antes da Etapa 5, e a decisão deve ser aplicada retroativamente aos documentos, sob pena de a modelagem nascer ambígua. A recomendação é manter o português para o domínio, dada a densidade de termos técnicos veterinários sem tradução consagrada, e declarar a convenção explicitamente na monografia.
 2. **Protocolo para animal adulto sem histórico conhecido.** Parametrização a confirmar nas diretrizes originais, conforme nota da seção 6.4. Afeta diretamente RN33 a RN35 e o caso da gata Nina no cenário.
-3. **Acesso de urgência sem autorização prévia.** A Etapa 1 declarou a hipótese como limitação. Existe alternativa reconhecida na literatura de sistemas de saúde — o acesso excepcional com justificativa obrigatória, auditoria reforçada e notificação imediata ao titular. Convém decidir, com o orientador, entre declarar a limitação ou incorporar o mecanismo: a segunda opção fortalece o trabalho, ao custo de um requisito adicional de complexidade média e de um argumento a mais a sustentar na defesa.
-4. **Repartição dos campos do animal entre tutor e veterinário.** Resolvida na versão 1.1 a questão da origem do cadastro: admitem-se o autocadastro do tutor e o cadastro pelo prestador, com identificação a cargo do tutor (RF16) e caracterização privativa do veterinário (RF19). Permanecem dois pontos em aberto, ambos de baixo custo e alto risco de retrabalho se decididos tarde:
-   - **Sexo e data de nascimento.** São dados que o tutor conhece e que o veterinário confirma. Adotou-se a captura como declaração do tutor, sujeita a confirmação profissional. A alternativa — reservá-los integralmente ao veterinário — é mais simples de implementar e menos útil ao tutor que usa o sistema antes de qualquer atendimento. Convém validar com o profissional entrevistado.
+3. **Acesso de urgência sem autorização prévia.** *Superada na versão 1.4.* Sem autorização a conceder, não há o que contornar na urgência: a clínica que alcança o animal por identificador exato vê o histórico inteiro (RN53), e o acesso fica registrado para o titular (RN49). O que a versão 1.3 tratava como exceção auditada tornou-se a regra, com a mesma auditoria.
+4. **Repartição dos campos do animal entre tutor e veterinário.** Resolvida na versão 1.4 a questão da origem do cadastro: o animal é cadastrado só pelo veterinário (RF16), que informa também a caracterização (RF19); ao tutor cabem o nome e a fotografia. Dos dois pontos que estavam em aberto:
+   - **Sexo e data de nascimento.** *Superado na versão 1.4.* Sem cadastro pelo tutor, os dois campos passam a ser informados pelo veterinário; a declaração pelo tutor subsiste apenas nos cadastros preliminares remanescentes (RN17).
    - **Fusão de cadastros duplicados** quando ambos já possuírem registro clínico, hoje declarada como limitação em RF20. Confirmar com o orientador se a declaração basta ou se a banca esperará tratamento.
 
 5. **Efeito do histórico pregresso sobre o cálculo.** Definiu-se que o registro não verificado alimenta o cálculo do calendário, com propagação da marcação de origem às datas dele derivadas. A alternativa — ignorá-lo no cálculo — seria mais conservadora e menos útil. Confirmar com o profissional entrevistado.
 6. **Verificação normativa.** Permanecem as pendências da Etapa 2: confirmar, no texto oficial, as Resoluções CFMV nº 1.321/2020 e nº 1.653/2025, especialmente quanto ao prazo de guarda e ao rol de elementos obrigatórios do prontuário, que sustentam RN22, RN51 e RNF25.
-7. **Alcance do uso autônomo pelo tutor.** Com o autocadastro (RF12), passa a existir um tutor que usa a plataforma sem prestador algum: cadastra o animal, lança histórico pregresso e recebe lembretes calculados sobre informação não verificada. É preciso decidir se esse tutor recebe lembretes e, em caso afirmativo, com que ressalva. A recomendação é que os receba, com aviso explícito, em cada mensagem e em cada tela de previsão, de que o cálculo se apoia em informação não verificada — a previsão imperfeita é preferível à ausência de previsão, que é justamente o modo de falha do arranjo em papel. A decisão está acoplada à pendência 5 e deve ser tomada em conjunto com ela.
+7. **Alcance do uso autônomo pelo tutor.** *Superada na versão 1.4.* Sem autocadastro, não existe tutor sem clínica: todo tutor e todo animal nascem de um cadastro profissional (RF12, RF16), e o tutor que não ativou o acesso não recebe lembretes (RN42). Os cadastros preliminares remanescentes de versões anteriores continuam sujeitos à pendência 5.
 
 8. **Papel operacional restrito.** Excluída a recepção do rol de usuários (§2.4), a rechamada ativa passa a ser atribuição da equipe clínica. Se a entrevista com o profissional indicar que isso é inviável na rotina do estabelecimento, a alternativa é um quarto papel, limitado a nome do tutor, contato, animal e vacina vencida, sem acesso a prontuário, a diagnóstico ou a qualquer outro conteúdo clínico. Não implementar por ora; registrar em Trabalhos Futuros e levar a pergunta ao entrevistado, pois é exatamente o tipo de exigência operacional que a literatura não revela e a prática sim.
 

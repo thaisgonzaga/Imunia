@@ -1,13 +1,13 @@
 ---
 title: "Imunia — Política de Privacidade"
 subtitle: "Como o sistema trata dados pessoais, com que fundamento e por quanto tempo"
-date: "8 de setembro de 2026 — versão 1.0"
+date: "1º de outubro de 2026 — versão 2.0"
 lang: pt-BR
 ---
 
 # Política de Privacidade
 
-**Versão 1.0 — em vigor desde 8 de setembro de 2026.**
+**Versão 2.0 — em vigor desde 1º de outubro de 2026.** Substitui a versão 1.0, de 8 de setembro de 2026.
 
 ## Nota preliminar de escopo
 
@@ -16,6 +16,8 @@ Este documento foi redigido para o sistema Imunia **tal como está implementado*
 Este arquivo é o documento de referência. O texto exibido ao usuário está em `imunia-frontend/src/views/public/PrivacyView.vue`, servido em `/privacidade`, e a versão gravada no aceite vem de `imunia-backend/app/Support/DocumentosLegais.php`. Ao publicar uma versão nova, os três precisam mudar juntos.
 
 Os campos entre colchetes — `[RAZÃO SOCIAL]`, `[CNPJ]`, `[ENDEREÇO]`, `[NOME DO ENCARREGADO]`, `[E-MAIL DO ENCARREGADO]` — só podem ser preenchidos por quem responder juridicamente pela operação. Enquanto o Imunia for um protótipo acadêmico sem pessoa jurídica constituída, esses campos permanecem em aberto, e esta política descreve o tratamento de dados de um sistema em desenvolvimento, não de um serviço em operação comercial.
+
+**O que mudou na versão 2.0 (1º de outubro de 2026).** O cadastro do tutor e do animal passou a ser feito pela clínica, que informa nome, CPF e e-mail do tutor; o tutor não se cadastra sozinho e recebe um convite por e-mail para acompanhar o animal. O compartilhamento entre clínicas deixou de depender de autorização do tutor: o histórico do animal é único, e a clínica que o atende, localizando-o por identificador exato, o acessa por inteiro, com registro no livro de acessos. Deixaram de existir — e de ser coletados — os dados de autorização, de solicitação de acesso e os códigos de confirmação. As seções 1, 2, 3, 4, 5, 6, 7, 8, 10, 11 e 13 foram revistas nesses pontos.
 
 ---
 
@@ -30,14 +32,16 @@ O Imunia é uma plataforma usada por dois grupos distintos: tutores de animais e
 | Conjunto de dados | Quem decide sobre o tratamento | Papel do Imunia |
 |---|---|---|
 | Conta, e-mail, senha, autenticação e sessões | Imunia | **Controlador** |
-| Cadastro do tutor e do animal feito pelo próprio tutor | Imunia | **Controlador** |
-| Autorizações de acesso, solicitações e registros de acesso | Imunia | **Controlador** |
-| Comunicações enviadas pelo sistema (confirmação de e-mail, convites, códigos) | Imunia | **Controlador** |
+| Cadastro do tutor (nome, CPF, e-mail) e do animal, feito pelo estabelecimento no atendimento | O estabelecimento que o criou | **Operador** |
 | Conteúdo clínico — atendimentos, vacinações, anexos e laudos | O estabelecimento veterinário que os registrou | **Operador** |
-| Cadastro de tutor e de animal criado por um estabelecimento | O estabelecimento que o criou | **Operador** |
+| Alterações que o tutor faz na identificação e na foto do animal, e registros pregressos que ele lança | Imunia | **Controlador** |
+| Disponibilização do histórico único do animal às clínicas que o atendem, vínculo entre clínica e animal, e livro de acessos | Imunia | **Controlador** |
+| Comunicações enviadas pelo sistema (convite ao tutor, confirmação de e-mail, avisos e lembretes) | Imunia | **Controlador** |
 | Dados cadastrais do próprio estabelecimento e de sua equipe | Imunia | **Controlador** |
 
-Quando o Imunia atua como **operador**, ele trata os dados seguindo as instruções do estabelecimento e **não os utiliza para finalidade própria** — não os vende, não os cede, não os usa para publicidade, não os usa para treinar modelos e não os cruza entre estabelecimentos fora do mecanismo de autorização descrito na seção 6.
+Quando o Imunia atua como **operador**, ele trata os dados seguindo as instruções do estabelecimento e **não os utiliza para finalidade própria** — não os vende, não os cede, não os usa para publicidade, não os usa para treinar modelos e não os cruza entre estabelecimentos fora do histórico único descrito na seção 6.
+
+A decisão de que o histórico do animal é um só, e de que fica disponível à clínica que atende o animal, é do Imunia — por isso, nesse ponto, o Imunia responde como controlador, e não como operador.
 
 ### 1.2 Encarregado pela proteção de dados
 
@@ -53,7 +57,7 @@ O encarregado é o canal entre você, o Imunia e a Agência Nacional de Proteç�
 
 Esta política descreve o tratamento de dados de quatro grupos de pessoas naturais:
 
-- **Tutores** — pessoas responsáveis por um ou mais animais cadastrados;
+- **Tutores** — pessoas responsáveis por um ou mais animais cadastrados, cadastradas pelo estabelecimento que atende o animal, tenham ou não ativado o acesso pelo convite;
 - **Médicos-veterinários** — profissionais com inscrição no CRMV vinculados a um estabelecimento;
 - **Responsáveis por estabelecimentos** — quem administra a conta de uma clínica, hospital ou atividade autônoma;
 - **Terceiros que verificam um documento** — quem recebe um PDF exportado e confere sua autenticidade na página pública de verificação.
@@ -78,9 +82,9 @@ Cada sessão autenticada registra **endereço IP** e **identificação do navega
 
 ### 3.3 Dados do tutor
 
-**Nome completo** e **CPF**. Também é registrada a data em que os Termos de Uso foram aceitos.
+**Nome completo**, **CPF** e **e-mail**, informados pelo estabelecimento que cadastra o tutor no atendimento. Quando o tutor aceita o convite e cria a senha, registram-se também a data e a versão dos Termos de Uso aceitos.
 
-O CPF não é coletado por conveniência: ele é exigência da regulamentação profissional. A Resolução CFMV nº 1.321/2020, art. 3º, VII, determina que os documentos médico-veterinários identifiquem o responsável pelo animal por nome completo, CPF e endereço. No Imunia, o CPF cumpre ainda a função de permitir que um estabelecimento localize um cadastro já existente sem criar duplicidade.
+O CPF não é coletado por conveniência: ele é exigência da regulamentação profissional. A Resolução CFMV nº 1.321/2020, art. 3º, VII, determina que os documentos médico-veterinários identifiquem o responsável pelo animal por nome completo, CPF e endereço. No Imunia, o CPF cumpre ainda a função de permitir que um estabelecimento localize um cadastro já existente sem criar duplicidade, e que a clínica que atende o animal o encontre pelo identificador exato.
 
 **O sistema não coleta do tutor:** telefone, endereço residencial, CEP, data de nascimento, RG, gênero, foto de perfil ou dados de pagamento. O único canal de contato é o e-mail.
 
@@ -104,11 +108,13 @@ O conteúdo clínico compreende atendimentos (motivo, anamnese, exame físico, h
 
 Esses são dados **do animal**, mas estão vinculados a um tutor identificado. A seção 5 explica o regime que se aplica a eles.
 
-### 3.7 Dados de autorização e de solicitação de acesso
+### 3.7 Vínculo entre clínica e animal, e convite
 
-Quem autorizou, qual estabelecimento, quais animais, quando a autorização foi concedida, quando expira e, se for o caso, quando foi revogada. Quando um estabelecimento solicita acesso, registra-se também a mensagem que ele escreveu ao tutor, limitada a 280 caracteres.
+Quando um estabelecimento cadastra um animal ou o atende, o sistema registra o vínculo entre os dois, com a data e a origem (cadastro ou atendimento). Esse vínculo **não é permissão**, não é concedido nem revogado por ninguém: serve para formar a lista de pacientes do estabelecimento e para indicar, no livro de acessos, se aquela clínica acompanha o animal.
 
-O código de seis dígitos enviado por e-mail para confirmar uma autorização **não é armazenado em texto legível** — o sistema guarda apenas seu resumo criptográfico, contra o qual compara o que você digita.
+O convite enviado ao tutor contém um endereço de uso único, válido por 7 dias. O token desse endereço **não é armazenado em texto legível** — o sistema guarda apenas seu resumo criptográfico.
+
+Até a versão 1.0, o sistema registrava autorizações de acesso, solicitações de acesso e códigos de confirmação. Essas funções foram removidas em 1º de outubro de 2026, e esses dados deixaram de ser coletados.
 
 ### 3.8 Documentos exportados
 
@@ -123,15 +129,19 @@ A LGPD exige que todo tratamento tenha uma finalidade específica e uma hipótes
 | Finalidade | Dados envolvidos | Base legal (LGPD) |
 |---|---|---|
 | Criar e manter sua conta, autenticar o acesso | Nome, e-mail, senha | Art. 7º, V — execução de contrato |
+| Cadastrar o tutor e o animal no atendimento | Nome, CPF e e-mail do tutor; dados do animal | Art. 7º, II e V — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII) e execução de contrato com o estabelecimento |
 | Identificar o tutor de forma inequívoca e evitar cadastro duplicado | CPF | Art. 7º, II — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII) |
 | Manter a carteira de vacinação e o prontuário do animal | Dados do animal e conteúdo clínico | Art. 7º, II e V — obrigação regulatória e execução de contrato |
 | Identificar o profissional responsável por cada procedimento | Nome e CRMV | Art. 7º, II — obrigação regulatória (Res. CFMV 1.321/2020, art. 9º, VIII) |
-| Permitir a continuidade do histórico entre estabelecimentos | Autorizações e registros de acesso | Art. 7º, V — execução de contrato, mediante autorização expressa do tutor |
+| Disponibilizar o histórico único do animal à clínica que o atende | Dados do animal, conteúdo clínico, nome e CPF do tutor | Art. 7º, IX — legítimo interesse (continuidade do cuidado do animal), com a transparência do livro de acessos |
 | Registrar quem acessou dados de quem, e mostrá-lo ao tutor | Registros de acesso | Art. 7º, II e IX — dever de segurança e prestação de contas |
-| Enviar confirmações, convites e códigos de autorização | E-mail | Art. 7º, V — execução de contrato |
+| Convidar o tutor cadastrado pela clínica a acompanhar o animal | Nome e e-mail do tutor, nome do animal e do estabelecimento | Art. 7º, IX — legítimo interesse |
+| Enviar confirmações, avisos e lembretes de dose ao tutor que ativou o acesso | E-mail | Art. 7º, V — execução de contrato |
 | Guardar registros de acesso à aplicação | IP, user-agent, data e hora | Art. 7º, II — obrigação legal (Marco Civil da Internet, art. 15) |
 | Preservar registros para defesa em eventual processo | Conforme o caso | Art. 7º, VI e art. 16, I |
 | Proteger o sistema contra fraude e uso indevido | Dados de sessão e tentativas de acesso | Art. 7º, IX — legítimo interesse |
+
+O cadastro do tutor e do animal e os registros clínicos são feitos pelo estabelecimento **no exercício da atividade médico-veterinária**, que inclui o dever de manter prontuário e de guardá-lo por cinco anos (Res. CFMV nº 1.321/2020, arts. 3º, VII e 9º, § 3º). Nesses dados, é o estabelecimento, como controlador, quem responde pela finalidade e pela base legal do tratamento; o Imunia os trata por conta dele.
 
 Quando o tratamento se apoia em **legítimo interesse**, você pode se opor a ele pelo canal da seção 13. A avaliação que fundamenta esse uso está documentada e é disponibilizada mediante pedido.
 
@@ -147,26 +157,25 @@ A LGPD define dado sensível, no art. 5º, II, como aquele referente à saúde d
 
 Há uma exceção que merece atenção. O art. 11, § 1º da LGPD estende o regime dos dados sensíveis a qualquer tratamento que **revele** dado sensível e possa causar dano ao titular. Um prontuário pode fazer isso — ao registrar uma zoonose transmitida ao tutor, ao identificar um animal de assistência ligado a uma deficiência, ou ao anotar uma condição do tutor como motivo de conduta. Quando isso ocorrer, o registro está sob o regime mais rigoroso, e o Imunia o trata como tal.
 
-**A postura adotada é conservadora:** o sistema aplica a dados clínicos as mesmas salvaguardas devidas a dados sensíveis — acesso condicionado a autorização expressa, registro de cada consulta, imutabilidade dos registros, minimização do que se exibe — independentemente da classificação. Além disso, o prontuário veterinário está protegido por **sigilo profissional**, cuja violação é crime (Código Penal, art. 154) e infração ética (Res. CFMV nº 1.138/2016, art. 11).
+**A postura adotada é conservadora:** o sistema aplica a dados clínicos as mesmas salvaguardas devidas a dados sensíveis — acesso apenas por identificador exato, registro de cada acesso de clínica que não acompanhava o animal ou que lê registro alheio, imutabilidade dos registros, minimização do que se exibe — independentemente da classificação. Além disso, o prontuário veterinário está protegido por **sigilo profissional**, cuja violação é crime (Código Penal, art. 154) e infração ética (Res. CFMV nº 1.138/2016, art. 11).
 
 ---
 
 ## 6. Com quem os dados são compartilhados
 
-### 6.1 Entre estabelecimentos, e só com autorização do tutor
+### 6.1 Entre estabelecimentos: histórico único, acesso registrado
 
-Este é o núcleo do sistema, e a regra é simples: **nenhum estabelecimento vê o histórico produzido por outro sem que o tutor tenha autorizado, nominalmente, aquele estabelecimento e aquele animal.**
+Este é o núcleo do sistema: **o histórico do animal é um só**, e acompanha o animal de uma clínica para outra sem que o tutor precise fazer nada.
 
 Como funciona:
 
-- A autorização é concedida **exclusivamente pelo tutor**. Um estabelecimento pode solicitá-la, nunca concedê-la a si mesmo.
-- Ela é específica por **animal** e por **estabelecimento**. Não existe autorização geral, nem autorização a um veterinário como pessoa física.
-- Para concedê-la, o tutor confirma um **código de seis dígitos** enviado ao seu e-mail. Após cinco tentativas erradas, a confirmação é bloqueada por trinta minutos e o tutor é avisado.
-- A autorização **vale 90 dias** e pode ser renovada. Vencida, o acesso cessa.
-- O tutor pode **revogar a qualquer momento**, e o estabelecimento é notificado da revogação.
-- Antes de exibir a um profissional qualquer histórico produzido por outro estabelecimento, o sistema avisa que aquela visualização será registrada e ficará visível ao tutor.
+- A clínica alcança um cadastro **apenas por identificador exato** — CPF do tutor, código ou QR do animal, ou microchip. A busca por nome só alcança os animais que aquela clínica já acompanha.
+- Encontrado o animal, a clínica vê o **histórico inteiro**, com a indicação do estabelecimento autor de cada registro. Esse acesso não depende de autorização do tutor.
+- Todo acesso de clínica que ainda não acompanhava o animal, a leitura de registro produzido por outra clínica e a exportação de documento que o contenha **ficam registrados no livro de acessos** (seção 7), visível ao tutor.
+- Ver não é alterar: só a clínica autora de um registro pode emitir retificação sobre ele.
+- Não há concessão, revogação, renovação nem prazo de autorização, nem diretório público de estabelecimentos.
 
-**A revogação não apaga registros.** O estabelecimento perde o acesso ao histórico alheio, mas os atendimentos e as vacinações que ele próprio realizou permanecem sob sua guarda. Isso não é escolha de produto: a Resolução CFMV nº 1.321/2020, art. 9º, § 3º, obriga o profissional a arquivar o prontuário por pelo menos cinco anos após o último atendimento, mesmo em caso de óbito do animal.
+**Os registros permanecem.** Os atendimentos e as vacinações que cada estabelecimento realizou continuam sob sua guarda e no histórico do animal. Isso não é escolha de produto: a Resolução CFMV nº 1.321/2020, art. 9º, § 3º, obriga o profissional a arquivar o prontuário por pelo menos cinco anos após o último atendimento, mesmo em caso de óbito do animal.
 
 ### 6.2 Perfis administrativos não alcançam dados clínicos
 
@@ -198,13 +207,14 @@ Quando esses fornecedores atuarem como operadores, o farão sob contrato que os 
 
 O Imunia mantém um **livro de acessos** consultável pelo tutor, que registra de forma imutável:
 
-- buscas realizadas por CPF, por código do animal, por microchip ou por nome;
-- consulta a ficha de animal sem autorização vigente;
-- visualização de histórico produzido por outro estabelecimento;
+- buscas por CPF, por código do animal ou por microchip feitas por clínica que ainda não acompanhava o animal;
+- leitura de histórico produzido por outro estabelecimento;
 - exportação de documento que contenha registro alheio;
 - alertas de duplicidade de cadastro.
 
-Cada entrada mostra o estabelecimento, o profissional (nome e CRMV), o animal, a natureza do acesso, a data e a hora, e qual autorização estava vigente naquele momento.
+Cada entrada mostra o estabelecimento, o profissional (nome e CRMV), o animal, a natureza do acesso, a data e a hora, e se aquele estabelecimento acompanha o animal.
+
+O livro de acessos é a contrapartida de transparência do histórico único: como o acesso entre clínicas não depende de autorização prévia, todo acesso que vai além da clínica que já acompanha o animal fica à vista do tutor.
 
 Esse registro cumpre, por interface e em tempo real, o direito do art. 18, VII da LGPD — saber com quem seus dados foram compartilhados — sem que seja preciso pedir.
 
@@ -218,8 +228,8 @@ Esse registro cumpre, por interface e em tempo real, o direito do art. 18, VII d
 | Registros de acesso à aplicação (IP, data e hora) | **6 meses**, sob sigilo | Marco Civil da Internet, art. 15 |
 | Registros de incidentes de segurança | **5 anos** | Res. CD/ANPD nº 15/2024, art. 10 |
 | Conta e cadastro | Enquanto a conta existir, e depois pelos prazos de prescrição aplicáveis | LGPD, art. 16, I |
-| Autorizações e livro de acessos | Enquanto necessários à prestação de contas e à defesa de direitos | LGPD, art. 7º, VI e art. 16, I |
-| Códigos de autorização e tokens de convite | Expiram em 5 minutos (código), 24 horas (confirmação de e-mail) ou 7 dias (convite) | Minimização — LGPD, art. 6º, III |
+| Livro de acessos e vínculos entre clínica e animal | Enquanto necessários à prestação de contas e à defesa de direitos | LGPD, art. 7º, VI e art. 16, I |
+| Tokens de confirmação de e-mail e de convite | Expiram em 24 horas (confirmação de e-mail) ou 7 dias (convite) | Minimização — LGPD, art. 6º, III |
 
 Findos os prazos, os dados são eliminados ou anonimizados, salvo quando a lei impuser guarda mais longa.
 
@@ -248,7 +258,6 @@ O Imunia **não usa cookies de publicidade, de analytics ou de rastreamento**. P
 |---|---|---|
 | Cookie de sessão | Manter você autenticado. Não é legível por scripts da página. | Navegador |
 | Cookie `XSRF-TOKEN` | Impedir que outro site execute ações em seu nome | Navegador |
-| Rascunho da concessão de autorização | Preservar sua escolha de estabelecimento e animais durante o fluxo | `sessionStorage`, apagado ao fechar a aba |
 | Rascunho de atendimento | Evitar que o veterinário perca o texto digitado se a página recarregar | `localStorage` do dispositivo |
 
 **Atenção ao último item.** O rascunho de atendimento guarda conteúdo clínico **no próprio dispositivo do veterinário**, até que o registro seja concluído. Em computador compartilhado, encerre a sessão e conclua ou descarte os rascunhos abertos.
@@ -257,11 +266,11 @@ O Imunia **não usa cookies de publicidade, de analytics ou de rastreamento**. P
 
 ## 11. Segurança
 
-As medidas adotadas incluem: transmissão cifrada, senhas armazenadas apenas como resultado de função de derivação criptográfica, tokens e códigos de autorização guardados apenas como resumo criptográfico, limitação de tentativas de acesso e de pedidos de autorização, invalidação das demais sessões ao trocar a senha, proteção contra requisições forjadas de outros sites, anexos servidos por rota autorizada e nunca por endereço direto, e registro imutável de acessos.
+As medidas adotadas incluem: transmissão cifrada, senhas armazenadas apenas como resultado de função de derivação criptográfica, tokens de convite e de confirmação guardados apenas como resumo criptográfico, limitação de tentativas de acesso, invalidação das demais sessões ao trocar a senha, proteção contra requisições forjadas de outros sites, anexos servidos por rota autorizada e nunca por endereço direto, e registro imutável de acessos.
 
 Nenhum sistema é imune. As medidas acima reduzem risco; não o eliminam.
 
-**Limitação conhecida:** as fotografias de animais são armazenadas em área de arquivos servida publicamente. Quem conhecer o endereço de uma fotografia poderá acessá-la sem autenticação. Isso não expõe prontuário, nome de tutor ou CPF, mas é uma diferença real em relação ao tratamento dado aos anexos clínicos, que exigem autenticação e autorização.
+**Limitação conhecida:** as fotografias de animais são armazenadas em área de arquivos servida publicamente. Quem conhecer o endereço de uma fotografia poderá acessá-la sem autenticação. Isso não expõe prontuário, nome de tutor ou CPF, mas é uma diferença real em relação ao tratamento dado aos anexos clínicos, que exigem autenticação.
 
 ---
 
@@ -290,6 +299,10 @@ A LGPD assegura a você, no art. 18:
 9. **revogação do consentimento**, a qualquer momento.
 
 Você pode ainda **opor-se** a tratamento fundado em dispensa de consentimento, quando houver descumprimento da lei (art. 18, § 2º).
+
+### O que você já faz pelo próprio sistema
+
+Depois de ativar o acesso pelo convite, parte desses direitos é exercida sem pedido: o **livro de acessos** mostra quem acessou seus dados (art. 18, VII); a carteira, o histórico e a **exportação em PDF** dão acesso ao que foi registrado sobre seus animais (art. 18, II); e a edição da identificação e da foto do animal permite corrigir esses dados (art. 18, III). Para os demais direitos — inclusive a oposição a tratamento fundado em legítimo interesse —, use o canal abaixo.
 
 ### Como pedir
 

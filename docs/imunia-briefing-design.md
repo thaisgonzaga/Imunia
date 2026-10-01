@@ -1,7 +1,7 @@
 ---
 title: "Imunia — Briefing de Design de Interface"
 subtitle: "Etapa 4 do Trabalho de Conclusão de Curso: projeto da interface"
-date: "Agosto de 2026 — versão 1.0"
+date: "Agosto de 2026 — versão 1.0; revisada em 01/10/2026 (versão 1.1)"
 lang: pt-BR
 ---
 
@@ -9,7 +9,9 @@ lang: pt-BR
 
 Este documento é a especificação de projeto de interface do **Imunia**, derivada integralmente do documento de decisões (Etapa 1), do estudo de caso (Etapa 2) e do documento de requisitos v1.2 (Etapa 3). Toda tela aqui descrita responde a requisito funcional identificado; toda restrição visual responde a requisito não funcional ou a regra de negócio. Nenhum elemento foi incluído por convenção de mercado.
 
-**Destinatário.** O Claude Design (ou qualquer ferramenta de geração de interface). O documento é longo por decisão: interface gerada a partir de briefing vago produz telas plausíveis e erradas, e neste sistema o erro de interface é erro de conformidade — a tela que exibe o nome de um tutor antes da autorização viola a LGPD tanto quanto a consulta que o faz.
+**Destinatário.** O Claude Design (ou qualquer ferramenta de geração de interface). O documento é longo por decisão: interface gerada a partir de briefing vago produz telas plausíveis e erradas, e neste sistema o erro de interface é erro de conformidade — a tela que mostra a uma clínica o registro produzido por outra sem antes gravar o acesso no livro do tutor descumpre a transparência prometida tanto quanto a consulta que o faz.
+
+**Revisão de 01/10/2026.** O modelo de acesso mudou. O veterinário passou a fazer todo o atendimento sem depender do tutor — cadastrar tutor, cadastrar animal, atender, registrar, finalizar — e o tutor tornou-se usuário convidado: recebe um e-mail quando a clínica cadastra o primeiro animal dele, cria a senha e acompanha. Saíram o autocadastro do tutor, o cadastro de animal pelo tutor, o diretório de prestadores e todo o circuito de autorização (concessão por código, revogação, renovação, solicitações). Ficaram, como contrapartida de transparência, o livro de acessos (T14) e o PDF verificável (T15, P09). As telas removidas mantêm a numeração, marcadas como "Removida em 01/10/2026", para não quebrar a rastreabilidade com o documento de requisitos.
 
 **Sequência recomendada de trabalho.** Não peça as cinquenta telas de uma vez. Gere na ordem abaixo, validando cada bloco antes de seguir:
 
@@ -36,7 +38,7 @@ Este documento é a especificação de projeto de interface do **Imunia**, deriv
 
 **O que é.** Plataforma web multi-inquilino de controle de calendário vacinal e prontuário eletrônico veterinário, restrita a cães e gatos.
 
-**A tese do produto, em uma frase.** O dado clínico pertence ao animal, não ao estabelecimento que o produziu — e quem decide quem o vê é o tutor.
+**A tese do produto, em uma frase.** O dado clínico pertence ao animal, não ao estabelecimento que o produziu — o histórico acompanha o animal de clínica em clínica, é registrado pelo profissional sem depender de ninguém, e o tutor vê o que foi registrado e quem o consultou.
 
 **A inversão que define a interface.** O médico-veterinário é o único autor de informação clínica. O tutor identifica o seu animal e consulta; não escreve prontuário. O pessoal administrativo não acessa dado algum de tutor, animal ou registro clínico. Essa fronteira precisa estar **visível na interface**, e não apenas garantida no servidor: quem olha uma tela do Imunia deve conseguir dizer, sem explicação, quem escreveu cada coisa.
 
@@ -55,7 +57,7 @@ Este documento é a especificação de projeto de interface do **Imunia**, deriv
 **Métricas de usabilidade que o design precisa atender** (RNF13 a RNF17, verificáveis):
 
 - Tela do tutor operável em 360 px sem rolagem horizontal;
-- Concessão de autorização concluída pelo tutor em, no máximo, **quatro passos** a partir da tela inicial;
+- Atendimento completo pelo veterinário — cadastrar tutor, cadastrar animal, registrar — **sem nenhuma ação prévia do tutor** (a concessão de autorização em quatro passos deixou de existir em 01/10/2026);
 - Registro de vacinação concluído pelo veterinário em até **noventa segundos**, incluindo lote e validade;
 - Toda informação exibida indica sua origem e sua confiabilidade;
 - Mensagens de erro e confirmação em linguagem compreensível a leigo, sem termos de implementação.
@@ -68,9 +70,9 @@ Sete princípios, cada um derivado de requisito. Onde houver conflito entre eles
 
 **P1 — A procedência é conteúdo de primeira classe.** Todo item clínico exibe, sempre e sem interação, quem o produziu: prestador, profissional e CRMV, ou a marca de não verificado. Nunca esconda a origem atrás de *hover*, *tooltip* ou tela de detalhe. (RNF16, RN24, RF35)
 
-**P2 — A ausência de autorização é um estado de tela, não um erro.** O sistema exibe rotineiramente animais sobre os quais o prestador nada sabe. Essa tela precisa ser desenhada com o mesmo cuidado de uma tela cheia: identificação mínima, explicação do porquê, e um caminho único e claro para solicitar acesso. (RF13, RF18, RN12)
+**P2 — "Ainda não acompanhado" é um estado de tela, não um erro.** A clínica alcança qualquer animal da plataforma por identificador exato (CPF do tutor, código ou QR do animal, micro-chip) e o vê por inteiro; o que muda é a marca "ainda não acompanhado por esta clínica" e o aviso de que aquele acesso fica registrado no livro do tutor. As listas da clínica, por sua vez, só mostram a carteira de pacientes — e a lista vazia explica como os animais entram nela. Os dois estados precisam ser desenhados com o mesmo cuidado de uma tela cheia. (RF13, RF18, RN49) — *Revisto em 01/10/2026: o antigo P2, "a ausência de autorização é um estado de tela", deixou de ter objeto.*
 
-**P3 — Nada de irreversível sem antevisão do efeito.** Antes de confirmar revogação, encerramento de conta, registro imutável ou exportação, a interface enuncia em texto simples o que acontece **e o que não acontece**. A revogação, em particular, deve explicar que não apaga o prontuário da clínica. (RF39d, RF55c, RN26)
+**P3 — Nada de irreversível sem antevisão do efeito.** Antes de confirmar encerramento de conta, encerramento de vínculo profissional, registro imutável ou exportação, a interface enuncia em texto simples o que acontece **e o que não acontece**. O encerramento de conta, em particular, deve explicar que não apaga o prontuário dos animais. (RF10, RF55c, RN26)
 
 **P4 — O sistema calcula e sugere; o profissional decide.** Nenhuma tela bloqueia conduta clínica divergente. Alertas são informativos e acompanhados de campo de justificativa, jamais de botão desabilitado. (RN36, RF27c)
 
@@ -134,10 +136,10 @@ Todos os valores abaixo são normativos. Nomes de token em inglês; a coluna "no
 | `--status-late` | `#B4372E` | vermelho-atraso | Dose atrasada; falha de protocolo |
 | `--status-late-wash` | `#FBEDEB` | atraso lavado | Fundo de linha ou cartão em atraso |
 | `--unverified` | `#6B7A74` | não verificado | Registro pregresso, sem responsabilidade técnica |
-| `--consent` | `#3B4E8C` | índigo-consentimento | **Uso exclusivo**: autorização, consentimento, auditoria de acesso, verificação pública |
-| `--consent-wash` | `#EAEDF7` | índigo lavado | Fundos de bloco de autorização e de auditoria |
+| `--consent` | `#3B4E8C` | índigo-consentimento | **Uso exclusivo**: convite e aceite de termos, consentimento, livro de acessos, verificação pública |
+| `--consent-wash` | `#EAEDF7` | índigo lavado | Fundos de bloco de convite, de aviso de acesso registrado e de auditoria |
 
-O índigo é o token mais disciplinado do sistema: aparece **somente** onde o assunto é quem pode ver o quê. Autorizações, códigos de confirmação, registro de acessos e verificação pública de documento. Em nenhum outro lugar. Essa regra faz com que o usuário aprenda, sem que ninguém lhe explique, que aquela cor significa consentimento.
+O índigo é o token mais disciplinado do sistema: aparece **somente** onde o assunto é quem vê o quê. Convite do tutor, aviso de acesso registrado, livro de acessos e verificação pública de documento. Em nenhum outro lugar. Essa regra faz com que o usuário aprenda, sem que ninguém lhe explique, que aquela cor significa consentimento.
 
 **Regras de cor**
 
@@ -171,7 +173,7 @@ A escolha da monoespaçada é funcional, não decorativa: são exatamente os cam
 | `--text-meta` | 12 / 16 px, peso 400 | Public Sans | Metadados, notas de rodapé, carimbos de data |
 | `--text-mono` | 13 / 18 px, peso 500 | IBM Plex Mono | Identificadores; números tabulares sempre ativos |
 
-**Regras.** Numerais tabulares (`font-variant-numeric: tabular-nums`) em toda tabela, data e valor. Nunca abaixo de 12 px. Nenhum texto em caixa alta acima de 13 px. Comprimento de linha entre 45 e 75 caracteres em blocos de leitura corrida (avisos de consentimento, explicações de revogação).
+**Regras.** Numerais tabulares (`font-variant-numeric: tabular-nums`) em toda tabela, data e valor. Nunca abaixo de 12 px. Nenhum texto em caixa alta acima de 13 px. Comprimento de linha entre 45 e 75 caracteres em blocos de leitura corrida (avisos de consentimento, explicações do livro de acessos).
 
 ## 4.3 Grade, espaçamento e forma
 
@@ -204,7 +206,7 @@ Vocabulário fixo — o mesmo conceito usa sempre o mesmo ícone:
 
 | Conceito | Ícone | Conceito | Ícone |
 |---|---|---|---|
-| Vacinação | `syringe` | Autorização / consentimento | `key-round` |
+| Vacinação | `syringe` | Acesso / consentimento | `key-round` |
 | Atendimento / prontuário | `stethoscope` | Acesso registrado em log | `eye` |
 | Animal (genérico) | `paw-print` | Auditoria / histórico de acessos | `history` |
 | Cão / gato | `dog` / `cat` | Documento verificável | `file-check` |
@@ -238,11 +240,11 @@ Nomes em inglês, prontos para virar componentes Vue 3 com `<script setup>`. Cad
 
 ## 5.1 Componentes de base
 
-**`AppButton`** — variantes `primary` (fundo `--brand`, texto branco), `secondary` (fundo branco, borda `--border-strong`), `ghost` (sem borda, texto `--brand-bright`), `danger` (borda e texto `--status-late`, fundo branco; preenchido apenas na confirmação final de ação destrutiva). Tamanhos `sm` 32 px, `md` 40 px, `lg` 48 px (obrigatório em celular). Estados: normal, *hover*, foco, ativo, desabilitado (opacidade 0.45, cursor `not-allowed`), carregando (rótulo permanece, ícone substituído por indicador; largura não muda). O rótulo é sempre um verbo no infinitivo ou imperativo que descreve o efeito: "Registrar vacinação", "Conceder autorização", "Revogar acesso" — nunca "Enviar", "OK", "Confirmar" sozinho.
+**`AppButton`** — variantes `primary` (fundo `--brand`, texto branco), `secondary` (fundo branco, borda `--border-strong`), `ghost` (sem borda, texto `--brand-bright`), `danger` (borda e texto `--status-late`, fundo branco; preenchido apenas na confirmação final de ação destrutiva). Tamanhos `sm` 32 px, `md` 40 px, `lg` 48 px (obrigatório em celular). Estados: normal, *hover*, foco, ativo, desabilitado (opacidade 0.45, cursor `not-allowed`), carregando (rótulo permanece, ícone substituído por indicador; largura não muda). O rótulo é sempre um verbo no infinitivo ou imperativo que descreve o efeito: "Registrar vacinação", "Cadastrar tutor", "Encerrar vínculo" — nunca "Enviar", "OK", "Confirmar" sozinho.
 
 **`AppInput` / `AppSelect` / `AppTextarea` / `AppDatePicker`** — rótulo persistente `--text-label` acima, campo com borda `--border-strong` e fundo branco, altura 40 px (48 em celular), texto de apoio opcional em `--text-meta`, contador de caracteres quando houver limite. `AppDatePicker` aceita digitação em `dd/mm/aaaa` e abre calendário; nunca exige o calendário. Campos de identificador (`código`, `lote`, `CPF`, `CRMV`, `micro-chip`) usam `IBM Plex Mono` no valor digitado e máscara visível.
 
-**`OtpInput`** — seis casas separadas, monoespaçada, avanço automático, colagem inteligente, contador regressivo de validade abaixo, ligação "Reenviar código" desabilitada até o fim do contador. Fundo `--consent-wash`. Usado apenas na confirmação de autorização (RF37).
+**`OtpInput`** — seis casas separadas, monoespaçada, avanço automático, colagem inteligente, contador regressivo de validade abaixo, ligação "Reenviar código" desabilitada até o fim do contador. Fundo `--consent-wash`. Usado apenas na confirmação de autorização (RF37). **Removido em 01/10/2026** — a confirmação de autorização por código deixou de existir; nenhuma tela atual usa este componente.
 
 **`AppTable`** — cabeçalho `--surface-sunken`, `--text-label`, divisores `--border-hairline`, linhas de 48 px, zebra desligada (o divisor basta), coluna de ação alinhada à direita e fixa na rolagem horizontal. Ordenação por clique no cabeçalho com indicador. Em `md` e abaixo, a tabela **se converte em lista de cartões** — nunca rolagem horizontal em celular.
 
@@ -252,7 +254,7 @@ Nomes em inglês, prontos para virar componentes Vue 3 com `<script setup>`. Cad
 
 **`AppModal` / `BottomSheet`** — o mesmo conteúdo renderiza como modal centrado (≥ 768 px) e como folha inferior arrastável (< 768 px). Cabeçalho com título e fechar, corpo rolável, rodapé fixo com ações (primária à direita em desktop; empilhadas, primária no topo, em celular).
 
-**`ConfirmDialog`** — específico para ações irreversíveis. Estrutura obrigatória: título que nomeia a ação; um bloco **"O que acontece"** e um bloco **"O que não acontece"**, ambos em lista; e, nos casos mais graves (encerrar conta, revogar), campo de confirmação por digitação. Cumpre P3.
+**`ConfirmDialog`** — específico para ações irreversíveis. Estrutura obrigatória: título que nomeia a ação; um bloco **"O que acontece"** e um bloco **"O que não acontece"**, ambos em lista; e, nos casos mais graves (encerrar conta), campo de confirmação por digitação. Cumpre P3.
 
 **`Toast`** — canto inferior direito em desktop, topo em celular. Quatro tons: sucesso, informação, atenção, erro. Duração 5 s, com ação de desfazer quando a operação for desfazível — e apenas então. Nenhum *toast* para ação irreversível: essas confirmam-se com mudança de estado na própria tela.
 
@@ -284,15 +286,15 @@ Regra: nenhum registro clínico é renderizado em qualquer tela sem um `Provenan
 
 **`AnimalCard`** — foto circular 56 px (ou ícone de espécie sobre `--surface-sunken` quando ausente), nome em `--text-h3`, linha de metadados (espécie · raça · idade), `StatusPill` da dose mais urgente, e — quando o cadastro for preliminar — tarja `--consent` com "Cadastro preliminar: aguarda caracterização por veterinário". Toque em toda a área do cartão.
 
-**`AuthorizationCard`** — cartão em `--consent-wash`, borda `--consent`. Exibe prestador, animal, data de concessão, prazo com barra de tempo restante, e ação de revogar ou renovar. Variantes: vigente, a expirar (< 15 dias, âmbar), expirada, revogada (esmaecida, com data).
+**`AuthorizationCard`** — **Removido em 01/10/2026.** Servia à lista de autorizações do tutor (T12), que deixou de existir com o fim da concessão e da revogação de acesso.
 
-**`AccessLogRow`** — linha do registro de acessos: data e hora em monoespaçada, prestador, profissional, natureza do dado acessado, e ação "Revogar acesso" acionável ali mesmo.
+**`AccessLogRow`** — linha do livro de acessos: data e hora em monoespaçada, prestador, profissional com CRMV, natureza do acesso ("busca pelo código do animal", "histórico de outra clínica", "exportação com registro de outra clínica", "alerta de cadastro duplicado") e marca de acompanhamento — "acompanha o Théo" ou "não acompanha o Théo". Somente leitura: não há ação de revogar.
 
 **`ContextBanner`** — faixa fixa de 32 px abaixo do cabeçalho, fundo `--brand-wash`, exibindo "Contexto ativo: **Clínica Vet Amigo**" com seletor, quando o profissional tem vínculo com mais de um prestador. Exigência direta de RF09(b). Nunca ocultável.
 
 **`ImmutableNotice`** — bloco informativo com ícone `lock`, exibido no topo de todo formulário de registro clínico antes da confirmação: "Depois de confirmado, este registro não pode ser alterado nem excluído. Correções entram como retificação vinculada, e as duas versões ficam visíveis."
 
-**`ConsentNotice`** — bloco em `--consent-wash` com o texto de consentimento aplicável, usado na concessão de autorização e na exportação de PDF. Texto redigido para leigo, com no máximo 75 caracteres por linha.
+**`ConsentNotice`** — bloco em `--consent-wash` com o texto de consentimento aplicável, usado nos formulários do tutor: aceite do convite (termos e aviso de privacidade, P07), lançamento de histórico pregresso (T09) e exportação de PDF (T15). Texto redigido para leigo, com no máximo 75 caracteres por linha.
 
 **`VerificationResult`** — resultado da verificação pública: cartão grande, ícone 48 px, três estados — autêntico (`file-check`, `--consent`), não localizado (`circle-help`, `--ink-muted`), divergente (`triangle-alert`, `--status-late`). Exibe data de emissão, animal e resumo criptográfico em monoespaçada para conferência visual. **Nunca** exibe conteúdo clínico nem dados do tutor.
 
@@ -302,9 +304,9 @@ Regra: nenhum registro clínico é renderizado em qualquer tela sem um `Provenan
 
 **`AppShell`** — três variações por papel:
 
-- *Tutor*: cabeçalho de 56 px (marca à esquerda, sino de notificações e avatar à direita) e **barra de abas inferior** em celular com quatro destinos: Início · Animais · Compartilhamento · Conta. Em desktop, as abas viram barra lateral de 240 px e o conteúdo limita-se a 880 px.
+- *Tutor*: cabeçalho de 56 px (marca à esquerda, sino de notificações e avatar à direita) e **barra de abas inferior** em celular com quatro destinos: Início · Animais · Acessos · Conta ("Acessos" leva a T14; até 01/10/2026 era "Compartilhamento"). Em desktop, as abas viram barra lateral de 240 px e o conteúdo limita-se a 880 px.
 - *Veterinário*: barra lateral persistente (240 px em `xl`, 72 px só-ícones em `lg`, gaveta abaixo disso), `ContextBanner`, cabeçalho com busca global sempre visível e botão primário "Registrar" com menu de duas opções (vacinação, atendimento). Em celular, barra inferior reduzida: Painel · Buscar · Registrar.
-- *Administração*: barra lateral curta com três itens e, obrigatoriamente, um bloco fixo no rodapé da barra: "Este perfil administra a conta do prestador. Dados de tutores, animais e registros clínicos não são acessíveis por ele." — a explicação de uma ausência é parte do design (P2, RN08).
+- *Administração*: barra lateral curta com três itens e, obrigatoriamente, um bloco fixo no rodapé da barra: "Este perfil administra a conta do prestador. Dados de tutores, animais e registros clínicos não são acessíveis por ele." — a explicação de uma ausência é parte do design (RN08).
 
 **`PageHeader`** — sobrelinha (categoria), título, subtítulo opcional, ações à direita, trilha de navegação quando houver mais de dois níveis.
 
@@ -319,24 +321,25 @@ Toda tela que carrega dados precisa dos seis estados abaixo desenhados, e o brie
 1. **Carregando** — `SkeletonLoader` na forma do conteúdo.
 2. **Vazio** — `EmptyState` com causa e ação.
 3. **Erro de carregamento** — mensagem em linguagem simples e botão "Tentar novamente"; jamais código de erro visível.
-4. **Sem autorização** — identificação mínima + explicação + caminho para solicitar (P2). Distinto de erro e distinto de vazio.
+4. **Ainda não acompanhado** — o animal alcançado por identificador exato aparece completo, com a marca "ainda não acompanhado por esta clínica" e o aviso de acesso registrado (P2). Distinto de erro e distinto de vazio. *(Até 01/10/2026 este item era "Sem autorização".)*
 5. **Parcial** — dados carregados com algum bloco indisponível; o bloco falho se identifica sozinho, sem derrubar a tela.
 6. **Sucesso após ação** — mudança de estado visível na própria tela, não apenas *toast*.
 
 ## 6.2 Voz da interface
 
-- Rótulos de ação nomeiam o efeito e mantêm o mesmo verbo do começo ao fim do fluxo: o botão "Conceder autorização" produz a confirmação "Autorização concedida".
-- Erros não pedem desculpas e não são vagos. "O código expirou. Peça um novo código para concluir a autorização." — não "Ops! Algo deu errado."
+- Rótulos de ação nomeiam o efeito e mantêm o mesmo verbo do começo ao fim do fluxo: o botão "Cadastrar animal" produz a confirmação "Animal cadastrado".
+- Erros não pedem desculpas e não são vagos. "O convite venceu. Peça um novo convite nesta mesma página." — não "Ops! Algo deu errado."
 - Nada de jargão de implementação em texto visível (RNF17).
 - Datas sempre por extenso abreviado com dia da semana quando for futura e relevante: "ter, 12 de agosto de 2026". Prazos relativos acompanham a data absoluta, nunca a substituem: "em 6 dias (12/08/2026)".
 - Termos técnicos veterinários são mantidos (anamnese, imunobiológico), mas explicados em nota quando exibidos ao tutor.
 
 ## 6.3 Padrões de segurança visíveis
 
-- **Nunca** exibir dado de tutor ou de animal antes de autorização vigente. Telas de busca por CPF e por código único exibem exclusivamente a existência do cadastro (RF13, RF18).
+- **Busca por identificador exato, nunca por varredura.** CPF do tutor, código ou QR do animal e micro-chip alcançam qualquer cadastro da plataforma; busca por nome alcança apenas a carteira da clínica. Nenhuma tela oferece listagem ampla de tutores ou animais da plataforma (RF13, RF18).
+- Alcançar animal fora da carteira grava linha no livro de acessos do tutor, e a interface diz isso ao profissional junto do resultado.
 - Toda visualização de registro de outro prestador é precedida de aviso: bloco `--consent-wash` com "Este histórico foi produzido por outro prestador. Sua visualização será registrada e ficará visível ao tutor." O aviso aparece **antes** do conteúdo, porque a gravação do log é condição da exibição (RF52b).
 - Cadastro com e-mail não verificado exibe tarja permanente e persistente nas telas pertinentes, com ação de reenvio (RF05b).
-- Tutor não ativado é sinalizado nas telas do prestador (RF14b).
+- Tutor não ativado é sinalizado nas telas do prestador, com o e-mail para o qual o convite foi enviado (RF14b).
 - Sessão: aviso 2 minutos antes da expiração por inatividade, com ação de continuar.
 
 ## 6.4 Responsividade — regras gerais
@@ -356,7 +359,7 @@ Toda tela que carrega dados precisa dos seis estados abaixo desenhados, e o brie
 |---|---|---|---|---|---|
 | P01 | Página inicial pública | `/` | público | — | Importante |
 | P02 | Entrar | `/entrar` | público | RF01 | Essencial |
-| P03 | Criar conta de tutor | `/criar-conta` | público | RF12, RF05 | Essencial |
+| P03 | ~~Criar conta de tutor~~ — **Removida em 01/10/2026** | — | — | — | — |
 | P04 | Cadastrar prestador | `/cadastrar-prestador` | público | RF07 | Essencial |
 | P05 | Recuperar senha | `/recuperar-senha` | público | RF03 | Essencial |
 | P06 | Definir nova senha | `/redefinir-senha/:token` | público | RF03 | Essencial |
@@ -365,17 +368,17 @@ Toda tela que carrega dados precisa dos seis estados abaixo desenhados, e o brie
 | P09 | Verificar documento | `/verificar/:codigo` | público | RF47 | Essencial |
 | T01 | Painel do tutor | `/inicio` | tutor | RF50 | Essencial |
 | T02 | Meus animais | `/animais` | tutor | RF16 | Essencial |
-| T03 | Cadastrar animal | `/animais/novo` | tutor | RF16, RF17 | Essencial |
+| T03 | ~~Cadastrar animal~~ — **Removida em 01/10/2026** | — | — | — | — |
 | T04 | Perfil do animal | `/animais/:codigo` | tutor | RF16, RF17, RF19 | Essencial |
 | T05 | Carteira de vacinação | `/animais/:codigo/carteira` | tutor | RF28, RF26 | Essencial |
 | T06 | Detalhe da vacinação | `/animais/:codigo/vacinas/:id` | tutor, vet | RF25, RF30 | Essencial |
 | T07 | Histórico consolidado | `/animais/:codigo/historico` | tutor, vet | RF35, RF52 | Essencial |
 | T08 | Detalhe do atendimento | `/animais/:codigo/atendimentos/:id` | tutor, vet | RF31, RF32, RF33 | Essencial |
 | T09 | Lançar histórico pregresso | `/animais/:codigo/pregresso/novo` | tutor, vet | RF29 | Essencial |
-| T10 | Diretório de prestadores | `/prestadores` | tutor | RF11 | Essencial |
-| T11 | Conceder autorização | `/autorizacoes/nova` | tutor | RF36, RF37 | Essencial |
-| T12 | Minhas autorizações | `/autorizacoes` | tutor | RF41, RF39, RF40 | Essencial |
-| T13 | Solicitações de acesso | `/solicitacoes` | tutor | RF38 | Importante |
+| T10 | ~~Diretório de prestadores~~ — **Removida em 01/10/2026** | — | — | — | — |
+| T11 | ~~Conceder autorização~~ — **Removida em 01/10/2026** | — | — | — | — |
+| T12 | ~~Minhas autorizações~~ — **Removida em 01/10/2026** | — | — | — | — |
+| T13 | ~~Solicitações de acesso~~ — **Removida em 01/10/2026** | — | — | — | — |
 | T14 | Quem acessou meus dados | `/acessos` | tutor | RF53 | Importante |
 | T15 | Exportar histórico | modal sobre T04/T07 | tutor, vet | RF46 | Essencial |
 | T16 | Preferências de notificação | `/conta/notificacoes` | tutor | RF44 | Essencial |
@@ -391,7 +394,7 @@ Toda tela que carrega dados precisa dos seis estados abaixo desenhados, e o brie
 | V07 | Registrar vacinação | `/clinica/animais/:codigo/vacinar` | vet | RF25, RF26, RF27 | Essencial |
 | V08 | Registrar atendimento | `/clinica/animais/:codigo/atender` | vet | RF31, RF32, RF34 | Essencial |
 | V09 | Retificar registro | modal sobre T06/T08 | vet | RF33 | Essencial |
-| V10 | Solicitar autorização | modal sobre V03/V06 | vet | RF38 | Importante |
+| V10 | ~~Solicitar autorização~~ — **Removida em 01/10/2026** | — | — | — | — |
 | V11 | Registrar reação adversa | modal sobre T06 | vet | RF30 | Desejável |
 | V12 | Registrar óbito | modal sobre V06 | vet | RF22 | Importante |
 | A01 | Painel administrativo | `/prestador` | admin | RF08 | Importante |
@@ -415,11 +418,11 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 **Objetivo.** Explicar o que o sistema faz, em uma tela, para dois públicos distintos, e conduzir cada um ao seu ponto de entrada. Serve também como abertura da demonstração à banca.
 
-**Componentes.** `PageHeader` público (marca, "Entrar", "Criar conta"); herói com a tese do produto; bloco de três diferenciais; `BatchSeal` de exemplo em tamanho real; campo de verificação pública de documento; rodapé com ligação para a rota `/verificar`.
+**Componentes.** `PageHeader` público (marca e "Entrar"); herói com a tese do produto; bloco de três diferenciais; `BatchSeal` de exemplo em tamanho real; campo de verificação pública de documento; rodapé com ligação para a rota `/verificar`.
 
-**Layout.** Herói ocupando a primeira dobra: título em `--text-display` com a frase central — "O histórico do seu animal pertence a ele, não à clínica." —, subtítulo de duas linhas e dois botões (`primary` "Criar conta de tutor", `secondary` "Cadastrar meu estabelecimento"). À direita do herói, em `xl`, um `VaccineRail` vertical estático com três estações, servindo de demonstração silenciosa do produto. Abaixo, três blocos: calendário calculado, carteira verificável, autorização do tutor — cada um com ícone, título e duas frases. Ao final, faixa em `--consent-wash` com o campo "Recebeu um documento do Imunia? Verifique aqui" e campo monoespaçado para o código.
+**Layout.** Herói ocupando a primeira dobra: título em `--text-display` com a frase central — "O histórico do seu animal pertence a ele, não à clínica." —, subtítulo de duas linhas e dois botões (`primary` "Cadastrar meu estabelecimento", `secondary` "Entrar"). Não há botão de cadastro de tutor: o tutor entra por convite da clínica, e o subtítulo diz isso em uma frase. À direita do herói, em `xl`, um `VaccineRail` vertical estático com três estações, servindo de demonstração silenciosa do produto. Abaixo, três blocos: calendário calculado, carteira verificável, acompanhamento pelo tutor (convite e livro de acessos) — cada um com ícone, título e duas frases. Ao final, faixa em `--consent-wash` com o campo "Recebeu um documento do Imunia? Verifique aqui" e campo monoespaçado para o código.
 
-**Navegação.** Saídas: P02, P03, P04, P09.
+**Navegação.** Saídas: P02, P04, P09.
 
 **Interações.** Rolagem simples. O `VaccineRail` do herói anima uma única vez na carga (200 ms, respeitando `prefers-reduced-motion`). O campo de verificação valida formato antes de submeter.
 
@@ -431,11 +434,11 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 **Objetivo.** Autenticar por e-mail e senha, estabelecendo sessão por cookie, e encaminhar ao painel correspondente ao papel.
 
-**Componentes.** Cartão centrado de 400 px; `AppInput` de e-mail e de senha (com alternância de visibilidade); caixa "Manter conectado"; `AppButton primary` "Entrar"; ligações "Esqueci minha senha" e "Criar conta"; área de mensagem de erro.
+**Componentes.** Cartão centrado de 400 px; `AppInput` de e-mail e de senha (com alternância de visibilidade); caixa "Manter conectado"; `AppButton primary` "Entrar"; ligação "Esqueci minha senha"; nota curta "É tutor? Seu acesso chega por e-mail, quando a clínica cadastra seu animal."; área de mensagem de erro.
 
 **Layout.** Cartão único, verticalmente centrado sobre `--surface-page`, marca acima do cartão, rodapé discreto com ligação para a verificação pública.
 
-**Navegação.** Sucesso → T01 (tutor), V01 (veterinário), A01 (admin). Usuário com dois papéis → T01 ou V01 conforme o último contexto, com alternador acessível no menu do avatar. Saídas: P03, P05.
+**Navegação.** Sucesso → T01 (tutor), V01 (veterinário), A01 (admin). Usuário com dois papéis → T01 ou V01 conforme o último contexto, com alternador acessível no menu do avatar. Saída: P05.
 
 **Interações.** Foco automático no e-mail. Enter submete. Botão entra em estado de carregamento sem mudar de largura.
 
@@ -445,19 +448,7 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 ### P03 · Criar conta de tutor — `/criar-conta`
 
-**Objetivo.** Permitir o autocadastro do tutor, sem depender de convite de prestador.
-
-**Componentes.** Cartão de formulário; campos nome completo, CPF (máscara e monoespaçada), e-mail, senha, confirmação; medidor de força da senha com os critérios listados como itens verificáveis; caixa de aceite dos termos e do aviso de privacidade com ligação; `AppButton primary` "Criar conta".
-
-**Layout.** Coluna única, campos empilhados, agrupados em "Seus dados" e "Acesso". Barra lateral em `xl` com três frases explicando o que o tutor pode fazer sozinho — cadastrar animais, lançar histórico pregresso, autorizar clínicas.
-
-**Navegação.** Sucesso → P08 (aviso de verificação enviada) e, ao confirmar, T01 com estado de primeira visita.
-
-**Interações.** CPF validado quanto aos dígitos verificadores no *blur*, com mensagem imediata. Critérios de senha marcam-se conforme o usuário digita. Botão desabilitado apenas enquanto houver campo obrigatório vazio.
-
-**Estados.** Normal; validação por campo; **CPF já cadastrado** — mensagem "Já existe uma conta com este CPF." com ligação para P05, e nenhuma outra informação sobre a conta existente; carregando; sucesso.
-
-**Responsividade.** Coluna única em todas as larguras; barra lateral some abaixo de `lg`.
+**Removida em 01/10/2026.** O tutor não se cadastra sozinho: o acesso nasce do convite enviado quando a clínica cadastra o primeiro animal dele (P07). A rota pública deixou de existir.
 
 ### P04 · Cadastrar prestador — `/cadastrar-prestador`
 
@@ -509,19 +500,19 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 ### P07 · Aceitar convite — `/convite/:token`
 
-**Objetivo.** Ativar acesso de tutor cadastrado por prestador, ou de veterinário convidado por administrador.
+**Objetivo.** Ser a porta de entrada do tutor — a única, desde 01/10/2026 — e ativar o acesso de veterinário convidado por administrador.
 
-**Componentes.** Cartão com identificação de quem convidou (nome do prestador e, no caso do veterinário, do administrador), resumo do que o convite concede, campos de senha, botão "Ativar meu acesso".
+**Componentes.** Cartão com identificação de quem convidou; na variante do tutor, o nome da clínica e do animal cadastrado ("Théo foi cadastrado no Imunia pela Clínica Vet Amigo"), uma frase sobre o que o acesso permite (acompanhar vacinas, histórico e lembretes) e a nota "o atendimento não depende disso"; na variante do veterinário, o prestador e o administrador. Campos de senha e confirmação com critérios verificáveis; `ConsentNotice` com o aceite dos termos e do aviso de privacidade (variante do tutor); botão "Ativar meu acesso".
 
-**Layout.** Cartão de 480 px com cabeçalho destacado exibindo o convidante.
+**Layout.** Cartão de 480 px com cabeçalho destacado exibindo o convidante e, na variante do tutor, a foto ou o ícone de espécie do animal.
 
-**Navegação.** Sucesso do tutor → T01; do veterinário → V01 com `ContextBanner` do prestador convidante.
+**Navegação.** Sucesso do tutor → T01, já autenticado; do veterinário → V01 com `ContextBanner` do prestador convidante.
 
-**Interações.** Variante do veterinário exibe CRMV e UF informados pelo administrador, para conferência, com aviso de que a correção deve ser solicitada ao administrador.
+**Interações.** Variante do veterinário exibe CRMV e UF informados pelo administrador, para conferência, com aviso de que a correção deve ser solicitada ao administrador. Variante do tutor exibe nome e e-mail como cadastrados pela clínica, somente leitura.
 
-**Estados.** Normal (duas variantes); convite expirado com ação "Solicitar novo convite"; convite já utilizado; carregando; sucesso. A ativação verifica o endereço automaticamente e dispensa P08 (RF14c).
+**Estados.** Normal (duas variantes); **convite vencido** — o convite vale 7 dias; a tela explica isso e oferece "Enviar novo convite" ali mesmo, sem depender da clínica; convite substituído por outro mais recente (quando a clínica cadastrou novo animal e o convite foi reemitido) — orienta a usar o e-mail mais recente; convite já utilizado — ligação para P02; carregando; sucesso. A ativação verifica o endereço automaticamente e dispensa P08 (RF14c).
 
-**Responsividade.** Como P02.
+**Responsividade.** Como P02. Projete primeiro em 360 px: o tutor abre o convite pelo celular.
 
 ### P08 · Confirmar endereço de e-mail — `/verificar-email/:token`
 
@@ -567,7 +558,7 @@ Cada verbete traz sete campos: **Objetivo**, **Componentes**, **Layout**, **Nave
 
 **Interações.** Nenhuma além da ação.
 
-**Estados.** **E01 sem permissão** — "Você não tem acesso a esta página." e, quando a causa for ausência de autorização do tutor, o texto muda para o padrão de P2 com o caminho de solicitação; **E02 não encontrado**; **E03 falha do sistema** — "Não conseguimos carregar esta página. Tente novamente em instantes." com botão de nova tentativa e, discretamente, um identificador de ocorrência em monoespaçada para suporte (não é código de erro técnico).
+**Estados.** **E01 sem permissão** — "Você não tem acesso a esta página."; **E02 não encontrado**; **E03 falha do sistema** — "Não conseguimos carregar esta página. Tente novamente em instantes." com botão de nova tentativa e, discretamente, um identificador de ocorrência em monoespaçada para suporte (não é código de erro técnico).
 
 **Responsividade.** Coluna única em todas as larguras.
 
@@ -579,49 +570,37 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Objetivo.** Responder, na primeira dobra e sem rolagem, à única pergunta que traz Helena ao sistema: **o que está pendente para os meus animais?**
 
-**Componentes.** Saudação curta; bloco "Precisa de atenção" com cartões de dose atrasada ou próxima; carrossel ou pilha de `AnimalCard`; bloco "Retornos programados"; tarja de verificação de e-mail pendente, quando for o caso; atalho "Autorizar uma clínica".
+**Componentes.** Saudação curta; bloco "Precisa de atenção" com cartões de dose atrasada ou próxima; carrossel ou pilha de `AnimalCard`; bloco "Retornos programados"; tarja de verificação de e-mail pendente, quando for o caso.
 
-**Layout.** Ordem vertical fixa: (1) tarja de pendência de verificação, se houver; (2) bloco de atenção — cada item é um cartão com foto do animal, nome do imunobiológico, `StatusPill` e botão "Ver carteira"; (3) "Meus animais" em cartões; (4) retornos programados; (5) atalho de autorização. Se não houver pendência, o bloco (2) é substituído por uma confirmação positiva discreta: "Théo e Nina estão com as vacinas em dia." com ícone `circle-check`.
+**Layout.** Ordem vertical fixa: (1) tarja de pendência de verificação, se houver; (2) bloco de atenção — cada item é um cartão com foto do animal, nome do imunobiológico, `StatusPill` e botão "Ver carteira"; (3) "Meus animais" em cartões; (4) retornos programados. Se não houver pendência, o bloco (2) é substituído por uma confirmação positiva discreta: "Théo e Nina estão com as vacinas em dia." com ícone `circle-check`.
 
-**Navegação.** Barra de abas inferior. Cartão de atenção → T05. `AnimalCard` → T04. Atalho → T10. Sino → lista de notificações.
+**Navegação.** Barra de abas inferior. Cartão de atenção → T05. `AnimalCard` → T04. Sino → lista de notificações.
 
 **Interações.** Puxar para atualizar em celular. Cartões inteiramente clicáveis. Nenhuma ação destrutiva acessível a partir daqui.
 
-**Estados.** Carregando (esqueleto de três cartões); **vazio de animais** — `EmptyState` "Cadastre seu primeiro animal" com ação; **vazio de pendências** — confirmação positiva; erro de carregamento; **e-mail não verificado** — tarja âmbar persistente com "Confirme seu e-mail para receber lembretes" e ação de reenvio (RF05).
+**Estados.** Carregando (esqueleto de três cartões); **vazio de animais** — `EmptyState` "Nenhum animal acompanhado ainda" com a explicação "Os animais aparecem aqui quando uma clínica os cadastra no Imunia.", sem ação de cadastro; **vazio de pendências** — confirmação positiva; erro de carregamento; **e-mail não verificado** — tarja âmbar persistente com "Confirme seu e-mail para receber lembretes" e ação de reenvio (RF05).
 
 **Responsividade.** `base`: coluna única, cartões em largura total, barra de abas inferior fixa. `md`: dois cartões por linha. `lg`+: barra lateral substitui as abas, conteúdo limitado a 880 px, blocos de atenção e animais lado a lado.
 
 ### T02 · Meus animais — `/animais`
 
-**Objetivo.** Listar os animais sob titularidade do tutor e dar acesso ao cadastro de novos.
+**Objetivo.** Listar os animais sob titularidade do tutor. Desde 01/10/2026 o tutor não cadastra animais: quem cadastra é a clínica.
 
-**Componentes.** `PageHeader` com ação "Cadastrar animal"; lista de `AnimalCard`; filtro de espécie e de situação, apenas quando houver mais de quatro animais; seção recolhida "Animais inativos" para óbitos e transferências.
+**Componentes.** `PageHeader` sem ação de cadastro; lista de `AnimalCard`; filtro de espécie e de situação, apenas quando houver mais de quatro animais; seção recolhida "Animais inativos" para óbitos e transferências.
 
 **Layout.** Lista vertical de cartões de 88 px de altura, com foto à esquerda.
 
-**Navegação.** Cartão → T04. Ação → T03.
+**Navegação.** Cartão → T04.
 
 **Interações.** Toque no cartão. Nenhum deslize para ação destrutiva: o tutor não exclui animal.
 
-**Estados.** Carregando; vazio; erro; **cadastro preliminar** sinalizado por tarja no cartão; **animal com óbito registrado** exibido apenas na seção recolhida, com ícone `moon` e data, sem cor de alerta.
+**Estados.** Carregando; vazio — "Nenhum animal acompanhado ainda. Os animais aparecem aqui quando uma clínica os cadastra no Imunia."; erro; **cadastro preliminar** sinalizado por tarja no cartão; **animal com óbito registrado** exibido apenas na seção recolhida, com ícone `moon` e data, sem cor de alerta.
 
 **Responsividade.** `base` coluna única; `md`+ grade de dois; `xl` grade de três dentro dos 880 px.
 
 ### T03 · Cadastrar animal — `/animais/novo`
 
-**Objetivo.** Permitir que o tutor identifique seu animal — e deixar claro, sem constrangê-lo, que a caracterização clínica cabe ao veterinário.
-
-**Componentes.** Campo de fotografia com recorte circular; nome; seletor de espécie em dois cartões grandes com ícones `dog` e `cat`; sexo e data de nascimento estimada, opcionais e no mesmo cartão de nome e espécie; `ConsentNotice` explicando a divisão de responsabilidade; botão "Cadastrar animal".
-
-**Layout.** Coluna única. O seletor de espécie é o elemento visualmente mais destacado — é a única escolha irreversível da tela após o primeiro registro clínico. Abaixo dos campos opcionais, bloco informativo: "Raça, peso, situação reprodutiva e micro-chip são preenchidos pelo veterinário na primeira consulta. Até lá, o cadastro fica marcado como preliminar."
-
-**Navegação.** Sucesso → T04 do animal recém-criado, com o código único em destaque e um *toast* discreto.
-
-**Interações.** Fotografia opcional com pré-visualização, recorte e limites de formato e tamanho explicitados antes do envio. Campos opcionais entram marcados como "declarado por você" com o `ProvenanceChip owner-declared` visível na pré-visualização.
-
-**Estados.** Normal; validação; **provável duplicidade** — quando já houver animal ativo do mesmo tutor, mesma espécie e nome semelhante, exibe-se, **antes** da confirmação, um bloco identificando o cadastro possivelmente equivalente com ações "Ver o cadastro existente" e "Cadastrar mesmo assim" (RF20a); carregando; sucesso; erro de envio da fotografia (o cadastro prossegue sem ela).
-
-**Responsividade.** Coluna única em todas as larguras; barra de ação fixa no rodapé da viewport em celular.
+**Removida em 01/10/2026.** O animal é cadastrado pela clínica (V05). O tutor continua podendo editar identificação e foto no perfil (T04) e lançar histórico pregresso (T09).
 
 ### T04 · Perfil do animal — `/animais/:codigo`
 
@@ -651,7 +630,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Interações.** Toque na estação do trilho rola até a aplicação correspondente e a destaca por 1 s. Cada próxima dose prevista exibe, sob a data, a justificativa da regra em linguagem simples — "Reforço anual, contado a partir da última aplicação" — atendendo a RF26(b).
 
-**Estados.** Carregando; **vazio** — "Nenhuma vacinação registrada ainda" com duas ações: "Lançar histórico pregresso" e "Encontrar uma clínica"; apenas pregresso — a tela funciona normalmente, com aviso de que nenhum registro foi feito por profissional na plataforma; com atraso — o grupo em atraso sobe para o topo e recebe fundo `--status-late-wash`; erro.
+**Estados.** Carregando; **vazio** — "Nenhuma vacinação registrada ainda" com a ação "Lançar histórico pregresso"; apenas pregresso — a tela funciona normalmente, com aviso de que nenhum registro foi feito por profissional na plataforma; com atraso — o grupo em atraso sobe para o topo e recebe fundo `--status-late-wash`; erro.
 
 **Responsividade.** **Requisito verificável**: operável em 360 px sem rolagem horizontal (RF28b). Trilho vertical em `base` e `sm`; horizontal a partir de `md`. O `BatchSeal` mantém a grade de dois campos por linha em celular e quatro em desktop.
 
@@ -683,7 +662,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Interações.** Filtros aplicam sem recarregar a página. Entradas de retificação aparecem vinculadas visualmente à entrada original por um conector, e não como itens soltos.
 
-**Estados.** Carregando; vazio; filtrado sem resultado (com ação de limpar); **sem autorização** (visão do veterinário) — a linha do tempo é substituída pelo padrão P2; erro.
+**Estados.** Carregando; vazio; filtrado sem resultado (com ação de limpar); erro. Na visão do veterinário, o histórico aparece inteiro, com a clínica autora em cada item; o aviso de acesso registrado precede os itens de outra clínica.
 
 **Responsividade.** Marcadores reduzidos e resumo em uma linha em `base`; filtros viram folha inferior.
 
@@ -697,9 +676,9 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Navegação.** Voltar para T07. Anexo abre visualizador em modal. "Retificar" → V09.
 
-**Interações.** Termos técnicos exibidos ao tutor recebem nota explicativa em linguagem simples, acessível por toque no termo — "anamnese: o relato do que você contou ao veterinário". Anexos são servidos por rota autorizada; nenhum endereço direto é exposto.
+**Interações.** Termos técnicos exibidos ao tutor recebem nota explicativa em linguagem simples, acessível por toque no termo — "anamnese: o relato do que você contou ao veterinário". Anexos são servidos por rota protegida; nenhum endereço direto é exposto.
 
-**Estados.** Normal; retificado; retificação; sem anexos; anexo indisponível; sem autorização; erro.
+**Estados.** Normal; retificado; retificação; sem anexos; anexo indisponível; erro.
 
 **Responsividade.** Coluna única; visualizador de anexo em tela cheia no celular.
 
@@ -721,81 +700,33 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 ### T10 · Diretório de prestadores — `/prestadores`
 
-**Objetivo.** Ser o ponto de partida da autorização: encontrar o estabelecimento que atenderá o animal.
-
-**Componentes.** Campo de busca por nome; filtro por município e UF; lista de cartões de prestador com nome, tipo, município e contato público; botão "Autorizar acesso" em cada cartão.
-
-**Layout.** `FilterBar` no topo, lista de cartões abaixo. O cartão exibe **exclusivamente** informação pública de identificação e contato — nenhuma contagem de animais, de atendimentos ou de profissionais (RF11a).
-
-**Navegação.** "Autorizar acesso" → T11 com o prestador pré-selecionado.
-
-**Interações.** Busca com atraso de 300 ms. Filtro de município pré-preenchido pelo município do tutor, quando conhecido, com ação de limpar.
-
-**Estados.** Carregando; vazio ("Nenhum estabelecimento encontrado em Viçosa, MG"); sem filtro (lista dos mais próximos); erro; **prestador já autorizado** — o botão vira etiqueta "Autorizado até 12/11/2026" com ligação para T12.
-
-**Responsividade.** Cartões em coluna única até `md`; filtros em folha inferior no celular.
+**Removida em 01/10/2026.** Sem autorização a conceder, o tutor não precisa procurar estabelecimentos; a clínica o encontra pelo CPF.
 
 ### T11 · Conceder autorização — `/autorizacoes/nova`
 
-**Objetivo.** Executar o ato central do modelo de consentimento do sistema, em no máximo quatro passos a partir da tela inicial (RNF14), com confirmação por código.
-
-**Componentes.** `Stepper` de três passos em `--consent-wash`: (1) escolher o prestador — pré-preenchido se veio de T10; (2) escolher o animal — lista de cartões com seleção múltipla explícita por animal, jamais um "selecionar todos" implícito; (3) confirmar — `ConsentNotice` completo e `OtpInput`.
-
-**Layout.** Coluna de 560 px. Toda a tela usa a cor de consentimento: cabeçalho, `Stepper`, bordas dos cartões selecionados. O passo 3 é o momento mais importante do sistema e deve parecer diferente de qualquer outra tela.
-
-**Navegação.** Sucesso → T12 com a nova autorização destacada e *toast* "Autorização concedida".
-
-**Interações.** O passo 3 exibe, antes do campo de código, um resumo em texto corrido: "Você está autorizando a **Clínica Vet Amigo** a ver o histórico completo de **Théo** por **90 dias**, até 12/11/2026. Você pode revogar a qualquer momento." O código é enviado ao e-mail verificado e **nunca** exibido em tela (RF37c). Contador de validade visível; reenvio bloqueado até o fim do contador; número limitado de tentativas.
-
-**Estados.** Por passo; **e-mail não verificado** — o fluxo é interrompido no passo 3 com explicação e ação de verificar (RF37b); código incorreto (com tentativas restantes); código expirado; limite de tentativas; carregando; sucesso.
-
-**Responsividade.** `Stepper` vira "Passo 2 de 3". `OtpInput` com teclado numérico e casas de 44 px em celular.
+**Removida em 01/10/2026.** O acesso da clínica ao histórico não depende mais de concessão do tutor nem de código por e-mail.
 
 ### T12 · Minhas autorizações — `/autorizacoes`
 
-**Objetivo.** Dar ao tutor o controle visível sobre quem vê o quê, e permitir revogação e renovação em um toque.
-
-**Componentes.** Abas "Vigentes", "A expirar", "Encerradas"; lista de `AuthorizationCard`; ação primária "Autorizar uma clínica".
-
-**Layout.** Agrupamento por animal, com o nome e a foto do animal como cabeçalho de grupo — a pergunta do tutor é "quem vê o Théo?", não "quais autorizações existem". Cada cartão traz prestador, data de concessão, prazo restante em barra e ações.
-
-**Navegação.** "Autorizar uma clínica" → T10. Cartão → detalhe em folha inferior.
-
-**Interações.** **Revogar** abre `ConfirmDialog` com a estrutura obrigatória: *O que acontece* — a clínica deixa imediatamente de ver o histórico produzido por outros prestadores; *O que não acontece* — os registros que essa clínica mesma criou continuam sob a guarda dela, porque o Conselho Federal de Medicina Veterinária exige que o prontuário seja preservado. Essa explicação é requisito, não cortesia (RF39d). **Renovar** estende o prazo em ato único, sem repetir o fluxo completo (RF40c).
-
-**Estados.** Carregando; vazio com explicação do que é uma autorização; a expirar (âmbar, com aviso "expira em 12 dias"); expirada; revogada (esmaecida, com data e sem ações); erro.
-
-**Responsividade.** Coluna única; ações em largura total no celular.
+**Removida em 01/10/2026.** Sem concessão, não há revogação, renovação nem prazo de 90 dias. O que o tutor vê sobre quem consultou o histórico está em T14.
 
 ### T13 · Solicitações de acesso — `/solicitacoes`
 
-**Objetivo.** Exibir os pedidos de autorização feitos por prestadores e permitir aceitar ou recusar.
-
-**Componentes.** Lista de cartões em `--consent-wash` com prestador solicitante, animal, data do pedido e prazo de expiração; ações "Autorizar" e "Recusar".
-
-**Layout.** Lista simples; contador na aba de navegação quando houver pendências.
-
-**Navegação.** "Autorizar" entra diretamente no passo 3 de T11 (o prestador e o animal já estão definidos) — o que mantém o percurso dentro do limite de quatro passos.
-
-**Interações.** "Recusar" não exige justificativa e não notifica motivo. A solicitação pendente não revela dado algum ao solicitante (RF38a) — e o texto da tela informa isso ao tutor: "Enquanto você não autorizar, esta clínica não vê nada sobre o Théo."
-
-**Estados.** Carregando; vazio; solicitação expirada (esmaecida); recusada; erro.
-
-**Responsividade.** Coluna única.
+**Removida em 01/10/2026.** A clínica não pede acesso; alcança o animal por identificador exato, e o encontro fica registrado em T14.
 
 ### T14 · Quem acessou meus dados — `/acessos`
 
-**Objetivo.** Materializar a auditoria prevista na LGPD: mostrar ao tutor quem consultou o histórico de cada animal, quando e sob qual autorização. É, junto de T11, o artefato mais demonstrável do trabalho.
+**Objetivo.** Ser a contrapartida de transparência do modelo: mostrar ao tutor, para cada animal, qual clínica e qual profissional o alcançou, quando e de que forma — busca pelo CPF, pelo código ou pelo micro-chip de animal fora da carteira daquela clínica, alerta de cadastro duplicado, leitura de histórico produzido por outra clínica, exportação de PDF com registro de outra clínica. É, junto de P09, o artefato mais demonstrável do trabalho.
 
-**Componentes.** Filtro por animal e por período; lista de `AccessLogRow`; bloco explicativo no topo.
+**Componentes.** Filtro por animal, por período e por clínica (o filtro lista as clínicas que acompanham o animal); lista de `AccessLogRow`; bloco explicativo no topo.
 
-**Layout.** Agrupamento por dia, com cabeçalho fixo. Cada linha: hora em monoespaçada, prestador, profissional com CRMV, natureza do dado acessado ("histórico de vacinação", "prontuário de 12/11/2025"), e ligação "Revogar acesso deste prestador".
+**Layout.** Agrupamento por dia, com cabeçalho fixo. Cada linha: hora em monoespaçada, prestador, profissional com CRMV, natureza do acesso ("histórico de outra clínica", "busca pelo código do animal", "exportação com registro de outra clínica") e a marca de acompanhamento — se aquela clínica acompanha o animal.
 
-**Navegação.** "Revogar" abre o mesmo `ConfirmDialog` de T12 (RF53b).
+**Navegação.** Nenhuma saída além do retorno; não há tela de revogação.
 
-**Interações.** Nenhuma edição. Exportação da lista não é oferecida nesta etapa.
+**Interações.** Somente leitura. O bloco explicativo diz, sem rodeios, o que a tela é e o que não é: o histórico acompanha o animal entre as clínicas que o atendem, e esta lista existe para que o tutor saiba quem o consultou; não há bloqueio a acionar. Exportação da lista não é oferecida nesta etapa.
 
-**Estados.** Carregando; **vazio** — "Ninguém acessou o histórico dos seus animais ainda." (estado positivo, não negativo); filtrado sem resultado; erro.
+**Estados.** Carregando; **vazio** — "Nenhuma outra clínica consultou o histórico dos seus animais ainda." (estado positivo, não negativo); filtrado sem resultado; erro.
 
 **Responsividade.** Linhas viram cartões abaixo de `md`, com hora e prestador no topo.
 
@@ -819,9 +750,9 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Objetivo.** Permitir descadastro granular por tipo, preservando as comunicações transacionais.
 
-**Componentes.** Lista de tipos com interruptor: lembrete de dose prevista, aviso na data prevista, alerta de atraso, lembrete de retorno, aviso de expiração de autorização. Bloco separado, sem interruptores, para as comunicações que não podem ser desativadas.
+**Componentes.** Lista de tipos com interruptor: lembrete de dose prevista, aviso na data prevista, alerta de atraso, lembrete de retorno, aviso de novo animal cadastrado. Bloco separado, sem interruptores, para as comunicações que não podem ser desativadas.
 
-**Layout.** Duas seções nitidamente separadas por fio e por cabeçalho: "Você escolhe receber" e "Sempre enviadas". A segunda seção lista confirmação de conta, redefinição de senha e código de autorização, com ícone `lock` e a explicação — "essas mensagens fazem a sua conta funcionar e não podem ser desativadas" (RF44b).
+**Layout.** Duas seções nitidamente separadas por fio e por cabeçalho: "Você escolhe receber" e "Sempre enviadas". A segunda seção lista convite de acesso, confirmação de conta e redefinição de senha, com ícone `lock` e a explicação — "essas mensagens fazem a sua conta funcionar e não podem ser desativadas" (RF44b).
 
 **Navegação.** A partir de T18 e do rodapé de qualquer e-mail recebido (RF44c).
 
@@ -841,7 +772,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Navegação.** Item → detalhe em folha inferior.
 
-**Interações.** Somente leitura. Na visão do veterinário, a tela abrange apenas notificações de animais sob autorização vigente (RF45a).
+**Interações.** Somente leitura. Na visão do veterinário, a tela abrange apenas notificações de animais acompanhados pela clínica (RF45a). Tutor que ainda não ativou o acesso não recebe lembretes por e-mail; a tela diz isso em vez de mostrar uma lista vazia sem explicação.
 
 **Estados.** Carregando; vazio; erro; falha de envio com explicação em linguagem simples.
 
@@ -873,7 +804,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Navegação.** Sucesso → T04 com tarja "Transferência aguardando aceite".
 
-**Interações.** O CPF localiza a existência do cadastro sem revelar dado algum do destinatário, exatamente como em RF13. `ConfirmDialog` com: *O que acontece* — o histórico completo acompanha o animal e o novo tutor passa a vê-lo; você perde o acesso e todas as suas autorizações sobre ele são encerradas. *O que não acontece* — nada é apagado.
+**Interações.** O CPF localiza o cadastro do destinatário sem exibir ao tutor de origem dado algum dele — nome, contato ou animais. `ConfirmDialog` com: *O que acontece* — o histórico completo acompanha o animal e o novo tutor passa a vê-lo; você perde o acesso a ele. *O que não acontece* — nada é apagado.
 
 **Estados.** Normal; CPF sem cadastro (com orientação); aguardando aceite; aceita; recusada; expirada.
 
@@ -885,7 +816,7 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 ### V01 · Painel do veterinário — `/clinica/painel`
 
-**Objetivo.** Retomar o trabalho: quem foi atendido, o que foi registrado e o que está pendente no prestador ativo, nos últimos trinta dias.
+**Objetivo.** Retomar o trabalho: quem foi atendido, o que foi registrado e o que está pendente no prestador ativo, nos últimos trinta dias. O painel abrange a carteira da clínica — os animais que ela cadastrou ou atendeu.
 
 **Componentes.** Quatro indicadores no topo (atendimentos no período, vacinas aplicadas, doses vencidas, retornos previstos); lista "Animais atendidos recentemente" com acesso direto ao histórico; bloco "Pendências desta semana" com prévia de V02; seletor de intervalo.
 
@@ -895,13 +826,13 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 **Interações.** Intervalo ajustável pelo usuário (RF48b), padrão de 30 dias, com opções de 7, 30 e 90 dias. Indicadores clicáveis, cada um levando à lista filtrada correspondente.
 
-**Estados.** Carregando (esqueleto de indicadores e de seis linhas); **vazio** — primeiro acesso do profissional, com orientação em três passos: cadastrar tutor, cadastrar animal, registrar atendimento; erro; **contexto sem autorizações** — explica que o painel abrange somente animais sob autorização vigente (RN48).
+**Estados.** Carregando (esqueleto de indicadores e de seis linhas); **vazio** — "Nenhum animal acompanhado ainda — os animais entram aqui quando você os cadastra ou atende.", com orientação em três passos: cadastrar tutor, cadastrar animal, registrar atendimento (RN48); erro.
 
 **Responsividade.** `xl` conforme descrito; `lg` indicadores em duas linhas de dois; `md` coluna única com pendências acima da lista; `base` painel reduzido a indicadores e pendências, tabela convertida em cartões.
 
 ### V02 · Pendências vacinais — `/clinica/pendencias`
 
-**Objetivo.** Converter a rechamada por amostragem em rechamada por critério. É o requisito de maior apelo demonstrativo do sistema (RF49).
+**Objetivo.** Converter a rechamada por amostragem em rechamada por critério, sobre a carteira da clínica. É o requisito de maior apelo demonstrativo do sistema (RF49).
 
 **Componentes.** `FilterBar` com período, espécie, imunobiológico e situação; `AppTable` com colunas animal, tutor, imunobiológico, dose, data prevista, dias de atraso, última notificação enviada; ação por linha "Abrir ficha"; ação de exportar o resultado; contador de resultados.
 
@@ -911,39 +842,39 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 **Interações.** Filtros combináveis, refletidos em pílulas removíveis. A coluna "Última notificação" exibe data e situação de envio, respondendo diretamente a "este tutor já foi avisado?". Seleção múltipla de linhas apenas se a exportação parcial for oferecida; caso contrário, sem caixas de seleção.
 
-**Estados.** Carregando; **vazio positivo** — "Nenhuma dose vencida ou próxima do vencimento no período." com ícone `circle-check`; filtrado sem resultado; erro; **desempenho** — a consulta deve responder em até 2 s no 95º percentil (RNF03); acima de 1 s, exibir esqueleto e não travar os filtros.
+**Estados.** Carregando; **carteira vazia** — "Nenhum animal acompanhado ainda — os animais entram aqui quando você os cadastra ou atende."; **vazio positivo** — "Nenhuma dose vencida ou próxima do vencimento no período." com ícone `circle-check`; filtrado sem resultado; erro; **desempenho** — a consulta deve responder em até 2 s no 95º percentil (RNF03); acima de 1 s, exibir esqueleto e não travar os filtros.
 
 **Responsividade.** Tabela vira cartões abaixo de `md`, promovendo animal, imunobiológico e dias de atraso; filtros em folha inferior. Em campo, a Dra. Larissa usa esta tela no celular.
 
 ### V03 · Buscar animal ou tutor — `/clinica/buscar`
 
-**Objetivo.** Localizar rapidamente por nome, CPF, código do animal ou micro-chip, respeitando estritamente o âmbito de autorização. É a tela de maior risco de vazamento por desenho de interface de todo o sistema.
+**Objetivo.** Localizar rapidamente por nome, CPF, código do animal ou micro-chip. Identificador exato alcança qualquer cadastro da plataforma; nome alcança só a carteira da clínica, porque nome não identifica ninguém e não pode servir de varredura.
 
-**Componentes.** Campo de busca único com detecção automática do tipo de termo; seletor de tipo quando ambíguo; resultados em duas seções — "Sob sua autorização" e "Existe cadastro na plataforma"; leitor de QR Code em celular.
+**Componentes.** Campo de busca único com detecção automática do tipo de termo; seletor de tipo quando ambíguo; resultados com `AnimalCard` completos; cartão do titular na busca por CPF; marca "ainda não acompanhado por esta clínica"; leitor de QR Code em celular.
 
-**Layout.** Campo de busca proeminente e centrado no primeiro uso, deslocando-se para o topo após a primeira consulta. As duas seções de resultado têm desenhos deliberadamente diferentes: a primeira traz `AnimalCard` completos; a segunda traz cartões **minimalistas**, em `--surface-sunken`, com borda tracejada `--consent`.
+**Layout.** Campo de busca proeminente e centrado no primeiro uso, deslocando-se para o topo após a primeira consulta. Na busca por CPF, o cartão do titular (nome, CPF mascarado, situação do acesso) vem primeiro e os animais dele abaixo — o titular aparece mesmo quando não tem animal. Animais ainda não acompanhados trazem a marca em `--consent`, com ícone `eye`, ao lado do nome.
 
-**Navegação.** Resultado autorizado → V06. Resultado não autorizado → V10 (solicitar autorização).
+**Navegação.** Animal → V06. Titular sem animal, ou sem animal acompanhado → V05 com o tutor já selecionado.
 
-**Interações.** Esta é a interação mais sensível do projeto. Quando o CPF ou o código pertence a cadastro existente **sem autorização vigente**, o cartão exibe **exclusivamente**: para busca por CPF, "Existe um cadastro com este CPF." — sem nome, sem contato, sem relação de animais (RF13a, RF13b); para busca por código do animal, apenas espécie, nome do animal e a indicação de que há histórico disponível mediante autorização (RF18a). Ação única: "Solicitar autorização ao tutor". A consulta sem autorização é registrada em log (RF18b), e a interface informa isso ao profissional em nota discreta.
+**Interações.** Resultado de identificador exato que inclua animal fora da carteira exibe, junto da marca, a nota discreta "Esta consulta fica registrada no histórico de acessos do tutor." (RN49). A busca por nome nunca sai da carteira e diz isso no estado sem resultado: "Nenhum animal acompanhado com este nome. Para encontrar um animal de outra clínica, busque pelo CPF do tutor, pelo código ou pelo micro-chip." Não existe mais o cartão mínimo de "existe cadastro" (antiga RN12).
 
-**Estados.** Inicial (campo vazio com exemplos de formato); carregando; sem resultado; **resultado sem autorização** (padrão P2, o estado mais importante desta tela); resultado autorizado; erro; termo inválido (CPF com dígito verificador incorreto).
+**Estados.** Inicial (campo vazio com exemplos de formato); carregando; sem resultado — por nome, com a orientação acima; por identificador exato, "Nenhum cadastro com este CPF" e ação "Cadastrar tutor"; **resultado ainda não acompanhado** (padrão P2, o estado mais importante desta tela); resultado da carteira; titular sem animais; erro; termo inválido (CPF com dígito verificador incorreto).
 
 **Responsividade.** Campo em 48 px no celular com botão de leitura de QR ao lado; resultados em coluna única.
 
 ### V04 · Cadastrar tutor — `/clinica/tutores/novo`
 
-**Objetivo.** Cadastrar tutor no atendimento, ou vincular o cadastro já existente sem expor seus dados.
+**Objetivo.** Primeiro passo do balcão: cadastrar o tutor com nome, CPF e e-mail, ou reaproveitar o cadastro existente, sem criar duplicata e sem exigir nada do tutor.
 
-**Componentes.** Campo de CPF em primeiro lugar, isolado, com botão "Verificar"; formulário completo revelado apenas após a verificação; bloco de convite de ativação.
+**Componentes.** Campo de CPF em primeiro lugar, isolado, com botão "Verificar"; campos de nome e e-mail revelados após a verificação; bloco de situação do e-mail.
 
-**Layout.** Fluxo de duas etapas em uma tela: o CPF é a chave e a barreira. Enquanto não verificado, o restante do formulário permanece oculto — não desabilitado, oculto —, porque um formulário visível sugere que o caminho normal é preenchê-lo.
+**Layout.** Fluxo de duas etapas em uma tela: o CPF é a chave. Enquanto não verificado, o restante do formulário permanece oculto — não desabilitado, oculto —, porque um formulário visível sugere preencher antes de saber se o tutor já existe.
 
-**Navegação.** CPF novo → formulário → sucesso → V05 ou ficha do tutor. CPF existente → V10.
+**Navegação.** CPF novo → formulário → sucesso → V05 com o tutor selecionado. CPF existente → V05 com o tutor selecionado.
 
-**Interações.** Quando o CPF já existe, a tela **não** exibe nome, contato ou animais. Exibe: "Já existe um cadastro com este CPF na plataforma. Para vincular este tutor ao atendimento e ver o histórico dos animais dele, solicite a autorização." com ação única (RF13). Ao concluir cadastro novo, informa que o tutor receberá convite de ativação e que, até ativar, não receberá lembretes nem poderá conceder autorizações (RF14).
+**Interações.** CPF existente não cria segundo cadastro: a tela mostra o titular ("Helena Ramos já tem cadastro no Imunia") e segue para o cadastro do animal; se a clínica não acompanhava nenhum animal dele, informa que o encontro fica registrado no histórico de acessos do tutor. E-mail que já pertence a uma conta sem papel de tutor (o veterinário que também tem animais, por exemplo) → a tela informa que o papel de tutor será acrescentado àquela conta (RN05). E-mail de outro tutor → recusado, com mensagem que não revela de quem é. **Nenhum e-mail sai nesta tela**: a tela diz que o convite seguirá quando o primeiro animal for cadastrado (RF14).
 
-**Estados.** Inicial; verificando CPF; CPF novo; **CPF existente** (estado crítico); validação; carregando; sucesso com aviso de convite enviado; **tutor não ativado** — sinalizado permanentemente nas telas do prestador (RF14b).
+**Estados.** Inicial; verificando CPF; CPF novo; CPF existente (titular exibido); e-mail de conta existente sem papel de tutor; e-mail de outro tutor; validação; carregando; sucesso; **tutor não ativado** — sinalizado nas telas do prestador com o e-mail de destino do convite (RF14b).
 
 **Responsividade.** Coluna única; barra de ação fixa no rodapé em celular.
 
@@ -955,11 +886,11 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 **Layout.** Duas colunas em `xl`: identificação à esquerda, caracterização à direita, separadas por fio e por cabeçalhos que nomeiam a divisão de responsabilidade — "Identificação (o tutor também pode preencher)" e "Caracterização (privativa do médico-veterinário)". A divisão que sustenta o diferencial do sistema fica, assim, explícita na própria tela.
 
-**Navegação.** Sucesso → V06. Duplicidade detectada → cadastro existente.
+**Navegação.** Sucesso → V06 com o aviso pós-cadastro (convite e frase de balcão). Duplicidade detectada → cadastro existente.
 
 **Interações.** Antes de confirmar, o sistema alerta sobre duplicidade provável quando houver, para o mesmo tutor, animal ativo de mesma espécie e nome semelhante, identificando o cadastro possivelmente equivalente (RF20a). O peso é registrado como **medição datada**, não como campo sobrescrevível: o formulário exibe "Peso aferido hoje" e a ficha exibe o valor mais recente com a data.
 
-**Estados.** Normal; alerta de duplicidade (bloqueante até escolha explícita); validação; carregando; sucesso; **consolidação** — quando o animal já fora cadastrado pelo tutor, a tela abre em modo de complemento, com os campos de identificação preenchidos e somente a caracterização por preencher.
+**Estados.** Normal; alerta de duplicidade (bloqueante até escolha explícita); validação; carregando; sucesso; **consolidação** — quando o animal já existe com cadastro preliminar, a tela abre em modo de complemento, com os campos de identificação preenchidos e somente a caracterização por preencher.
 
 **Responsividade.** Coluna única abaixo de `lg`, com a caracterização em bloco recolhível.
 
@@ -967,15 +898,15 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 **Objetivo.** Ser o centro de trabalho do veterinário sobre um animal: identidade, caracterização, carteira, histórico e ações de registro, sem troca de tela.
 
-**Componentes.** Cabeçalho com foto, nome, espécie, idade, código único, tutor e situação de autorização; abas — Resumo, Carteira, Histórico, Anexos; barra de ações persistente com "Registrar vacinação", "Registrar atendimento", "Exportar PDF" e menu com ações menos frequentes (reação adversa, óbito, retorno); painel lateral de alertas.
+**Componentes.** Cabeçalho com foto, nome, espécie, idade, código único, tutor e situação do acesso do tutor (convite pendente ou ativo); abas — Resumo, Carteira, Histórico, Anexos; barra de ações persistente com "Registrar vacinação", "Registrar atendimento", "Exportar PDF" e menu com ações menos frequentes (reação adversa, óbito, retorno); painel lateral de alertas.
 
-**Layout.** Cabeçalho fixo de 96 px durante a rolagem, contendo o essencial de identificação. Conteúdo em 8 colunas, painel lateral de alertas em 4: reações adversas registradas, doses atrasadas, retorno programado em aberto, cadastro preliminar, autorização a expirar. Alertas clínicos ficam **acima** de alertas administrativos.
+**Layout.** Cabeçalho fixo de 96 px durante a rolagem, contendo o essencial de identificação. Conteúdo em 8 colunas, painel lateral de alertas em 4: reações adversas registradas, doses atrasadas, retorno programado em aberto, cadastro preliminar, convite do tutor pendente. Alertas clínicos ficam **acima** de alertas administrativos.
 
-**Navegação.** Abas sem recarregar. Ações abrem V07, V08, V11, V12, T15. Anexos abrem visualizador.
+**Navegação.** Abas sem recarregar. Ações abrem V07, V08, V11, V12, T15. Anexos abrem visualizador. Abrir a ficha pelo código ou pelo QR coloca o animal na carteira da clínica; não há estado de acesso negado.
 
 **Interações.** Ao abrir aba que contenha registro produzido por outro prestador, exibe-se, **antes** do conteúdo, o aviso em `--consent-wash`: "Parte deste histórico foi produzida por outro prestador. Sua visualização é registrada e fica visível ao tutor." A gravação do log é condição da exibição (RF52b), e a interface deve refletir essa ordem. Barra de ações fixa no rodapé em telas menores.
 
-**Estados.** Carregando; **sem autorização vigente** — exibe apenas espécie, nome e código, com o padrão P2 e ação de solicitar (RF35c); autorização a expirar (tarja âmbar com renovação a pedir ao tutor); cadastro preliminar (tarja com ação "Completar caracterização"); óbito registrado (ações de registro clínico suprimidas, exceto retificação); erro.
+**Estados.** Carregando; **logo após o cadastro** — bloco em `--consent-wash` acima das abas, dispensável, que informa para qual e-mail o convite foi enviado ("Convite enviado para h•••@exemplo.com") e traz a frase de balcão para o profissional dizer ao tutor: "Nós utilizamos o Imunia para registrar e acompanhar as informações do seu pet. Caso queira acompanhar tudo o que for registrado, você receberá um e-mail para criar seu acesso e poderá consultar as informações por lá." Variantes: convite reemitido (tutor ainda não ativado, novo animal); tutor já ativo, avisado do novo animal; tutor já ativo com e-mail não verificado, sem aviso enviado; cadastro preliminar (tarja com ação "Completar caracterização"); óbito registrado (ações de registro clínico suprimidas, exceto retificação); erro.
 
 **Responsividade.** `xl` conforme descrito; `lg` painel de alertas passa a faixa acima do conteúdo; `md` abas viram seletor; `base` cabeçalho reduzido a 64 px, ações em barra inferior fixa com as duas principais e menu.
 
@@ -1035,19 +966,7 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 ### V10 · Solicitar autorização — modal sobre V03 ou V06
 
-**Objetivo.** Pedir ao tutor acesso ao histórico, sem obter nada antes da concessão.
-
-**Componentes.** `AppModal` em `--consent-wash` com identificação do que se está solicitando (animal, quando conhecido; ou apenas o CPF localizado), campo opcional de mensagem, e explicação do que acontece em seguida.
-
-**Layout.** Modal estreito, 480 px, com o texto explicativo acima da ação.
-
-**Navegação.** Sucesso → volta à tela de origem com etiqueta "Solicitação enviada · aguardando o tutor".
-
-**Interações.** O texto informa ao profissional, sem rodeios, que a solicitação não confere acesso algum e que o tutor precisará confirmar por código. Prazo de expiração da solicitação exibido.
-
-**Estados.** Normal; enviando; enviada; já existe solicitação pendente (com data); tutor não ativado — explica que ele precisa ativar o acesso antes de poder autorizar.
-
-**Responsividade.** Folha inferior em celular.
+**Removida em 01/10/2026.** A clínica não pede acesso ao tutor: alcança o animal por identificador exato e o atende; o encontro fica registrado em T14.
 
 ### V11 · Registrar reação adversa — modal sobre T06
 
@@ -1075,7 +994,7 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 **Navegação.** Sucesso → V06 em estado de animal inativo.
 
-**Interações.** Texto de confirmação: *O que acontece* — nenhum lembrete será enviado ao tutor a partir de agora e o calendário deixa de ser calculado; *O que não acontece* — o histórico permanece consultável pelo tutor e pelos prestadores autorizados, e este registro não pode ser excluído, apenas retificado. A redação evita eufemismo e evita frieza; é uma das poucas telas em que o tom importa mais que a eficiência.
+**Interações.** Texto de confirmação: *O que acontece* — nenhum lembrete será enviado ao tutor a partir de agora e o calendário deixa de ser calculado; *O que não acontece* — o histórico permanece consultável pelo tutor e pelas clínicas que atendem o animal, e este registro não pode ser excluído, apenas retificado. A redação evita eufemismo e evita frieza; é uma das poucas telas em que o tom importa mais que a eficiência.
 
 **Estados.** Normal; confirmando; sucesso; já registrado.
 
@@ -1111,7 +1030,7 @@ Três telas, deliberadamente poucas. O papel administra a conta e **não acessa 
 
 **Navegação.** A partir de A01.
 
-**Interações.** Ao salvar alteração de denominação, aviso: "Documentos já exportados continuam exibindo o nome vigente na data de emissão." (RF08a). Alteração de município informa que se refletirá no diretório consultado pelos tutores.
+**Interações.** Ao salvar alteração de denominação, aviso: "Documentos já exportados continuam exibindo o nome vigente na data de emissão." (RF08a).
 
 **Estados.** Normal; salvando; validação; erro; somente leitura para campos que exijam verificação.
 
@@ -1175,24 +1094,24 @@ Duas telas. Não fazem parte da experiência dos usuários finais, mas são indi
 
 Cinco percursos que atravessam as telas. Use-os para validar a coerência do conjunto e como roteiro da demonstração à banca — eles reproduzem, na ordem, o cenário do estudo de caso.
 
-**F1 — Helena chega antes de qualquer clínica.**
-P01 → P03 (autocadastro) → P08 (confirma e-mail) → T01 (vazio, com orientação) → T03 (cadastra Théo) → T04 (recebe o código único) → T09 (lança o histórico pregresso que tem em mãos) → T05 (a carteira já existe, ainda que só com registros não verificados).
-*O que este fluxo prova:* a adoção não depende do estabelecimento.
+**F1 — A clínica chega primeiro; Helena, por convite.**
+V04 (Dr. Marcelo cadastra Helena: nome, CPF, e-mail) → V05 (cadastra Théo) → V06 (aviso pós-cadastro: convite enviado, frase de balcão dita a Helena) → [Helena, no celular] e-mail do convite → P07 (cria a senha, aceita os termos, entra) → T01 → T04 (vê o código único) → T09 (lança o histórico pregresso que tem em mãos) → T05.
+*O que este fluxo prova:* o tutor acompanha sem pré-requisito algum, e o atendimento nunca esperou por ele. *(Até 01/10/2026 este fluxo partia do autocadastro do tutor.)*
 
-**F2 — A autorização, em quatro passos.**
-T01 → T10 (encontra a Clínica Vet Amigo) → T11 passo 2 (escolhe Théo) → T11 passo 3 (lê o resumo, recebe e digita o código) → T12 (autorização vigente).
-*O que este fluxo prova:* o consentimento é ato do titular, verificado por segundo fator, e cabe em quatro passos (RNF14). Cronometre-o na demonstração.
+**F2 — O balcão: cadastrar tutor → cadastrar pet → atender → registrar → finalizar.**
+V01 → V04 (cadastra Helena) → V05 (cadastra Théo) → V06 (aviso pós-cadastro) → V08 (registra o atendimento; confirma) → V07 (registra a vacina; confirma) → V06 aba Carteira, com o novo selo e a próxima dose calculada.
+*O que este fluxo prova:* nenhum passo depende do tutor — sem conta, senha, autorização ou compartilhamento prévios. Cronometre-o na demonstração. *(Substitui o antigo F2, a autorização em quatro passos, removido em 01/10/2026.)*
 
 **F3 — O registro de vacinação, em noventa segundos.**
-V01 → V03 (busca "Théo") → V06 (ficha, autorização vigente) → V07 (imunobiológico, lote e validade pré-preenchidos do último registro; confirma) → painel de cálculo exibe a próxima data e a regra → V06 aba Carteira, com o novo selo.
+V01 → V03 (busca "Théo") → V06 (ficha) → V07 (imunobiológico, lote e validade pré-preenchidos do último registro; confirma) → painel de cálculo exibe a próxima data e a regra → V06 aba Carteira, com o novo selo.
 *O que este fluxo prova:* o formulário cabe na consulta (RNF15). Cronometre-o também.
 
 **F4 — O histórico atravessa o estabelecimento.**
-V03 (busca por código, animal de outro prestador, **sem** autorização — estado P2) → V10 (solicita) → [Helena] T13 → T11 passo 3 → [Dr. Marcelo] V06 com aviso de acesso registrado → T07 (histórico consolidado, com procedência de cada item) → [Helena] T14 (vê exatamente quem acessou, quando e o quê).
-*O que este fluxo prova:* o dado segue o animal, o tutor controla o acesso, e o acesso é auditável. É o núcleo da tese do trabalho.
+V03 (outra clínica busca Théo pelo código ou pelo micro-chip — resultado completo, com a marca "ainda não acompanhado por esta clínica" e a nota de acesso registrado) → V06 (o animal entra na carteira; aviso antes dos registros da Clínica Vet Amigo) → T07 (histórico consolidado, com procedência de cada item) → [Helena] T14 (vê exatamente qual clínica acessou, quando, o quê, e que ela agora acompanha o Théo).
+*O que este fluxo prova:* o dado segue o animal sem atrito e sem autorização prévia, e todo acesso de outra clínica é transparente ao tutor. É o núcleo da tese do trabalho.
 
 **F5 — O documento sai da plataforma e continua verificável.**
-T04 → T15 (lê a advertência de responsabilidade, gera o PDF) → [terceiro fora da plataforma] lê o QR Code → P09 (documento autêntico, emitido em tal data, referente a tal animal — e nada mais).
+T04 (ou V06, pelo veterinário) → T15 (lê a advertência de responsabilidade, gera o PDF) → [terceiro fora da plataforma] lê o QR Code → P09 (documento autêntico, emitido em tal data, referente a tal animal — e nada mais).
 *O que este fluxo prova:* a mitigação da limitação de adesão parcial funciona sem abrir dado clínico a quem não deve vê-lo.
 
 ---
@@ -1203,20 +1122,20 @@ Lista de verificação a aplicar sobre cada tela entregue. Serve também de inst
 
 | Requisito | O que verificar no design | Telas críticas |
 |---|---|---|
-| RNF13 | Operação em 360 px sem rolagem horizontal | T01, T04, T05, T07, T12 |
-| RNF14 | Concessão em até quatro passos desde a tela inicial | T01 → T10 → T11 |
+| RNF13 | Operação em 360 px sem rolagem horizontal | T01, T04, T05, T07, T14, P07 |
+| RNF14 | **Removido em 01/10/2026** — não há concessão de autorização a medir | — |
 | RNF15 | Registro de vacinação em até 90 s, com lote e validade | V07 |
 | RNF16 | Toda informação exibe origem e confiabilidade | T05, T06, T07, T08, V06 |
 | RNF17 | Mensagens sem jargão de implementação | todas, com atenção a E01–E03 |
 | RNF09 | Ação indisponível não aparece na interface; a recusa é do servidor | V09, V06, A01 |
-| RN12 | Existência de cadastro nunca revela conteúdo | V03, V04, T19 |
+| RN12 | **Removida em 01/10/2026** — busca por identificador exato mostra o cadastro completo, com acesso registrado (RN49) | — |
 | RN24 | Não verificado permanentemente distinguível, inclusive no PDF | T05, T09, T15 |
 | RN26 | Nenhum caminho permite sobrescrever ou excluir registro | V07, V08, V09, T06, T08 |
 | RN36 | Nenhum bloqueio de conduta clínica divergente | V07 |
 | RN46 | Advertência de responsabilidade antes da exportação | T15 |
 | RN47 | Verificação pública sem conteúdo clínico | P09 |
-| RN48 | Painéis restritos a animais sob autorização vigente | V01, V02, T17 |
-| RN49 | Aviso de registro de acesso antes da exibição | V06, T07 |
+| RN48 | Painéis e listas restritos à carteira da clínica (animais cadastrados ou atendidos por ela) | V01, V02, V03 (busca por nome), T17 |
+| RN49 | Aviso de registro de acesso antes da exibição | V03, V06, T07, T14 |
 | LGPD art. 18 | Direitos do titular acessíveis a partir da conta | T18, T14 |
 
 ---
@@ -1234,7 +1153,7 @@ Se, ao desenhar, surgir a tentação de acrescentar uma dessas telas "para compl
 1. *Style guide* navegável com tokens (seção 4) e biblioteca de componentes (seção 5), em uma única tela de referência;
 2. Telas do inventário (seção 7) nas três larguras — 360, 768 e 1440 px —, com os estados nomeados em cada verbete;
 3. Os cinco fluxos da seção 9 montados como percursos navegáveis, para a demonstração;
-4. Nota de projeto de uma página registrando as decisões de interface e suas justificativas — insumo direto do Capítulo 4 da monografia, em especial a divisão de responsabilidade entre tutor e veterinário na tela V05 e o tratamento do estado "sem autorização" em V03.
+4. Nota de projeto de uma página registrando as decisões de interface e suas justificativas — insumo direto do Capítulo 4 da monografia, em especial a divisão de responsabilidade entre tutor e veterinário na tela V05 o tratamento do animal "ainda não acompanhado por esta clínica" em V03 e o aviso pós-cadastro com a frase de balcão em V06.
 
 ---
 

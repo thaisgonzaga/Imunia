@@ -1,7 +1,7 @@
 ---
 title: "Imunia --- Estudo de Caso"
 subtitle: "Etapa 2 do Trabalho de Conclusão de Curso: caracterização do problema e da solução proposta"
-date: "Agosto de 2026 --- versão 1.0"
+date: "Outubro de 2026 --- versão 1.1"
 lang: pt-BR
 ---
 
@@ -225,7 +225,7 @@ Esta é a decisão arquitetural que sustenta o diferencial do sistema, e merece 
 
 Na arquitetura multi-inquilino com base compartilhada adotada, `tutores` e `animais` são entidades **globais**, sem discriminador de inquilino, ao passo que `atendimentos`, `vacinacoes` e `prontuarios` são escopados por `prestador_id`, preservando a autoria e a responsabilidade técnica de cada registro.
 
-A consequência é a inversão exata da causa raiz enunciada na seção 4: o dado clínico permanece vinculado ao animal, e o estabelecimento produtor é atributo do registro, não seu proprietário exclusivo. A mudança de cidade do tutor deixa de exigir importação, migração ou integração — exige apenas autorização.
+A consequência é a inversão exata da causa raiz enunciada na seção 4: o dado clínico permanece vinculado ao animal, e o estabelecimento produtor é atributo do registro, não seu proprietário exclusivo. A mudança de cidade do tutor deixa de exigir importação, migração ou integração: basta que o novo estabelecimento localize o animal pelo código, pelo QR Code, pelo micro-chip ou pelo CPF do tutor.
 
 ## S5 — Persistência e captura ampliada (responde a P5)
 
@@ -236,21 +236,21 @@ Contra a perda por destruição do suporte, a persistência em base relacional �
 
 A segunda resposta é uma mitigação, não uma solução. Reconhecê-la como tal fortalece o trabalho perante a banca, em vez de enfraquecê-lo.
 
-## S6 — Continuidade do histórico mediante autorização do tutor (responde a P6)
+## S6 — Continuidade do histórico entre estabelecimentos (responde a P6)
 
-O tutor consulta, pelo próprio sistema, quais prestadores utilizam a plataforma, e concede autorização nominal ao escolhido, confirmada por código enviado ao endereço eletrônico cadastrado. Confirmada a autorização, cria-se vínculo em `autorizacoes_acesso`, e o prestador autorizado passa a visualizar consultas, exames, diagnósticos e tratamentos registrados por outros profissionais.
+O profissional localiza o animal por identificador exato — código ou QR Code do animal, micro-chip ou CPF do tutor — e passa a visualizar consultas, exames, diagnósticos e tratamentos registrados por outros profissionais, cada registro acompanhado do estabelecimento que o produziu. Não há pedido de acesso nem espera por ato do tutor: o atendimento acontece no balcão, no tempo do balcão. Ao cadastrar ou atender o animal, o estabelecimento passa a acompanhá-lo — ele entra na relação de pacientes da clínica, que alimenta o painel e a rechamada de pendências.
 
-A autorização desmembra-se em três níveis, coerentes com a decisão de imutabilidade do registro clínico:
+O acesso desmembra-se em três níveis, coerentes com a decisão de imutabilidade do registro clínico:
 
 | Nível | Alcance |
 |---|---|
 | Leitura | Visualiza todo o histórico anterior, de qualquer origem |
 | Escrita | Cria registros novos, atribuídos a ele e ao seu prestador |
-| Edição | Inexistente sobre registro alheio; correções apenas por retificação |
+| Edição | Inexistente sobre registro alheio; correções apenas por retificação, privativas do autor |
 
 Aplicado ao cenário: em novembro de 2025, o segundo profissional teria visualizado o laudo do raspado cutâneo e a prescrição anterior antes de decidir, sem repetir o exame e sem depender do relato de uma tutora leiga.
 
-**Distinção relevante para a comparação com concorrentes.** O compartilhamento automático praticado por parte do mercado faz o histórico circular entre profissionais sem ato de vontade do titular. O modelo do Imunia coloca o consentimento na origem do fluxo, o que o distingue tanto do ponto de vista de projeto quanto do ponto de vista da Lei Geral de Proteção de Dados.
+**A contrapartida é a transparência, não o consentimento prévio.** Uma versão anterior deste projeto condicionava o acesso a autorização nominal concedida pelo tutor, com confirmação por código, prazo e revogação. O modelo foi abandonado em 01/10/2026 (ver o documento de decisões, §3.2 e §9.33): exigia do tutor uma série de atos antes do primeiro atendimento e tornava o veterinário dependente de alguém que, no balcão, frequentemente nem tinha conta na plataforma. No modelo adotado, o tutor é convidado por e-mail quando seu primeiro animal é cadastrado, e encontra no próprio acesso o registro de cada vez que um estabelecimento alcançou dados produzidos por outro (ver S8). A escolha deve ser apresentada como troca deliberada — fluidez do atendimento em vez de controle prévio do tutor — e não como equivalência.
 
 ## S7 — Painel de pendências e retorno programado (responde a P7)
 
@@ -272,7 +272,7 @@ Cada vacinação registra fabricante, lote, validade, via de administração e i
 
 Os registros clínicos são imutáveis: correções não sobrescrevem o original, entrando como retificação vinculada ao registro corrigido, e preservando ambos. A prática replica o padrão consolidado do prontuário eletrônico na medicina humana e preserva autoria e responsabilidade técnica.
 
-Complementarmente, toda visualização de prontuário originado de outro prestador é registrada em log — quem acessou, o que acessou e quando —, o que constitui evidência de conformidade e permite ao tutor auditar quem consultou os dados do seu animal.
+Complementarmente, toda visualização de prontuário originado de outro prestador é registrada em log — quem acessou, o que acessou e quando —, assim como a localização, por identificador, de animal que o estabelecimento ainda não acompanhava e a exportação em PDF que leva registro alheio. O livro constitui evidência de conformidade e permite ao tutor saber quem consultou os dados do seu animal; é a principal contrapartida de transparência do modelo em que o acesso clínico não depende de autorização prévia.
 
 ---
 
@@ -287,7 +287,7 @@ Complementarmente, toda visualização de prontuário originado de outro prestad
 | P3 | RF04 — Carteira digital<br>RF09 — Exportação em PDF com QR de verificação | Persistência relacional; *hash* e rota pública de verificação (§4.5) |
 | P4 | RF01 — Cadastro global do animal com código único | Multi-inquilino com base compartilhada; `animais` e `tutores` sem `prestador_id` (§3.1) |
 | P5 | RF10 — Histórico pregresso não verificado | Marcação explícita de origem e de confiabilidade do registro (§6) |
-| P6 | RF07 — Autorização nominal pelo tutor<br>RF14 — Revogação | Livro de consentimento `autorizacoes_acesso` (§3.2, §4) |
+| P6 | Histórico consolidado do animal, de qualquer origem, com autoria por registro<br>Livro de acessos visível ao tutor | Entidades globais e vínculo automático clínica–animal; registro de acesso (§3.2, §4) |
 | P7 | RF13 — Painel de pendências vacinais<br>RF12 — Retorno programado | Consulta agregada sobre base relacional; reuso do motor de notificação |
 | P8 | RF02 — Registro de lote, validade e CRMV do aplicador<br>RF06 — Prontuário imutável<br>RF08 — Log de acesso | Imutabilidade com retificação (§3.4); autenticação por credenciais e não repúdio (§3.3) |
 
@@ -299,15 +299,15 @@ Complementarmente, toda visualização de prontuário originado de outro prestad
 
 A releitura contrafactual da mesma trajetória evidencia, de forma sintética, o efeito agregado das funcionalidades descritas.
 
-**Fevereiro de 2025.** O Pet Center cadastra Théo, que recebe código único e permanente na plataforma. A primeira dose é registrada com fabricante, lote, validade e CRMV do aplicador. O sistema calcula a data prevista da segunda dose.
+**Fevereiro de 2025.** O Pet Center cadastra Helena, com nome, CPF e e-mail, e em seguida Théo, que recebe código único e permanente na plataforma. A primeira dose é registrada com fabricante, lote, validade e CRMV do aplicador. O sistema calcula a data prevista da segunda dose. Helena recebe um e-mail de convite; ao abri-lo, cria a senha e passa a acompanhar a carteira de Théo — mas o atendimento já havia terminado sem depender disso.
 
-**Março de 2025.** Helena autoriza a Clínica Vet Amigo. O Dr. Marcelo visualiza a dose anterior com todos os seus atributos, e não depende de transcrição manual nem da memória da tutora.
+**Março de 2025.** Helena informa no balcão o código de Théo, ou a recepção busca pelo CPF dela. O Dr. Marcelo visualiza a dose anterior com todos os seus atributos, e não depende de transcrição manual nem da memória da tutora. Helena não precisa fazer nada antes do atendimento.
 
 **Abril de 2025.** Helena recebe notificação sete dias antes da data prevista. A terceira dose é aplicada no prazo, e o protocolo se completa dentro da janela recomendada.
 
 **Maio de 2025.** A antirrábica de campanha continua fora da plataforma — o serviço público não é prestador cadastrado. Helena lança a aplicação como histórico pregresso, marcado como não verificado. **A limitação permanece, mitigada.**
 
-**Setembro de 2025.** A mudança de cidade não produz efeito algum sobre o histórico. Helena consulta os prestadores disponíveis no novo município e autoriza um deles. O acesso é imediato e integral.
+**Setembro de 2025.** A mudança de cidade não produz efeito algum sobre o histórico. O estabelecimento do novo município localiza Théo pelo código e vê o histórico integral no primeiro atendimento. Helena encontra, no livro de acessos, o nome da nova clínica e o momento em que ela consultou o histórico.
 
 **Novembro de 2025.** O segundo profissional consultado visualiza o laudo e a prescrição anteriores antes de decidir. O exame não é repetido. O acesso fica registrado em log.
 
@@ -328,7 +328,8 @@ A honestidade quanto ao alcance da proposta é, em trabalho acadêmico, elemento
 | Prestadores não cadastrados na plataforma | A campanha municipal permanece fora do registro verificado | Exportação verificável em PDF; campo de histórico pregresso marcado como não verificado |
 | Dependência da adesão de estabelecimentos | O valor da rede cresce com o número de participantes | Declarada; o sistema é útil ainda com adesão parcial, pois o histórico permanece com o animal |
 | Ausência do canal WhatsApp | Tutores com baixo uso de correio eletrônico podem não ser alcançados | Delimitação de escopo assumida; canal abstraído para inclusão futura |
-| Atendimento de urgência sem tutor disponível para autorizar | Emergência em Juiz de Fora, fora do horário, sem autorização prévia | Declarada; mitigada pela exportação prévia em PDF |
+| Acesso clínico sem consentimento prévio do tutor | Qualquer estabelecimento cadastrado que tenha o código, o micro-chip ou o CPF alcança o histórico de Théo | Declarada como troca deliberada; busca por nome restrita aos animais que a clínica já acompanha; livro de acessos visível ao tutor; registro de cada acesso a dado alheio |
+| Estabelecimento de urgência fora da plataforma | Emergência em Juiz de Fora, fora do horário, em clínica não cadastrada | Declarada; mitigada pela exportação verificável em PDF, que o tutor pode gerar a qualquer momento |
 | Ausência de padrão de interoperabilidade veterinária no Brasil | Impossibilidade de intercâmbio com sistemas de terceiros | Declarada; remetida a Trabalhos Futuros |
 | Cenário ilustrativo, não empírico | O problema é caracterizado por construção, não por levantamento de campo | Rotulagem correta como cenário; entrevista com profissional, se realizada |
 

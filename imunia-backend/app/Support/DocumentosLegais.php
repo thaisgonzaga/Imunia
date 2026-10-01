@@ -25,7 +25,7 @@ final class DocumentosLegais
      * Versão semântica curta. Muda quando o texto muda de forma que afete o
      * que a pessoa aceitou — correção de vírgula não é versão nova.
      */
-    public const VERSAO = '1.0';
+    public const VERSAO = '2.0';
 
-    public const VIGENTE_DESDE = '2026-09-08';
+    public const VIGENTE_DESDE = '2026-10-01';
 }

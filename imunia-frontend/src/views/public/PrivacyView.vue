@@ -32,6 +32,16 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         constituída, esta política descreve o tratamento de dados de um sistema em
         desenvolvimento, não de um serviço em operação comercial.
       </p>
+      <p>
+        <strong>O que mudou na versão 2.0.</strong> O cadastro do tutor e do animal passou a
+        ser feito pela clínica, que informa nome, CPF e e-mail do tutor; o tutor não se
+        cadastra sozinho e recebe um convite por e-mail para acompanhar o animal. O
+        compartilhamento entre clínicas deixou de depender de autorização do tutor: o histórico
+        do animal é único, e a clínica que o atende, localizando-o por identificador exato, o
+        acessa por inteiro, com registro no livro de acessos. Deixaram de existir — e de ser
+        coletados — os dados de autorização, de solicitação de acesso e os códigos de
+        confirmação.
+      </p>
     </div>
 
     <h2>1. Quem responde pelos seus dados</h2>
@@ -63,19 +73,9 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td><strong>Controlador</strong></td>
           </tr>
           <tr>
-            <td>Cadastro do tutor e do animal feito pelo próprio tutor</td>
-            <td>Imunia</td>
-            <td><strong>Controlador</strong></td>
-          </tr>
-          <tr>
-            <td>Autorizações, solicitações e registros de acesso</td>
-            <td>Imunia</td>
-            <td><strong>Controlador</strong></td>
-          </tr>
-          <tr>
-            <td>Comunicações enviadas pelo sistema</td>
-            <td>Imunia</td>
-            <td><strong>Controlador</strong></td>
+            <td>Cadastro do tutor (nome, CPF, e-mail) e do animal, feito pelo estabelecimento no atendimento</td>
+            <td>O estabelecimento que criou</td>
+            <td><strong>Operador</strong></td>
           </tr>
           <tr>
             <td>Conteúdo clínico — atendimentos, vacinações, anexos e laudos</td>
@@ -83,9 +83,19 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td><strong>Operador</strong></td>
           </tr>
           <tr>
-            <td>Cadastro de tutor e de animal criado por um estabelecimento</td>
-            <td>O estabelecimento que criou</td>
-            <td><strong>Operador</strong></td>
+            <td>Alterações que o tutor faz na identificação e na foto do animal, e registros pregressos que ele lança</td>
+            <td>Imunia</td>
+            <td><strong>Controlador</strong></td>
+          </tr>
+          <tr>
+            <td>Disponibilização do histórico único do animal às clínicas que o atendem, vínculo entre clínica e animal, e livro de acessos</td>
+            <td>Imunia</td>
+            <td><strong>Controlador</strong></td>
+          </tr>
+          <tr>
+            <td>Comunicações enviadas pelo sistema (convite ao tutor, confirmação de e-mail, avisos e lembretes)</td>
+            <td>Imunia</td>
+            <td><strong>Controlador</strong></td>
           </tr>
           <tr>
             <td>Dados cadastrais do estabelecimento e de sua equipe</td>
@@ -99,8 +109,13 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       Quando o Imunia atua como <strong>operador</strong>, trata os dados seguindo as
       instruções do estabelecimento e <strong>não os utiliza para finalidade própria</strong>
       — não os vende, não os cede, não os usa para publicidade, não os usa para treinar
-      modelos e não os cruza entre estabelecimentos fora do mecanismo de autorização
-      descrito na seção 6.
+      modelos e não os cruza entre estabelecimentos fora do histórico único descrito na
+      seção 6.
+    </p>
+    <p>
+      A decisão de que o histórico do animal é um só, e de que fica disponível à clínica que
+      atende o animal, é do Imunia — por isso, nesse ponto, o Imunia responde como
+      controlador, e não como operador.
     </p>
 
     <h3>1.2 Encarregado pela proteção de dados</h3>
@@ -122,7 +137,10 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
 
     <h2>2. A quem esta política se dirige</h2>
     <ul>
-      <li><strong>Tutores</strong> — pessoas responsáveis por animais cadastrados;</li>
+      <li>
+        <strong>Tutores</strong> — pessoas responsáveis por animais cadastrados, cadastradas
+        pelo estabelecimento que atende o animal, tenham ou não ativado o acesso pelo convite;
+      </li>
       <li>
         <strong>Médicos-veterinários</strong> — profissionais com inscrição no CRMV
         vinculados a um estabelecimento;
@@ -165,13 +183,18 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     </p>
 
     <h3>3.3 Dados do tutor</h3>
-    <p><strong>Nome completo</strong> e <strong>CPF</strong>, mais a data e a versão dos termos aceitos.</p>
+    <p>
+      <strong>Nome completo</strong>, <strong>CPF</strong> e <strong>e-mail</strong>, informados
+      pelo estabelecimento que cadastra o tutor no atendimento. Quando o tutor aceita o
+      convite e cria a senha, registram-se também a data e a versão dos termos aceitos.
+    </p>
     <p>
       O CPF não é coletado por conveniência: é exigência da regulamentação profissional. A
       Resolução CFMV nº 1.321/2020, art. 3º, VII, determina que os documentos
       médico-veterinários identifiquem o responsável pelo animal por nome completo, CPF e
       endereço. No Imunia, o CPF cumpre ainda a função de permitir que um estabelecimento
-      localize um cadastro já existente sem criar duplicidade.
+      localize um cadastro já existente sem criar duplicidade, e que a clínica que atende o
+      animal o encontre pelo identificador exato.
     </p>
     <p>
       <strong>O sistema não coleta do tutor:</strong> telefone, endereço residencial, CEP,
@@ -212,17 +235,23 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       anexos (laudos e exames em PDF ou imagem).
     </p>
 
-    <h3>3.7 Dados de autorização e de solicitação de acesso</h3>
+    <h3>3.7 Vínculo entre clínica e animal, e convite</h3>
     <p>
-      Quem autorizou, qual estabelecimento, quais animais, quando a autorização foi
-      concedida, quando expira e, se for o caso, quando foi revogada. Quando um
-      estabelecimento solicita acesso, registra-se também a mensagem que ele escreveu ao
-      tutor, limitada a 280 caracteres.
+      Quando um estabelecimento cadastra um animal ou o atende, o sistema registra o vínculo
+      entre os dois, com a data e a origem (cadastro ou atendimento). Esse vínculo
+      <strong>não é permissão</strong>, não é concedido nem revogado por ninguém: serve para
+      formar a lista de pacientes do estabelecimento e para indicar, no livro de acessos, se
+      aquela clínica acompanha o animal.
     </p>
     <p>
-      O código de seis dígitos enviado por e-mail para confirmar uma autorização
-      <strong>não é armazenado em texto legível</strong> — o sistema guarda apenas seu resumo
-      criptográfico, contra o qual compara o que você digita.
+      O convite enviado ao tutor contém um endereço de uso único, válido por 7 dias. O token
+      desse endereço <strong>não é armazenado em texto legível</strong> — o sistema guarda
+      apenas seu resumo criptográfico.
+    </p>
+    <p>
+      Até a versão 1.0, o sistema registrava autorizações de acesso, solicitações de acesso e
+      códigos de confirmação. Essas funções foram removidas em 1º de outubro de 2026, e esses
+      dados deixaram de ser coletados.
     </p>
 
     <h3>3.8 Documentos exportados</h3>
@@ -249,6 +278,11 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>Art. 7º, V — execução de contrato</td>
           </tr>
           <tr>
+            <td>Cadastrar o tutor e o animal no atendimento</td>
+            <td>Nome, CPF e e-mail do tutor; dados do animal</td>
+            <td>Art. 7º, II e V — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII) e execução de contrato com o estabelecimento</td>
+          </tr>
+          <tr>
             <td>Identificar o tutor e evitar cadastro duplicado</td>
             <td>CPF</td>
             <td>Art. 7º, II — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII)</td>
@@ -264,9 +298,9 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>Art. 7º, II — obrigação regulatória (Res. CFMV 1.321/2020, art. 9º, VIII)</td>
           </tr>
           <tr>
-            <td>Permitir a continuidade do histórico entre estabelecimentos</td>
-            <td>Autorizações e registros de acesso</td>
-            <td>Art. 7º, V — mediante autorização expressa do tutor</td>
+            <td>Disponibilizar o histórico único do animal à clínica que o atende</td>
+            <td>Dados do animal, conteúdo clínico, nome e CPF do tutor</td>
+            <td>Art. 7º, IX — legítimo interesse (continuidade do cuidado do animal), com a transparência do livro de acessos</td>
           </tr>
           <tr>
             <td>Registrar quem acessou dados de quem, e mostrá-lo ao tutor</td>
@@ -274,7 +308,12 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>Art. 7º, II e IX — segurança e prestação de contas</td>
           </tr>
           <tr>
-            <td>Enviar confirmações, convites e códigos de autorização</td>
+            <td>Convidar o tutor cadastrado pela clínica a acompanhar o animal</td>
+            <td>Nome e e-mail do tutor, nome do animal e do estabelecimento</td>
+            <td>Art. 7º, IX — legítimo interesse</td>
+          </tr>
+          <tr>
+            <td>Enviar confirmações, avisos e lembretes de dose ao tutor que ativou o acesso</td>
             <td>E-mail</td>
             <td>Art. 7º, V</td>
           </tr>
@@ -296,6 +335,13 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         </tbody>
       </table>
     </div>
+    <p>
+      O cadastro do tutor e do animal e os registros clínicos são feitos pelo estabelecimento
+      <strong>no exercício da atividade médico-veterinária</strong>, que inclui o dever de
+      manter prontuário e de guardá-lo por cinco anos (Res. CFMV nº 1.321/2020, arts. 3º, VII
+      e 9º, § 3º). Nesses dados, é o estabelecimento, como controlador, quem responde pela
+      finalidade e pela base legal do tratamento; o Imunia os trata por conta dele.
+    </p>
     <p>
       Quando o tratamento se apoia em <strong>legítimo interesse</strong>, você pode se opor
       a ele pelo canal da seção 13. A avaliação que fundamenta esse uso está documentada e é
@@ -333,8 +379,9 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     </p>
     <p>
       <strong>A postura adotada é conservadora:</strong> o sistema aplica a dados clínicos as
-      mesmas salvaguardas devidas a dados sensíveis — acesso condicionado a autorização
-      expressa, registro de cada consulta, imutabilidade dos registros, minimização do que se
+      mesmas salvaguardas devidas a dados sensíveis — acesso apenas por identificador exato,
+      registro de cada acesso de clínica que não acompanhava o animal ou que lê registro
+      alheio, imutabilidade dos registros, minimização do que se
       exibe — independentemente da classificação. Além disso, o prontuário veterinário está
       protegido por <strong>sigilo profissional</strong>, cuja violação é crime (Código Penal,
       art. 154) e infração ética (Res. CFMV nº 1.138/2016, art. 11).
@@ -342,45 +389,42 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
 
     <h2>6. Com quem os dados são compartilhados</h2>
 
-    <h3>6.1 Entre estabelecimentos, e só com autorização do tutor</h3>
+    <h3>6.1 Entre estabelecimentos: histórico único, acesso registrado</h3>
     <p>
-      Este é o núcleo do sistema, e a regra é simples:
-      <strong>
-        nenhum estabelecimento vê o histórico produzido por outro sem que o tutor tenha
-        autorizado, nominalmente, aquele estabelecimento e aquele animal.
-      </strong>
+      Este é o núcleo do sistema: <strong>o histórico do animal é um só</strong>, e acompanha
+      o animal de uma clínica para outra sem que o tutor precise fazer nada.
     </p>
     <ul>
       <li>
-        A autorização é concedida <strong>exclusivamente pelo tutor</strong>. Um
-        estabelecimento pode solicitá-la, nunca concedê-la a si mesmo.
+        A clínica alcança um cadastro <strong>apenas por identificador exato</strong> — CPF do
+        tutor, código ou QR do animal, ou microchip. A busca por nome só alcança os animais que
+        aquela clínica já acompanha.
       </li>
       <li>
-        Ela é específica por <strong>animal</strong> e por <strong>estabelecimento</strong>.
-        Não existe autorização geral, nem autorização a um veterinário como pessoa física.
+        Encontrado o animal, a clínica vê o <strong>histórico inteiro</strong>, com a indicação
+        do estabelecimento autor de cada registro. Esse acesso não depende de autorização do
+        tutor.
       </li>
       <li>
-        Para concedê-la, o tutor confirma um <strong>código de seis dígitos</strong> enviado
-        ao seu e-mail. Após cinco tentativas erradas, a confirmação é bloqueada por trinta
-        minutos e o tutor é avisado.
-      </li>
-      <li>A autorização <strong>vale 90 dias</strong> e pode ser renovada.</li>
-      <li>
-        O tutor pode <strong>revogar a qualquer momento</strong>, e o estabelecimento é
-        notificado da revogação.
+        Todo acesso de clínica que ainda não acompanhava o animal, a leitura de registro
+        produzido por outra clínica e a exportação de documento que o contenha
+        <strong>ficam registrados no livro de acessos</strong> (seção 7), visível ao tutor.
       </li>
       <li>
-        Antes de exibir a um profissional qualquer histórico produzido por outro
-        estabelecimento, o sistema avisa que aquela visualização será registrada e ficará
-        visível ao tutor.
+        Ver não é alterar: só a clínica autora de um registro pode emitir retificação sobre
+        ele.
+      </li>
+      <li>
+        Não há concessão, revogação, renovação nem prazo de autorização, nem diretório público
+        de estabelecimentos.
       </li>
     </ul>
     <p>
-      <strong>A revogação não apaga registros.</strong> O estabelecimento perde o acesso ao
-      histórico alheio, mas os atendimentos e as vacinações que ele próprio realizou
-      permanecem sob sua guarda. Isso não é escolha de produto: a Resolução CFMV nº
-      1.321/2020, art. 9º, § 3º, obriga o profissional a arquivar o prontuário por pelo menos
-      cinco anos após o último atendimento, mesmo em caso de óbito do animal.
+      <strong>Os registros permanecem.</strong> Os atendimentos e as vacinações que cada
+      estabelecimento realizou continuam sob sua guarda e no histórico do animal. Isso não é
+      escolha de produto: a Resolução CFMV nº 1.321/2020, art. 9º, § 3º, obriga o profissional
+      a arquivar o prontuário por pelo menos cinco anos após o último atendimento, mesmo em
+      caso de óbito do animal.
     </p>
 
     <h3>6.2 Perfis administrativos não alcançam dados clínicos</h3>
@@ -444,15 +488,22 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h2>7. O registro de acessos: você vê quem viu</h2>
     <p>O Imunia mantém um <strong>livro de acessos</strong> consultável pelo tutor, que registra de forma imutável:</p>
     <ul>
-      <li>buscas realizadas por CPF, por código do animal, por microchip ou por nome;</li>
-      <li>consulta a ficha de animal sem autorização vigente;</li>
-      <li>visualização de histórico produzido por outro estabelecimento;</li>
+      <li>
+        buscas por CPF, por código do animal ou por microchip feitas por clínica que ainda não
+        acompanhava o animal;
+      </li>
+      <li>leitura de histórico produzido por outro estabelecimento;</li>
       <li>exportação de documento que contenha registro alheio;</li>
       <li>alertas de duplicidade de cadastro.</li>
     </ul>
     <p>
       Cada entrada mostra o estabelecimento, o profissional (nome e CRMV), o animal, a
-      natureza do acesso, a data e a hora, e qual autorização estava vigente naquele momento.
+      natureza do acesso, a data e a hora, e se aquele estabelecimento acompanha o animal.
+    </p>
+    <p>
+      O livro de acessos é a contrapartida de transparência do histórico único: como o acesso
+      entre clínicas não depende de autorização prévia, todo acesso que vai além da clínica
+      que já acompanha o animal fica à vista do tutor.
     </p>
     <p>
       Esse registro cumpre, por interface e em tempo real, o direito do art. 18, VII da LGPD
@@ -491,13 +542,13 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>LGPD, art. 16, I</td>
           </tr>
           <tr>
-            <td>Autorizações e livro de acessos</td>
+            <td>Livro de acessos e vínculos entre clínica e animal</td>
             <td>Enquanto necessários à prestação de contas e à defesa de direitos</td>
             <td>LGPD, art. 7º, VI e art. 16, I</td>
           </tr>
           <tr>
-            <td>Códigos de autorização e tokens de convite</td>
-            <td>5 minutos, 24 horas ou 7 dias, conforme o tipo</td>
+            <td>Tokens de confirmação de e-mail e de convite</td>
+            <td>24 horas ou 7 dias, conforme o tipo</td>
             <td>Minimização — LGPD, art. 6º, III</td>
           </tr>
         </tbody>
@@ -564,11 +615,6 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>Navegador</td>
           </tr>
           <tr>
-            <td>Rascunho da concessão de autorização</td>
-            <td>Preservar sua escolha durante o fluxo</td>
-            <td>Apagado ao fechar a aba</td>
-          </tr>
-          <tr>
             <td>Rascunho de atendimento</td>
             <td>Evitar que o veterinário perca o texto digitado</td>
             <td>Dispositivo do profissional</td>
@@ -589,9 +635,9 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h2>11. Segurança</h2>
     <p>
       As medidas adotadas incluem: transmissão cifrada, senhas armazenadas apenas como
-      resultado de função de derivação criptográfica, tokens e códigos de autorização
-      guardados apenas como resumo criptográfico, limitação de tentativas de acesso e de
-      pedidos de autorização, invalidação das demais sessões ao trocar a senha, proteção
+      resultado de função de derivação criptográfica, tokens de convite e de confirmação
+      guardados apenas como resumo criptográfico, limitação de tentativas de acesso,
+      invalidação das demais sessões ao trocar a senha, proteção
       contra requisições forjadas de outros sites, anexos servidos por rota autorizada e
       nunca por endereço direto, e registro imutável de acessos.
     </p>
@@ -602,7 +648,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         As fotografias de animais são armazenadas em área de arquivos servida publicamente.
         Quem conhecer o endereço de uma fotografia poderá acessá-la sem autenticação. Isso não
         expõe prontuário, nome de tutor ou CPF, mas é uma diferença real em relação ao
-        tratamento dado aos anexos clínicos, que exigem autenticação e autorização.
+        tratamento dado aos anexos clínicos, que exigem autenticação.
       </p>
     </div>
 
@@ -647,6 +693,16 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <p>
       Você pode ainda <strong>opor-se</strong> a tratamento fundado em dispensa de
       consentimento, quando houver descumprimento da lei (art. 18, § 2º).
+    </p>
+
+    <h3>O que você já faz pelo próprio sistema</h3>
+    <p>
+      Depois de ativar o acesso pelo convite, parte desses direitos é exercida sem pedido: o
+      <strong>livro de acessos</strong> mostra quem acessou seus dados (art. 18, VII); a
+      carteira, o histórico e a <strong>exportação em PDF</strong> dão acesso ao que foi
+      registrado sobre seus animais (art. 18, II); e a edição da identificação e da foto do
+      animal permite corrigir esses dados (art. 18, III). Para os demais direitos — inclusive a
+      oposição a tratamento fundado em legítimo interesse —, use o canal abaixo.
     </p>
 
     <h3>Como pedir</h3>

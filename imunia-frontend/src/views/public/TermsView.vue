@@ -31,6 +31,16 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         Leia antes de aceitar. <strong>As cláusulas que limitam direitos estão em
         destaque</strong>, como exige o art. 54, § 4º do Código de Defesa do Consumidor.
       </p>
+      <p>
+        <strong>O que mudou na versão 2.0.</strong> O tutor deixou de se cadastrar sozinho:
+        quem cadastra o tutor e o animal é a clínica, no atendimento, e o tutor recebe por
+        e-mail um convite para acompanhar o que for registrado. Saiu o compartilhamento
+        controlado pelo tutor — não há mais concessão, revogação, renovação nem prazo de 90
+        dias de autorização, nem código de confirmação, solicitação de acesso ou diretório de
+        estabelecimentos. O histórico do animal passou a ser único: qualquer clínica que o
+        atenda, localizando-o por identificador exato, vê o histórico inteiro, e o acesso fica
+        registrado no livro de acessos que o tutor consulta.
+      </p>
     </div>
 
     <h2>1. O que é o Imunia — e o que ele não é</h2>
@@ -39,7 +49,12 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       médico-veterinário</strong> para cães e gatos. Ele permite que tutores acompanhem a
       vacinação de seus animais, que médicos-veterinários registrem atendimentos e vacinações,
       e que o histórico de um animal acompanhe-o entre estabelecimentos diferentes,
-      <strong>sempre mediante autorização expressa do tutor</strong>.
+      <strong>com registro de cada acesso visível ao tutor</strong>.
+    </p>
+    <p>
+      O cadastro do tutor e do animal é feito pelo estabelecimento que os atende. O tutor
+      <strong>não precisa fazer nada</strong> para que o atendimento aconteça: ele é convidado
+      por e-mail a criar uma senha e acompanhar o que for registrado, se quiser.
     </p>
     <p><strong>O Imunia é um instrumento de registro. Ele não é, e não pretende ser:</strong></p>
     <ul>
@@ -58,17 +73,20 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h2>2. Definições</h2>
     <ul>
       <li><strong>Plataforma</strong> — o sistema Imunia, em suas interfaces web e serviços associados.</li>
-      <li><strong>Tutor</strong> — pessoa natural responsável por um ou mais animais cadastrados.</li>
+      <li><strong>Tutor</strong> — pessoa natural responsável por um ou mais animais cadastrados, cujo cadastro é feito por um estabelecimento.</li>
       <li><strong>Estabelecimento</strong> — clínica, hospital veterinário ou profissional autônomo cadastrado como prestador.</li>
       <li><strong>Profissional</strong> — médico-veterinário com inscrição ativa no CRMV, vinculado a um estabelecimento.</li>
-      <li><strong>Autorização</strong> — permissão concedida pelo tutor a um estabelecimento determinado, para acessar o histórico de um animal determinado.</li>
+      <li><strong>Convite</strong> — mensagem enviada ao e-mail do tutor quando um estabelecimento cadastra o primeiro animal dele, com um endereço para criar a senha e passar a acompanhar o animal.</li>
+      <li><strong>Animal acompanhado</strong> — animal que um estabelecimento cadastrou ou atendeu. O vínculo nasce desses atos, não é concedido nem revogado por ninguém, e não é permissão: serve para formar a lista de pacientes do estabelecimento.</li>
+      <li><strong>Livro de acessos</strong> — registro, consultável pelo tutor, de quem acessou dados dele e dos seus animais.</li>
       <li><strong>Registro clínico</strong> — atendimento, vacinação ou anexo lançado na plataforma.</li>
       <li><strong>Registro pregresso</strong> — vacinação anterior informada pelo tutor a partir de documento que possua.</li>
     </ul>
 
     <h2>3. Aceite</h2>
     <p>
-      Ao marcar a caixa de aceite no cadastro, ou ao usar a plataforma, você declara ter lido
+      Ao marcar a caixa de aceite — no cadastro do estabelecimento ou ao aceitar o convite
+      para acompanhar seus animais —, ou ao usar a plataforma, você declara ter lido
       e concordado com estes Termos e com a
       <RouterLink to="/privacidade">Política de Privacidade</RouterLink>.
     </p>
@@ -82,7 +100,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <ul>
       <li>ter <strong>18 anos ou mais</strong> e capacidade civil plena;</li>
       <li>fornecer informações verdadeiras, exatas e atualizadas;</li>
-      <li>ser o legítimo responsável pelos animais que cadastrar, quando for tutor;</li>
+      <li>ser o legítimo responsável pelos animais vinculados ao seu cadastro, quando for tutor;</li>
       <li>possuir <strong>inscrição ativa no CRMV</strong>, quando atuar como médico-veterinário.</li>
     </ul>
     <p>
@@ -103,31 +121,40 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       </li>
       <li>Comunique imediatamente qualquer uso não autorizado pelo canal de contato.</li>
       <li>
-        A confirmação do endereço de e-mail é condição para atos sensíveis, como conceder
-        autorização de acesso.
+        Como tutor, você só recebe avisos e lembretes por e-mail depois de ativar seu acesso
+        pelo convite.
       </li>
       <li>Ao trocar sua senha, as demais sessões abertas são encerradas.</li>
     </ul>
     <p>
-      O sistema <strong>não oferece autenticação em duas etapas para o login</strong>. A
-      verificação por código de seis dígitos existe apenas no ato de conceder autorização de
-      acesso. Escolha uma senha forte e não a reutilize.
+      O sistema <strong>não oferece autenticação em duas etapas para o login</strong>. Escolha
+      uma senha forte e não a reutilize.
     </p>
 
     <h2>6. Regras aplicáveis ao tutor</h2>
 
-    <h3>6.1 O que você controla</h3>
+    <h3>6.1 Como seu acesso nasce, e o que você acompanha</h3>
     <p>
-      O histórico do seu animal não circula sozinho. <strong>Somente você autoriza</strong> um
-      estabelecimento a vê-lo. A autorização é específica por animal e por estabelecimento,
-      exige confirmação por código enviado ao seu e-mail, <strong>vale 90 dias</strong>
-      renováveis, e pode ser <strong>revogada por você a qualquer momento</strong>, sem
-      justificativa e sem custo.
+      Você não se cadastra sozinho. <strong>O estabelecimento que atende seu animal cadastra
+      você</strong> — com nome, CPF e e-mail — e cadastra o animal. Quando o primeiro animal é
+      cadastrado, você recebe um <strong>convite por e-mail</strong>, válido por 7 dias e
+      renovável pela própria página, para criar sua senha. Aceitar o convite é opcional:
+      <strong>o atendimento não depende disso</strong>.
     </p>
     <p>
-      Você pode consultar, a qualquer tempo, o registro de quem acessou dados dos seus
-      animais, com identificação do estabelecimento, do profissional, da data e da natureza do
-      acesso.
+      Depois de ativar o acesso, você pode consultar a carteira e o histórico dos seus
+      animais, editar a identificação e a foto deles, lançar registro pregresso, exportar
+      documentos e receber lembretes de dose. Você <strong>não registra</strong> atendimento,
+      vacinação ou anexo clínico: isso é privativo do médico-veterinário.
+    </p>
+    <p>
+      <strong>O histórico do animal é único.</strong> Qualquer estabelecimento que atenda seu
+      animal e o localize por identificador exato — seu CPF, o código ou QR do animal, ou o
+      microchip — vê o histórico inteiro, com a indicação do estabelecimento que produziu cada
+      registro. Esse acesso não depende de autorização sua. Em contrapartida, ele
+      <strong>fica registrado</strong>: você pode consultar, a qualquer tempo, o livro de
+      acessos, com identificação do estabelecimento, do profissional, da data e da natureza do
+      acesso, e com a indicação de se aquele estabelecimento acompanha o animal.
     </p>
 
     <h3>6.2 Registro pregresso: o que você lança e o que isso vale</h3>
@@ -149,18 +176,18 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
 
     <h3>6.3 O que você não pode fazer</h3>
     <ul>
-      <li>Cadastrar animal do qual não seja responsável.</li>
-      <li>Usar CPF de terceiro ou informar dados falsos.</li>
+      <li>Aceitar convite dirigido a outra pessoa, ou acompanhar animal do qual não seja responsável.</li>
+      <li>Informar dados falsos ao estabelecimento ou ao editar a identificação do animal.</li>
       <li>Apresentar registro pregresso como se fosse registro profissional.</li>
     </ul>
 
-    <h3>6.4 Revogar não apaga</h3>
+    <h3>6.4 O prontuário não depende da sua conta</h3>
     <div class="legal-destaque">
       <span class="legal-destaque__rotulo">Cláusula de destaque</span>
       <p>
-        Ao revogar uma autorização, o estabelecimento perde o acesso ao histórico produzido
-        por outros — <strong>mas conserva os registros que ele mesmo realizou</strong>. A
-        Resolução CFMV nº 1.321/2020, art. 9º, § 3º, obriga o profissional a arquivar o
+        Encerrar sua conta, ou nunca ativá-la, <strong>não apaga os registros clínicos</strong>
+        feitos pelos estabelecimentos que atenderam seu animal, nem impede que eles continuem
+        disponíveis a quem atender o animal. A Resolução CFMV nº 1.321/2020, art. 9º, § 3º, obriga o profissional a arquivar o
         prontuário por pelo menos cinco anos após o último atendimento, mesmo em caso de óbito
         do animal. Nem o Imunia nem o estabelecimento podem afastar essa obrigação a seu
         pedido.
@@ -201,16 +228,23 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       </p>
     </div>
 
-    <h3>7.3 Acesso condicionado</h3>
+    <h3>7.3 Histórico único, acesso registrado</h3>
     <p>
-      O estabelecimento <strong>pode solicitar</strong> autorização ao tutor;
-      <strong>não pode concedê-la a si mesmo</strong>. Buscar um cadastro revela apenas sua
-      existência, nunca seu conteúdo.
+      O estabelecimento alcança qualquer cadastro da plataforma
+      <strong>por identificador exato</strong> — CPF do tutor, código ou QR do animal, ou
+      microchip — e vê o histórico inteiro do animal, com a indicação do estabelecimento autor
+      de cada registro. A busca por nome alcança apenas os animais que o estabelecimento já
+      acompanha.
     </p>
     <p>
-      Toda visualização de histórico produzido por outro estabelecimento é registrada e
-      <strong>fica visível ao tutor</strong>. Esse registro é condição da exibição: ver implica
-      ficar registrado. Autorização vencida ou revogada encerra o acesso.
+      Todo acesso de estabelecimento que ainda não acompanhava o animal, a leitura de registro
+      produzido por outro estabelecimento e a exportação de documento que o contenha são
+      registrados e <strong>ficam visíveis ao tutor</strong> no livro de acessos. Esse registro
+      é condição da exibição: ver implica ficar registrado.
+    </p>
+    <p>
+      Ver não é retificar: só o estabelecimento autor de um registro pode emitir retificação
+      sobre ele (seção 8).
     </p>
 
     <h3>7.4 Equipe</h3>
@@ -237,6 +271,19 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       <strong>não os utiliza para finalidade própria</strong>. A distribuição completa de
       papéis está na seção 1 da
       <RouterLink to="/privacidade">Política de Privacidade</RouterLink>.
+    </p>
+
+    <h3>7.6 Cadastro do tutor e do animal</h3>
+    <p>
+      O estabelecimento cadastra o tutor (nome, CPF e e-mail) e o animal no atendimento, e
+      responde pela veracidade do que informa. Se o CPF já estiver cadastrado, o sistema não
+      cria um segundo cadastro: o animal é vinculado ao tutor existente.
+    </p>
+    <p>
+      Ao cadastrar o primeiro animal de um tutor, o sistema envia ao e-mail informado o
+      convite descrito na seção 6.1. <strong>O estabelecimento deve informar o tutor</strong> de
+      que usa o Imunia para registrar as informações do animal e de que ele receberá esse
+      convite.
     </p>
 
     <h2>8. Registros são imutáveis; a correção é retificação</h2>
@@ -280,12 +327,12 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h2>10. Uso aceitável</h2>
     <p>É vedado:</p>
     <ul>
-      <li>acessar ou tentar acessar dados sem autorização vigente;</li>
+      <li>acessar ou tentar acessar dados de animal que não esteja sendo atendido;</li>
       <li>realizar buscas em massa, raspagem de dados ou extração sistemática de cadastros;</li>
       <li>usar o sistema para fim diverso do cuidado do animal e do registro profissional;</li>
       <li>inserir conteúdo ilícito, ofensivo, ou dado pessoal de terceiro sem base legal;</li>
       <li>inserir dado sensível de pessoa natural sem necessidade clínica;</li>
-      <li>burlar, testar ou contornar mecanismos de segurança, limites de tentativa ou controles de autorização;</li>
+      <li>burlar, testar ou contornar mecanismos de segurança, limites de tentativa ou controles de acesso;</li>
       <li>fazer engenharia reversa, descompilar ou copiar o software;</li>
       <li>automatizar o uso por robôs ou scripts sem autorização escrita.</li>
     </ul>
@@ -338,7 +385,11 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
           veracidade, exatidão ou completude do conteúdo inserido por usuários, inclusive
           registros pregressos lançados por tutores;
         </li>
-        <li>consequências de autorização concedida pelo tutor a um estabelecimento;</li>
+        <li>
+          consequências de acesso ao histórico por estabelecimento que atenda o animal, na
+          forma da seção 7.3, ressalvada a responsabilidade do próprio estabelecimento pelo uso
+          que fizer dos dados;
+        </li>
         <li>uso ou divulgação de documento exportado, depois de baixado;</li>
         <li>
           indisponibilidade decorrente de caso fortuito, força maior, falha de terceiro
