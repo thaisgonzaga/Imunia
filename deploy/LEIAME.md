@@ -11,6 +11,7 @@ SPA pede, e dispensa CORS e cookies de terceiros.
 | Arquivos | [Backblaze B2](https://www.backblaze.com/cloud-storage) | O disco do Render é apagado a cada deploy. 10 GB, compatível com S3 |
 | E-mail | [Brevo](https://www.brevo.com) | O Render gratuito bloqueia SMTP. O envio sai pela API, com 300 e-mails por dia |
 | Manter acordado | [UptimeRobot](https://uptimerobot.com) (opcional) | O Render gratuito hiberna após 15 min sem acesso |
+| Lembretes diários | [GitHub Actions](https://docs.github.com/actions) | O Render gratuito não tem cron. A tarefa acorda o servidor uma vez por dia |
 
 Nenhum deles pede cartão de crédito. **Use a mesma região em todos (leste dos
 EUA)**: cada tela faz várias consultas ao banco, e a distância entre servidor e
@@ -100,6 +101,30 @@ espera cerca de 1 minuto. No UptimeRobot, crie um monitor **HTTP(s)** para
 `https://SEU-ENDERECO.onrender.com/up` a cada **5 minutos**. As 750 horas
 mensais do plano gratuito cobrem um serviço ligado o mês inteiro.
 
+## 7. Lembretes diários (GitHub Actions)
+
+Os lembretes ao tutor (véspera da dose, atraso de 5 dias e véspera do retorno)
+saem de uma rotina diária. Sem cron no Render gratuito, quem a chama é a
+tarefa `.github/workflows/lembretes.yml`, todo dia às 8h de Brasília.
+
+1. No Render, abra o serviço → **Environment** e copie o valor de
+   `LEMBRETES_TOKEN`, gerado pelo Blueprint. Se a variável não estiver lá
+   (serviço criado antes dela), crie-a com um valor longo e aleatório, por
+   exemplo a saída de `openssl rand -hex 32`.
+2. No GitHub, no repositório: **Settings → Secrets and variables → Actions →
+   New repository secret**, e crie dois segredos:
+   - `IMUNIA_URL`: o endereço público, como `https://imunia.onrender.com`;
+   - `LEMBRETES_TOKEN`: o valor copiado do Render.
+3. Para testar, abra **Actions → Lembretes diários → Run workflow**. O log
+   termina com a contagem do dia, por exemplo
+   `{"executada":true,"lembretes_de_dose":2,"alertas_de_atraso":0,…}`.
+
+Rodar duas vezes no mesmo dia não reenvia nada. Se o GitHub pular um dia, o
+lembrete da véspera ainda sai no próprio dia da dose, e o alerta de atraso, até
+o sétimo dia. **O GitHub desativa tarefas agendadas de repositório público depois
+de 60 dias sem commits**: se os lembretes pararem, reative a tarefa em
+**Actions**.
+
 ---
 
 ## Como atualizar
@@ -120,8 +145,8 @@ Medido localmente com os mesmos limites do Render (0,1 CPU e 512 MB):
 - emissão do PDF: ~3 s;
 - memória: ~140 MB de 512 MB.
 
-Limites: 300 e-mails por dia (Brevo), 5 GiB de banco (TiDB), 10 GB de arquivos
-(B2). Nenhum desses planos garante backup. Trate o ambiente como de testes.
+Limites: 300 e-mails por dia (Brevo), contados os lembretes, 5 GiB de banco
+(TiDB), 10 GB de arquivos (B2). Nenhum desses planos garante backup. Trate o ambiente como de testes.
 
 ## Avisos para quem for testar
 

@@ -34,6 +34,7 @@ use App\Http\Controllers\RegistroDeAtendimentoController;
 use App\Http\Controllers\RegistroDeObitoController;
 use App\Http\Controllers\RegistroDeVacinacaoController;
 use App\Http\Controllers\RegistrosDaClinicaController;
+use App\Http\Controllers\RotinaDeLembretesController;
 use App\Http\Controllers\VacinasPrestadorController;
 use App\Http\Controllers\VerificacaoDocumentoController;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +44,11 @@ Route::post('/prestadores', [PrestadorController::class, 'store']);
 // P09 — verificação pública do documento exportado (RF47). Única rota aberta
 // do sistema, ressalva expressa de RN01.
 Route::get('/documentos/{codigo}', [VerificacaoDocumentoController::class, 'show']);
+
+// RF42, RF43 — disparo diário da rotina de lembretes pelo GitHub Actions, no
+// servidor sem cron. A prova é um segredo, e não uma sessão.
+Route::post('/rotinas/lembretes', RotinaDeLembretesController::class)
+    ->middleware('throttle:10,1');
 
 // P02 — sessão por cookie httpOnly (RF01, RF02, RNF08).
 Route::post('/sessao', [SessionController::class, 'store']);

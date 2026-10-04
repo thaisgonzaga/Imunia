@@ -9,15 +9,16 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Uma comunicação já emitida ao tutor sobre uma dose prevista (RF42, RF43),
- * conservada porque RN43 exige registro persistente do que já se enviou.
+ * Uma comunicação já emitida ao tutor sobre uma dose prevista (RF42) ou um
+ * retorno programado (RF43), conservada porque RN43 exige registro persistente
+ * do que já se enviou.
  *
- * O modelo só é lido, e por duas telas: V02 exibe a última notificação de cada
- * pendência (RF49), que é o dado que decide se a rechamada por telefone é
- * necessária ou redundante; T17 mostra ao tutor tudo o que lhe foi enviado
- * (RF45). Quem escreve estas linhas é o motor de notificação, fatia própria.
+ * Quem escreve estas linhas é `LembretesAoTutorService`, e quem as lê são duas
+ * telas: V02 exibe a última notificação de cada pendência (RF49), que é o dado
+ * que decide se a rechamada por telefone é necessária ou redundante; T17
+ * mostra ao tutor tudo o que lhe foi enviado (RF45).
  */
-#[Fillable(['animal_id', 'tutor_id', 'destinatario', 'imunobiologico_id', 'tipo', 'referente_a', 'enviada_em', 'situacao'])]
+#[Fillable(['animal_id', 'tutor_id', 'destinatario', 'imunobiologico_id', 'atendimento_id', 'tipo', 'referente_a', 'enviada_em', 'situacao'])]
 class Notificacao extends Model
 {
     /** @use HasFactory<NotificacaoFactory> */
@@ -61,6 +62,16 @@ class Notificacao extends Model
     }
 
     /**
+     * O atendimento que marcou o retorno — nulo em toda notificação de dose.
+     *
+     * @return BelongsTo<Atendimento, Notificacao>
+     */
+    public function atendimento(): BelongsTo
+    {
+        return $this->belongsTo(Atendimento::class);
+    }
+
+    /**
      * Como V02 anuncia esta notificação na coluna que responde "já foi
      * avisado?". A situação vem junto da data porque uma sem a outra não
      * responde à pergunta: "19/07/2026" não diz se a mensagem chegou.
@@ -79,9 +90,12 @@ class Notificacao extends Model
     }
 
     /**
-     * RN44 — as três comunicações de uma dose, com os nomes que T16 dá aos
-     * interruptores de descadastro. O tutor que desliga "Alerta de atraso"
-     * numa tela precisa reconhecer a mesma mensagem na outra.
+     * RN44 — as comunicações de uma dose, e a do retorno (RF43), com os nomes
+     * que T16 dá aos interruptores de descadastro. O tutor que desliga "Alerta
+     * de atraso" numa tela precisa reconhecer a mesma mensagem na outra.
+     *
+     * "Aviso na data prevista" não é mais emitido, mas continua nomeado: o
+     * histórico de quem o recebeu antes de 01/10/2026 não muda de sentido.
      */
     public static function descreverTipo(string $tipo): string
     {
@@ -89,6 +103,7 @@ class Notificacao extends Model
             'aviso_previo' => 'Lembrete de dose prevista',
             'aviso_na_data' => 'Aviso na data prevista',
             'alerta_atraso' => 'Alerta de atraso',
+            'lembrete_retorno' => 'Lembrete de retorno',
             default => 'Lembrete de vacina',
         };
     }

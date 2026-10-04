@@ -2,10 +2,12 @@
 
 use App\Models\Imunobiologico;
 use App\Models\User;
+use App\Services\LembretesAoTutorService;
 use Database\Seeders\CatalogoImunobiologicosSeeder;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Str;
 
 Artisan::command('inspire', function () {
@@ -50,3 +52,32 @@ Artisan::command('imunia:preparar', function () {
 
     $this->info("Administração da plataforma: {$email}.");
 })->purpose('Semeia o catálogo no banco vazio e garante a administração da plataforma');
+
+/*
+ * RF42, RF43 — a rotina diária de lembretes ao tutor. Num servidor com cron, o
+ * agendador abaixo a chama; no plano gratuito do Render, que hiberna e não tem
+ * cron, quem a chama é o GitHub Actions, pela rota `POST /api/rotinas/lembretes`
+ * (ver deploy/LEIAME.md). As duas formas podem coexistir: a segunda execução do
+ * dia não reenvia nada (RNF19).
+ */
+Artisan::command('imunia:lembretes', function (LembretesAoTutorService $lembretes) {
+    $resumo = $lembretes->enviar();
+
+    if (! $resumo['executada']) {
+        $this->warn('Outra execução da rotina está em andamento; nada foi feito.');
+
+        return;
+    }
+
+    $this->info(sprintf(
+        'Lembretes de dose: %d · alertas de atraso: %d · lembretes de retorno: %d · falhas: %d.',
+        $resumo['lembretes_de_dose'],
+        $resumo['alertas_de_atraso'],
+        $resumo['lembretes_de_retorno'],
+        $resumo['falhas'],
+    ));
+})->purpose('Envia aos tutores os lembretes de dose, de atraso e de retorno do dia');
+
+// O relógio da aplicação é UTC; o do tutor, o de Brasília. Às 8h de lá a data
+// é a mesma nos dois, e é a data que decide o "amanhã" de cada lembrete.
+Schedule::command('imunia:lembretes')->dailyAt('08:00')->timezone('America/Sao_Paulo');

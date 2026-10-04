@@ -97,14 +97,22 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
               <dt>Animal</dt>
               <dd>{{ notificacao.animal.nome }}</dd>
             </div>
-            <div class="dados__item">
+            <!-- RF43 — o lembrete de retorno não trata de vacina: a finalidade
+                 ocupa o lugar dela, e a data é a do retorno, não a da dose. -->
+            <div v-if="notificacao.retorno" class="dados__item">
+              <dt>Retorno</dt>
+              <dd :class="{ 'dados__ausente': !notificacao.retorno.finalidade }">
+                {{ notificacao.retorno.finalidade ?? 'Finalidade não descrita' }}
+              </dd>
+            </div>
+            <div v-else class="dados__item">
               <dt>Vacina</dt>
               <dd :class="{ 'dados__ausente': !notificacao.vacina }">
                 {{ notificacao.vacina ?? 'Vacina não identificada' }}
               </dd>
             </div>
             <div class="dados__item">
-              <dt>Dose prevista para</dt>
+              <dt>{{ notificacao.retorno ? 'Retorno previsto para' : 'Dose prevista para' }}</dt>
               <dd class="dados__numeros">{{ emNumeros(notificacao.referente_a) }}</dd>
             </div>
             <div class="dados__item">

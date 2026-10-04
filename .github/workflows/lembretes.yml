@@ -1,0 +1,35 @@
+name: Lembretes diários
+
+# RF42, RF43 — o Render gratuito hiberna e não tem cron. Esta tarefa acorda o
+# servidor uma vez por dia e executa a rotina de lembretes ao tutor
+# (`POST /api/rotinas/lembretes`). Configuração em deploy/LEIAME.md, passo 7.
+on:
+  schedule:
+    # 11h UTC = 8h em Brasília. O GitHub às vezes atrasa ou pula uma execução
+    # agendada; a rotina tolera isso (`LembretesAoTutorService`).
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+jobs:
+  lembretes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Executar a rotina no servidor
+        env:
+          IMUNIA_URL: ${{ secrets.IMUNIA_URL }}
+          LEMBRETES_TOKEN: ${{ secrets.LEMBRETES_TOKEN }}
+        run: |
+          if [ -z "$IMUNIA_URL" ] || [ -z "$LEMBRETES_TOKEN" ]; then
+            echo "::notice::Segredos IMUNIA_URL e LEMBRETES_TOKEN não configurados; nada a fazer."
+            exit 0
+          fi
+
+          # O primeiro pedido acorda o servidor, o que leva cerca de 1 minuto.
+          # Repetir é seguro: a rotina não reenvia o que já saiu.
+          curl --fail-with-body --silent --show-error \
+            --retry 4 --retry-delay 30 --retry-all-errors \
+            --max-time 600 \
+            -X POST "${IMUNIA_URL%/}/api/rotinas/lembretes" \
+            -H "Authorization: Bearer $LEMBRETES_TOKEN" \
+            -H "Accept: application/json"

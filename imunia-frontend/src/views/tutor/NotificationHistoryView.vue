@@ -56,7 +56,7 @@ const contagem = computed(() => (total.value === 1 ? '1 notificação' : `${tota
  */
 const descricaoDoVazio = computed(() => (dados.value?.conta.email_verificado === false
   ? 'Enquanto o seu e-mail não for confirmado, o Imunia não envia lembretes. Depois da confirmação, cada lembrete de vacina aparece aqui com a data e a situação de entrega.'
-  : 'Os lembretes saem por e-mail antes da data prevista de cada dose, no próprio dia e, se a dose atrasar, mais uma vez. Cada um aparece aqui com a data e a situação de entrega.'))
+  : 'Os lembretes saem por e-mail na véspera de cada dose e de cada retorno marcado e, se a dose completar cinco dias de atraso, mais uma única vez. Cada um aparece aqui com a data e a situação de entrega.'))
 </script>
 
 <template>
@@ -75,8 +75,8 @@ const descricaoDoVazio = computed(() => (dados.value?.conta.email_verificado ===
         <p class="notificacoes__sobrelinha">Minha conta</p>
         <h1 class="notificacoes__titulo">Histórico de notificações</h1>
         <p class="notificacoes__apoio">
-          Cada lembrete de vacina que o Imunia envia fica registrado aqui: quando saiu, para qual
-          endereço e se chegou.
+          Cada lembrete de vacina e de retorno que o Imunia envia fica registrado aqui: quando
+          saiu, para qual endereço e se chegou.
         </p>
       </div>
 

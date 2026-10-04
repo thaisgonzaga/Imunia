@@ -388,8 +388,8 @@ function abrirConfirmacao() {
 
   if (formulario.value.retorno_em && formulario.value.retorno_finalidade) {
     acontece.push(
-      `O retorno de ${emNumeros(formulario.value.retorno_em)} gera lembrete a ${animal.value.tutor} `
-      + 'e entra no painel de pendências da clínica.',
+      `O retorno de ${emNumeros(formulario.value.retorno_em)} gera lembrete por e-mail a `
+      + `${animal.value.tutor} na véspera e entra no painel de pendências da clínica.`,
     )
   }
 
@@ -948,8 +948,8 @@ watch(formulario, agendarRascunho, { deep: true })
             <p class="nota-lembrete">
               <Bell :size="16" class="nota-lembrete__icone" />
               <span>
-                {{ animal.tutor }} recebe um lembrete deste retorno, e ele aparece no painel de
-                pendências da clínica.
+                {{ animal.tutor }} recebe um lembrete por e-mail na véspera deste retorno, e ele
+                aparece no painel de pendências da clínica.
               </span>
             </p>
           </section>

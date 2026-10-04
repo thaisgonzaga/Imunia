@@ -119,8 +119,8 @@ class FichaClinicaService
                 'email' => $animal->tutor->user?->email,
 
                 // RF14b — tutor cadastrado pelo prestador que ainda não ativou
-                // o acesso é sinalizado nas telas do prestador. Enquanto não
-                // ativa, não recebe lembrete de dose por e-mail.
+                // o acesso é sinalizado nas telas do prestador. Os lembretes
+                // chegam a ele mesmo assim (RN42); o que lhe falta é a conta.
                 'ativado' => $animal->tutor->user?->ativado_em !== null,
             ],
 
@@ -391,12 +391,14 @@ class FichaClinicaService
             'tom' => 'atencao',
             'icone' => 'user-round',
             'titulo' => 'Tutor ainda não ativou o acesso',
-            // RF14 — enquanto não ativa, o tutor não recebe lembrete. Nada do
-            // atendimento depende disso; é só a clínica saber que, por ora, o
-            // aviso de dose é com ela.
+            // RF14 — nada do atendimento depende disso, e desde 01/10/2026 nem
+            // os lembretes (RN42): o tutor só não acompanha a carteira pela
+            // plataforma. A clínica precisa saber, porque é ela quem ouve "não
+            // recebi convite nenhum" no balcão.
             'texto' => sprintf(
-                '%s recebeu o convite e ainda não definiu a senha. Até lá não recebe lembretes '
-                .'de dose por e-mail.',
+                '%s recebeu o convite e ainda não definiu a senha. Os lembretes de vacina e de '
+                .'retorno chegam por e-mail mesmo assim; sem a senha, só não dá para acompanhar a '
+                .'carteira pela plataforma.',
                 $animal->tutor->nome,
             ),
             'nota' => null,

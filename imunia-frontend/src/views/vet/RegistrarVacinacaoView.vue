@@ -777,7 +777,7 @@ watch(() => route.params.codigo, carregar)
                 </div>
                 <div class="resumo__linha resumo__linha--separada">
                   <dt>Lembrete ao tutor</dt>
-                  <dd>enviado antes da data prevista</dd>
+                  <dd>enviado na véspera da data prevista</dd>
                 </div>
               </dl>
             </section>

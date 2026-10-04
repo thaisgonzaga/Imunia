@@ -197,6 +197,9 @@ class PendenciasVacinaisService
     private function ultimasNotificacoes(Collection $animais): Collection
     {
         return Notificacao::whereIn('animal_id', $animais->modelKeys())
+            // O lembrete de retorno (RF43) não é de dose, e sem imunobiológico
+            // cairia na chave do grupo de vacina não identificada.
+            ->where('tipo', '!=', 'lembrete_retorno')
             ->orderBy('enviada_em')
             ->get()
             ->keyBy(fn (Notificacao $n) => $n->animal_id.'|'.($n->imunobiologico_id ?? ''));

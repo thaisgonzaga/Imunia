@@ -77,3 +77,9 @@ services:
       # Quem administra o catálogo de vacinas (X01, X02).
       - key: ADMIN_PLATAFORMA_EMAIL
         sync: false
+
+      # Segredo do disparo diário dos lembretes pelo GitHub Actions (RF42,
+      # RF43). O Render o gera; o mesmo valor vai para os segredos do
+      # repositório no GitHub (deploy/LEIAME.md, passo 7).
+      - key: LEMBRETES_TOKEN
+        generateValue: true

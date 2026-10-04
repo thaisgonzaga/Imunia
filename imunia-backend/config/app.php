@@ -82,6 +82,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Disparo externo dos lembretes
+    |--------------------------------------------------------------------------
+    |
+    | Segredo da rotina de lembretes ao tutor (RF42, RF43) no servidor sem
+    | cron: quem o apresenta em `POST /api/rotinas/lembretes` executa a
+    | rotina. Vazio, a rota responde como se não existisse.
+    |
+    */
+
+    'lembretes_token' => env('LEMBRETES_TOKEN'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

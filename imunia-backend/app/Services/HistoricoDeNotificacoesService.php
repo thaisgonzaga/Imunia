@@ -31,7 +31,7 @@ class HistoricoDeNotificacoesService
         // passa a ver lembretes que nunca lhe foram enviados.
         $notificacoes = Notificacao::query()
             ->where('tutor_id', $tutor->id)
-            ->with(['animal', 'imunobiologico'])
+            ->with(['animal', 'imunobiologico', 'atendimento'])
             ->orderByDesc('enviada_em')
             ->orderByDesc('id')
             ->get();
@@ -69,6 +69,12 @@ class HistoricoDeNotificacoesService
             // não identifica a vacina (RF29) — e a tela diz isso, em vez de
             // deixar o campo em branco.
             'vacina' => $notificacao->imunobiologico?->nome_comercial,
+
+            // O lembrete de retorno (RF43) não trata de vacina: o que ocupa o
+            // lugar dela é a finalidade do retorno, e a tela troca os rótulos.
+            'retorno' => $notificacao->tipo === 'lembrete_retorno' ? [
+                'finalidade' => $notificacao->atendimento?->retorno_finalidade,
+            ] : null,
             'referente_a' => $notificacao->referente_a->toDateString(),
 
             // O endereço mascarado, como na confirmação de e-mail: basta para o
