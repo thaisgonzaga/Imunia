@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Support\DocumentosLegais;
 use Database\Factories\TutorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +36,19 @@ class Tutor extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * O e-mail mora na conta, não no tutor: um endereço, uma conta (RN05). É a
+     * chave com que o veterinário cadastra o tutor e o reencontra no balcão —
+     * o CPF é opcional e nem todo cadastro o tem.
+     *
+     * @param  Builder<Tutor>  $consulta
+     */
+    #[Scope]
+    protected function doEmail(Builder $consulta, string $email): void
+    {
+        $consulta->whereHas('user', fn (Builder $conta) => $conta->where('email', mb_strtolower(trim($email))));
     }
 
     /**

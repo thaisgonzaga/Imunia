@@ -15,8 +15,9 @@ use Tests\TestCase;
 /**
  * V04 — cadastrar tutor no atendimento (RF12, RF13, RF14).
  *
- * O que mais importa aqui é o que o cadastro **não** faz: não cria segundo
- * registro para CPF que já existe (RF12b) — devolve o cadastro encontrado para
+ * Nome e e-mail bastam: o CPF não é pedido. O que mais importa aqui é o que o
+ * cadastro **não** faz: não cria segundo registro para e-mail de tutor que já
+ * existe (RF12b) — devolve o cadastro encontrado para
  * o atendimento seguir — e não deixa o encontro de tutor fora da carteira sem
  * linha no livro de acessos (RF18b). O caminho feliz é o mesmo desenho de A03:
  * conta de senha inacessível; o convite de ativação sai com o primeiro animal.
@@ -24,15 +25,6 @@ use Tests\TestCase;
 class CadastroDeTutorTest extends TestCase
 {
     use RefreshDatabase;
-
-    /** CPF com dígitos verificadores corretos — o mesmo de BuscaClinicaTest. */
-    private const CPF_VALIDO = '23847190504';
-
-    /** Outro CPF válido, para o cenário em que só o e-mail colide. */
-    private const OUTRO_CPF_VALIDO = '52998224725';
-
-    /** O exemplo de dígito verificador incorreto que a própria tela exibe. */
-    private const CPF_INVALIDO = '41788231005';
 
     private function clinica(string $nome = 'Clínica Vet Amigo'): Prestador
     {
@@ -54,6 +46,13 @@ class CadastroDeTutorTest extends TestCase
         return $usuario;
     }
 
+    private function helenaJaCadastrada(): Tutor
+    {
+        $conta = User::factory()->create(['email' => 'helena@example.com']);
+
+        return Tutor::factory()->for($conta)->create(['nome' => 'Helena Ramos']);
+    }
+
     /**
      * @param  array<string, mixed>  $sobrescritos
      * @return array<string, mixed>
@@ -62,7 +61,6 @@ class CadastroDeTutorTest extends TestCase
     {
         return [
             'nome' => 'Helena Ramos',
-            'cpf' => '238.471.905-04',
             'email' => 'helena@example.com',
             ...$sobrescritos,
         ];
@@ -79,13 +77,13 @@ class CadastroDeTutorTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('tutor.nome', 'Helena Ramos')
-            ->assertJsonPath('tutor.cpf', self::CPF_VALIDO)
             ->assertJsonPath('tutor.email', 'helena@example.com');
 
-        // O CPF entra como dígitos puros, com a máscara digitada e tudo.
-        $tutor = Tutor::query()->where('cpf', self::CPF_VALIDO)->first();
+        // Sem CPF: o cadastro existe só com nome e e-mail.
+        $tutor = Tutor::query()->doEmail('helena@example.com')->first();
         $this->assertNotNull($tutor);
         $this->assertSame('Helena Ramos', $tutor->nome);
+        $this->assertNull($tutor->cpf);
 
         // RF14 — a conta nasce por ativar: sem termos aceitos, sem endereço
         // verificado, sem primeira entrada. Quem completa tudo isso é o
@@ -100,33 +98,61 @@ class CadastroDeTutorTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_cpf_existente_nao_cria_segundo_registro_e_devolve_o_cadastro(): void
+    public function test_o_cpf_nao_e_pedido(): void
+    {
+        $clinica = $this->clinica();
+
+        // Mesmo um CPF inválido enviado por engano não importa: o campo não
+        // faz parte do cadastro feito no balcão.
+        $this->actingAs($this->marcelo($clinica))
+            ->postJson('/api/clinica/tutores', $this->dados(['cpf' => '417.882.310-05']))
+            ->assertStatus(201);
+
+        $this->assertNull(Tutor::query()->sole()->cpf);
+    }
+
+    public function test_dois_tutores_sem_cpf_convivem(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+
+        $this->actingAs($marcelo)->postJson('/api/clinica/tutores', $this->dados())->assertStatus(201);
+        $this->actingAs($marcelo)
+            ->postJson('/api/clinica/tutores', $this->dados(['nome' => 'Antônio Prado', 'email' => 'antonio@example.com']))
+            ->assertStatus(201);
+
+        $this->assertSame(2, Tutor::query()->whereNull('cpf')->count());
+    }
+
+    public function test_email_de_tutor_existente_nao_cria_segundo_registro_e_devolve_o_cadastro(): void
     {
         Notification::fake();
 
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        $helena = Tutor::factory()->create(['nome' => 'Helena Ramos', 'cpf' => self::CPF_VALIDO]);
+        $conta = User::factory()->create(['email' => 'helena@example.com']);
+        $helena = Tutor::factory()->for($conta)->create(['nome' => 'Helena Ramos']);
 
         $response = $this->actingAs($marcelo)->postJson(
             '/api/clinica/tutores',
-            $this->dados(['nome' => 'Helena R.', 'email' => 'outra@example.com']),
+            // Maiúsculas e espaços não fazem outro endereço.
+            $this->dados(['nome' => 'Helena R.', 'email' => ' Helena@Example.com ']),
         );
 
         // O atendimento não para: a tela recebe o cadastro que já existe e
         // segue para o animal, com o nome que está no registro — não o que foi
         // digitado agora.
         $response->assertOk()
-            ->assertJsonPath('situacao', 'cpf_existente')
+            ->assertJsonPath('situacao', 'tutor_existente')
             ->assertJsonPath('tutor.id', $helena->id)
             ->assertJsonPath('tutor.nome', 'Helena Ramos')
-            ->assertJsonPath('tutor.cpf', self::CPF_VALIDO);
+            ->assertJsonPath('tutor.email', 'helena@example.com');
 
         // RF12b — jamais um segundo registro, nem convite, nem conta nova.
         $this->assertSame(1, Tutor::query()->count());
         $this->assertSame(0, Convite::query()->count());
-        $this->assertNull(User::query()->where('email', 'outra@example.com')->first());
+        $this->assertSame(1, User::query()->where('email', 'helena@example.com')->count());
 
         Notification::assertNothingSent();
     }
@@ -136,19 +162,19 @@ class CadastroDeTutorTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        $helena = Tutor::factory()->create(['cpf' => self::CPF_VALIDO]);
+        $helena = $this->helenaJaCadastrada();
 
         $this->actingAs($marcelo)->postJson('/api/clinica/tutores', $this->dados())
             ->assertOk();
 
-        // RF18b — mesmo fora da busca de V03, chegar pelo CPF a um tutor que a
-        // clínica não acompanha é encontro, e o titular o vê em T14.
+        // RF18b — mesmo fora da busca de V03, chegar pelo e-mail a um tutor
+        // que a clínica não acompanha é encontro, e o titular o vê em T14.
         $this->assertDatabaseHas('registros_de_acesso', [
             'prestador_id' => $clinica->id,
             'user_id' => $marcelo->id,
             'tutor_id' => $helena->id,
             'animal_id' => null,
-            'natureza' => RegistroDeAcesso::BUSCA_POR_CPF,
+            'natureza' => RegistroDeAcesso::BUSCA_POR_EMAIL,
         ]);
     }
 
@@ -157,34 +183,16 @@ class CadastroDeTutorTest extends TestCase
         $clinica = $this->clinica();
         $marcelo = $this->marcelo($clinica);
 
-        $helena = Tutor::factory()->create(['cpf' => self::CPF_VALIDO]);
-        Animal::factory()->acompanhadoPor($clinica)->create(['tutor_id' => $helena->id]);
+        $helena = $this->helenaJaCadastrada();
+        $theo = Animal::factory()->acompanhadoPor($clinica)->create(['tutor_id' => $helena->id]);
 
         $this->actingAs($marcelo)->postJson('/api/clinica/tutores', $this->dados())
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('animais.0.codigo', $theo->codigo);
 
         // A clínica já acompanha um animal deste tutor: reencontrá-lo não
         // revelou nada, e linha aqui só encheria T14 de ruído.
         $this->assertSame(0, RegistroDeAcesso::query()->count());
-    }
-
-    public function test_email_de_outro_tutor_recusa_sem_criar_nada(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->marcelo($clinica);
-
-        $outra = User::factory()->create(['email' => 'helena@example.com']);
-        Tutor::factory()->for($outra)->create();
-
-        $response = $this->actingAs($marcelo)->postJson(
-            '/api/clinica/tutores',
-            $this->dados(['cpf' => self::OUTRO_CPF_VALIDO]),
-        );
-
-        $response->assertStatus(422)->assertJsonValidationErrors(['email']);
-
-        $this->assertSame(1, Tutor::query()->count());
-        $this->assertSame(0, Convite::query()->count());
     }
 
     public function test_email_de_conta_sem_papel_de_tutor_ganha_o_papel_na_mesma_conta(): void
@@ -206,7 +214,7 @@ class CadastroDeTutorTest extends TestCase
 
         $this->assertSame(1, User::query()->where('email', 'larissa@example.com')->count());
 
-        $tutor = Tutor::query()->where('cpf', self::CPF_VALIDO)->sole();
+        $tutor = Tutor::query()->sole();
         $this->assertSame($larissa->id, $tutor->user_id);
 
         // A conta continua a mesma — senha, ativação e o papel de veterinário.
@@ -215,16 +223,16 @@ class CadastroDeTutorTest extends TestCase
         $this->assertContains('veterinario', $larissa->papeis());
     }
 
-    public function test_cpf_com_digito_verificador_incorreto_e_recusado(): void
+    public function test_email_e_obrigatorio(): void
     {
         $clinica = $this->clinica();
 
-        $response = $this->actingAs($this->marcelo($clinica))->postJson(
-            '/api/clinica/tutores',
-            $this->dados(['cpf' => self::CPF_INVALIDO]),
-        );
+        $this->actingAs($this->marcelo($clinica))
+            ->postJson('/api/clinica/tutores', $this->dados(['email' => '']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
 
-        $response->assertStatus(422)->assertJsonValidationErrors(['cpf']);
+        $this->assertSame(0, Tutor::query()->count());
     }
 
     public function test_quem_nao_tem_vinculo_de_veterinario_nao_cadastra(): void

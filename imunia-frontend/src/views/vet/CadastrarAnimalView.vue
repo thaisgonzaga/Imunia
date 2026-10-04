@@ -17,20 +17,15 @@ import AppSelect from '@/components/base/AppSelect.vue'
 import { ApiError, apiGet, apiPost } from '@/lib/api.js'
 import { descreverEspecie } from '@/lib/animais.js'
 import { emNumeros } from '@/lib/datas.js'
-import {
-  cpfValido,
-  formatarCpf,
-  formatarDataAproximada,
-  formatarDataCompleta,
-  somenteDigitos,
-} from '@/lib/masks.js'
+import { cpfValido, formatarDataAproximada, formatarDataCompleta, somenteDigitos } from '@/lib/masks.js'
+import { CPF, EMAIL, classificarTermo, termoParaExibicao } from '@/lib/busca.js'
 
 /**
  * V05 — cadastrar animal no atendimento (RF16, RF19, RF20).
  *
  * Uma tela, duas portas. Por `/clinica/animais/novo`, o cadastro inteiro:
- * identificação e caracterização de uma vez, com o tutor resolvido por CPF —
- * a chave do balcão, verificada pela busca de V03 como em V04. Por
+ * identificação e caracterização de uma vez, com o tutor resolvido pelo e-mail
+ * (ou pelo CPF, de quem o tiver no cadastro), verificado pela busca de V03. Por
  * `/clinica/animais/:codigo/caracterizar` — o endereço que a tarja de V06
  * promete —, o modo de consolidação (RF20b): a identificação já existe e é do
  * tutor; o que se preenche é só a metade privativa. A mesma porta serve à
@@ -79,10 +74,11 @@ const rotuloDoEnvio = computed(() => {
 
 // Etapa do tutor (modo novo) ------------------------------------------------
 
-/** cpf → confirmado | sem-cadastro — a barreira de V04, pela mesma razão. */
-const etapaDoTutor = ref('cpf')
-const cpf = ref('')
-const erroDoCpf = ref('')
+/** chave → confirmado | sem-cadastro — animal sem titular não existe. */
+const etapaDoTutor = ref('chave')
+/** O e-mail ou o CPF do tutor, como digitado. */
+const chave = ref('')
+const erroDaChave = ref('')
 const verificando = ref(false)
 
 /** Nome do tutor quando o âmbito já o mostra; vazio fora dele (RN12). */
@@ -166,12 +162,12 @@ async function carregar() {
       // vínculos. Nada é consultado nem registrado.
       contexto.value = await apiGet('/api/clinica/buscar')
 
-      // Vindo de V04 com o tutor já resolvido, a barreira do CPF se confere
-      // sozinha. O CPF chega pelo estado do histórico, e não pela URL, para
-      // não ficar gravado no endereço.
-      const cpfRecebido = window.history.state?.cpf
-      if (cpfRecebido) {
-        cpf.value = String(cpfRecebido)
+      // Vindo de V04 ou de V03 com o tutor já resolvido, a barreira se
+      // confere sozinha. A chave chega pelo estado do histórico, e não pela
+      // URL, para não ficar gravada no endereço.
+      const recebida = window.history.state?.email ?? window.history.state?.cpf
+      if (recebida) {
+        chave.value = String(recebida)
         await verificar()
       }
 
@@ -207,16 +203,29 @@ async function carregar() {
   }
 }
 
+/** A chave classificada: e-mail, CPF ou nenhuma das duas. */
+const chaveClassificada = computed(() => classificarTermo(chave.value))
+
 /**
- * A barreira do CPF — a mesma verificação de V04, pela busca de V03: traz o
- * titular e registra a consulta (RF18b). O formulário só abre com um titular
- * resolvido, porque animal sem tutor não existe no sistema.
+ * A barreira do tutor, pela busca de V03: traz o titular e registra a consulta
+ * (RF18b). O formulário só abre com um titular resolvido, porque animal sem
+ * tutor não existe no sistema.
  */
 async function verificar() {
-  erroDoCpf.value = ''
+  erroDaChave.value = ''
 
-  if (!cpfValido(cpf.value)) {
-    erroDoCpf.value =
+  const { tipo, valor } = chaveClassificada.value
+
+  if (tipo !== EMAIL && tipo !== CPF) {
+    erroDaChave.value = 'Informe o e-mail do tutor.'
+
+    return
+  }
+
+  // RF13 — o dígito confere antes da consulta: um número digitado errado não
+  // pode gerar registro de acesso ao CPF de outra pessoa.
+  if (tipo === CPF && !cpfValido(valor)) {
+    erroDaChave.value =
       'Este CPF não é válido: o dígito verificador não confere. Confira o número com o tutor.'
 
     return
@@ -225,7 +234,7 @@ async function verificar() {
   verificando.value = true
 
   try {
-    const busca = new URLSearchParams({ termo: somenteDigitos(cpf.value) })
+    const busca = new URLSearchParams({ termo: valor })
     if (prestadorId.value) busca.set('prestador', prestadorId.value)
 
     const consulta = await apiGet(`/api/clinica/buscar?${busca}`)
@@ -237,14 +246,14 @@ async function verificar() {
       etapaDoTutor.value = 'sem-cadastro'
     }
   } catch (excecao) {
-    erroDoCpf.value = excecao.message
+    erroDaChave.value = excecao.message
   } finally {
     verificando.value = false
   }
 }
 
-function trocarCpf() {
-  etapaDoTutor.value = 'cpf'
+function trocarTutor() {
+  etapaDoTutor.value = 'chave'
   tutorConhecido.value = ''
   duplicado.value = null
   erroDeEnvio.value = ''
@@ -282,8 +291,10 @@ async function enviar({ apesarDaDuplicidade = false } = {}) {
       return
     }
 
+    const { tipo, valor } = chaveClassificada.value
+
     const resposta = await apiPost('/api/clinica/animais', {
-      cpf: somenteDigitos(cpf.value),
+      [tipo === CPF ? 'cpf' : 'email']: valor,
       nome: form.value.nome.trim(),
       especie: form.value.especie,
       ...caracterizacaoDoFormulario(),
@@ -323,10 +334,11 @@ function tratarFalha(excecao) {
   if (excecao instanceof ApiError && excecao.status === 422) {
     errosDeCampo.value = excecao.errors
 
-    // O CPF é validado no envio também; o erro dele volta para a barreira.
-    if (excecao.errors.cpf) {
-      erroDoCpf.value = excecao.errors.cpf[0]
-      etapaDoTutor.value = 'cpf'
+    // O tutor é conferido no envio também; o erro volta para a barreira.
+    const erroDoTutor = excecao.errors.email ?? excecao.errors.cpf
+    if (erroDoTutor) {
+      erroDaChave.value = erroDoTutor[0]
+      etapaDoTutor.value = 'chave'
     }
 
     return
@@ -340,7 +352,7 @@ function trocarPrestador(id) {
 
   // A verificação registra o acesso em nome do prestador ativo: trocada a
   // clínica, ela se refaz.
-  if (modo.value === 'novo' && etapaDoTutor.value !== 'cpf') verificar()
+  if (modo.value === 'novo' && etapaDoTutor.value !== 'chave') verificar()
   if (modo.value === 'consolidar') carregar()
 }
 
@@ -424,24 +436,22 @@ onMounted(carregar)
         <span v-if="animal.preliminar" class="identificado__tarja">Cadastro preliminar</span>
       </section>
 
-      <!-- Etapa do tutor (modo novo): o CPF é a chave e a barreira, como em
-           V04 — animal sem titular resolvido não existe no sistema. -->
+      <!-- Etapa do tutor (modo novo): o e-mail (ou o CPF) é a chave e a
+           barreira — animal sem titular resolvido não existe no sistema. -->
       <template v-if="modo === 'novo'">
-        <section v-if="etapaDoTutor === 'cpf'" class="cartao etapa-cpf">
+        <section v-if="etapaDoTutor === 'chave'" class="cartao etapa-tutor">
           <h2 class="secao__rotulo">Tutor do animal</h2>
-          <form class="etapa-cpf__linha" novalidate @submit.prevent="verificar">
+          <form class="etapa-tutor__linha" novalidate @submit.prevent="verificar">
             <AppInput
-              id="v05-cpf"
-              :model-value="cpf"
-              label="CPF do tutor"
-              inputmode="numeric"
+              id="v05-tutor"
+              v-model="chave"
+              label="E-mail do tutor"
+              type="email"
               autocomplete="off"
-              mono
-              :error="erroDoCpf"
-              hint="A verificação diz apenas se o CPF já tem cadastro — nada mais."
-              @update:model-value="cpf = formatarCpf($event)"
+              :error="erroDaChave"
+              hint="A verificação diz apenas se o tutor já está no Imunia."
             />
-            <AppButton type="submit" :loading="verificando" class="etapa-cpf__botao">
+            <AppButton type="submit" :loading="verificando" class="etapa-tutor__botao">
               Verificar
             </AppButton>
           </form>
@@ -449,36 +459,36 @@ onMounted(carregar)
           <div class="aviso-de-registro">
             <Eye :size="20" :stroke-width="1.75" class="aviso-de-registro__icone" />
             <p class="aviso-de-registro__texto">
-              Se o CPF já tiver cadastro e a clínica ainda não acompanhar nenhum animal dele,
+              Se o tutor já tiver cadastro e a clínica ainda não acompanhar nenhum animal dele,
               a consulta fica registrada e visível ao tutor.
             </p>
           </div>
         </section>
 
-        <section v-else-if="etapaDoTutor === 'sem-cadastro'" class="cartao etapa-cpf">
+        <section v-else-if="etapaDoTutor === 'sem-cadastro'" class="cartao etapa-tutor">
           <h2 class="secao__rotulo">Tutor do animal</h2>
-          <p class="etapa-cpf__vazio">
-            Nenhum cadastro corresponde a {{ formatarCpf(cpf) }}. O animal precisa de um titular:
+          <p class="etapa-tutor__vazio">
+            Nenhum tutor corresponde a {{ termoParaExibicao(chave) }}. O animal precisa de um titular:
             cadastre o tutor primeiro — o animal vem em seguida.
           </p>
-          <div class="etapa-cpf__acoes">
+          <div class="etapa-tutor__acoes">
             <RouterLink to="/clinica/tutores/novo" class="botao botao--primario">
               Cadastrar tutor
             </RouterLink>
-            <button type="button" class="botao botao--secundario" @click="trocarCpf">
-              Trocar CPF
+            <button type="button" class="botao botao--secundario" @click="trocarTutor">
+              Trocar tutor
             </button>
           </div>
         </section>
 
-        <section v-else class="cartao cpf-verificado">
+        <section v-else class="cartao tutor-verificado">
           <div>
-            <p class="cpf-verificado__rotulo">Tutor do animal</p>
-            <p class="cpf-verificado__numero">{{ formatarCpf(cpf) }}</p>
-            <p v-if="tutorConhecido" class="cpf-verificado__nome">{{ tutorConhecido }}</p>
+            <p class="tutor-verificado__rotulo">Tutor do animal</p>
+            <p v-if="tutorConhecido" class="tutor-verificado__nome">{{ tutorConhecido }}</p>
+            <p class="tutor-verificado__numero">{{ termoParaExibicao(chave) }}</p>
           </div>
-          <button type="button" class="cpf-verificado__trocar" @click="trocarCpf">
-            Trocar CPF
+          <button type="button" class="tutor-verificado__trocar" @click="trocarTutor">
+            Trocar tutor
           </button>
         </section>
       </template>
@@ -754,22 +764,22 @@ onMounted(carregar)
 
 /* Etapa do tutor ------------------------------------------------------------ */
 
-.etapa-cpf__linha {
+.etapa-tutor__linha {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   margin: var(--space-3) 0 0;
 }
 
-.etapa-cpf__linha > :first-child {
+.etapa-tutor__linha > :first-child {
   flex: 1;
 }
 
-.etapa-cpf__botao {
+.etapa-tutor__botao {
   margin-top: 24px;
 }
 
-.etapa-cpf__vazio {
+.etapa-tutor__vazio {
   margin: var(--space-3) 0 0;
   max-width: 65ch;
   font-size: 14px;
@@ -777,7 +787,7 @@ onMounted(carregar)
   color: var(--ink-muted);
 }
 
-.etapa-cpf__acoes {
+.etapa-tutor__acoes {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -807,31 +817,29 @@ onMounted(carregar)
   color: var(--ink);
 }
 
-.cpf-verificado {
+.tutor-verificado {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
 }
 
-.cpf-verificado__rotulo {
+.tutor-verificado__rotulo {
   margin: 0;
   font-size: 12px;
   line-height: 16px;
   color: var(--ink-faint);
 }
 
-.cpf-verificado__numero {
-  margin: var(--space-1) 0 0;
-  font-family: var(--font-mono);
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
+.tutor-verificado__numero {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
 }
 
-.cpf-verificado__nome {
+.tutor-verificado__nome {
   margin: var(--space-1) 0 0;
   font-size: 14px;
   line-height: 20px;
@@ -839,7 +847,7 @@ onMounted(carregar)
   color: var(--ink);
 }
 
-.cpf-verificado__trocar {
+.tutor-verificado__trocar {
   flex: none;
   background: none;
   border: 0;

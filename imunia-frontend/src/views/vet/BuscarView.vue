@@ -17,6 +17,7 @@ import { descreverAnimal } from '@/lib/animais.js'
 import {
   CODIGO,
   CPF,
+  EMAIL,
   MICROCHIP,
   classificarTermo,
   termoConsultavel,
@@ -26,8 +27,8 @@ import {
 /**
  * V03 — buscar animal ou tutor (RF51, RF18, RF13).
  *
- * O atendimento não depende do tutor: a busca por chave exata (CPF, código ou
- * micro-chip) traz o cadastro inteiro, de qualquer clínica, e a busca por nome
+ * O atendimento não depende do tutor: a busca por chave exata (e-mail ou CPF
+ * do tutor, código ou micro-chip) traz o cadastro inteiro, de qualquer clínica, e a busca por nome
  * percorre os animais que esta clínica já acompanha. O cartão diz quando o
  * animal ainda não é acompanhado aqui — abrir a ficha dele fica registrado e
  * visível ao tutor (RF18b), e o animal passa a ser acompanhado.
@@ -50,7 +51,7 @@ const resultados = ref(null)
 const estado = computed(() => consulta.value?.estado ?? 'inicial')
 const inicial = computed(() => estado.value === 'inicial')
 const encontrados = computed(() => consulta.value?.animais ?? [])
-/** Pelo CPF, o titular encontrado — com ou sem animal. */
+/** Pelo e-mail ou pelo CPF, o titular encontrado — com ou sem animal. */
 const tutor = computed(() => consulta.value?.tutor ?? null)
 const prestador = computed(() => consulta.value?.prestador?.nome ?? 'este prestador')
 
@@ -65,18 +66,28 @@ const termoRespondido = computed(() =>
 )
 
 /**
- * O CPF da resposta, só dígitos, para seguir ao cadastro do animal. Viaja no
+ * A chave do titular na resposta, para seguir ao cadastro do animal. Viaja no
  * estado da navegação, como em V04, e nunca no endereço.
  */
-const cpfRespondido = computed(() => (consulta.value?.termo ?? '').replace(/\D/g, ''))
+const chaveDoTutor = computed(() => {
+  const { tipo, valor } = classificarTermo(consulta.value?.termo ?? '')
+
+  return tipo === EMAIL ? { email: valor } : { cpf: valor }
+})
 
 const CABECALHOS = {
+  [EMAIL]: 'Resultados para o e-mail',
   [CPF]: 'Resultados para o CPF',
   [CODIGO]: 'Resultados para',
   [MICROCHIP]: 'Resultados para o micro-chip',
 }
 
 const VAZIOS = {
+  [EMAIL]: {
+    titulo: 'Nenhum tutor corresponde a este e-mail',
+    descricao:
+      'Confira o endereço com o tutor. Se ele ainda não está no Imunia, cadastre-o agora — o animal vem em seguida.',
+  },
   [CPF]: {
     titulo: 'Nenhum cadastro corresponde a este CPF',
     descricao:
@@ -99,7 +110,7 @@ const vazio = computed(
     VAZIOS[tipoRespondido.value] ?? {
       titulo: `Nenhum cadastro corresponde a “${termoRespondido.value}”`,
       descricao:
-        'Confira a grafia, ou procure pelo CPF do tutor, pelo código do animal ou pelo micro-chip.',
+        'Confira a grafia, ou procure pelo e-mail do tutor, pelo código do animal ou pelo micro-chip.',
     },
 )
 
@@ -336,7 +347,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
               v-model="termo"
               type="search"
               class="campo__entrada"
-              placeholder="Nome, CPF, código do animal ou micro-chip"
+              placeholder="Nome, e-mail, código do animal ou micro-chip"
               aria-label="Buscar animal ou tutor"
               :aria-invalid="Boolean(erroDoTermo)"
               :aria-describedby="erroDoTermo ? 'erro-do-termo' : undefined"
@@ -367,8 +378,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
 
         <dl class="exemplos">
           <div class="exemplo">
-            <dt class="exemplo__rotulo">CPF do tutor</dt>
-            <dd class="exemplo__forma exemplo__forma--numero">000.000.000-00</dd>
+            <dt class="exemplo__rotulo">E-mail do tutor</dt>
+            <dd class="exemplo__forma exemplo__forma--texto">helena@exemplo.com</dd>
           </div>
           <div class="exemplo">
             <dt class="exemplo__rotulo">Código do animal</dt>
@@ -389,7 +400,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
         <div class="aviso-de-registro">
           <Eye :size="20" :stroke-width="1.75" class="aviso-de-registro__icone" />
           <p class="aviso-de-registro__texto">
-            Buscas por CPF, código ou micro-chip de animal que a clínica ainda não acompanha
+            Buscas por e-mail, código ou micro-chip de animal que a clínica ainda não acompanha
             ficam registradas e visíveis ao tutor. A busca por nome percorre só os animais que
             a clínica já acompanha.
           </p>
@@ -446,8 +457,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
               <span v-else>“{{ termoRespondido }}”</span>
             </h1>
           </div>
-          <span v-if="tipoRespondido === CPF" class="busca__deteccao">
-            CPF reconhecido automaticamente
+          <span v-if="tipoRespondido === CPF || tipoRespondido === EMAIL" class="busca__deteccao">
+            {{ tipoRespondido === CPF ? 'CPF' : 'E-mail' }} reconhecido automaticamente
           </span>
         </div>
 
@@ -472,7 +483,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
 
           <template v-else>
             <section class="secao">
-              <!-- Pelo CPF a resposta traz o titular, com ou sem animal: é o
+              <!-- Pelo e-mail ou pelo CPF a resposta traz o titular, com ou sem animal: é o
                    que permite seguir ao cadastro do primeiro. -->
               <p v-if="tutor" class="secao__tutor">
                 Tutor: <strong>{{ tutor.nome }}</strong>
@@ -517,7 +528,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', aoTeclar))
 
               <p v-else-if="tutor" class="secao__vazio">
                 {{ tutor.nome }} ainda não tem animal cadastrado no Imunia.
-                <RouterLink :to="{ path: '/clinica/animais/novo', state: { cpf: cpfRespondido } }">
+                <RouterLink :to="{ path: '/clinica/animais/novo', state: chaveDoTutor }">
                   Cadastrar o animal
                 </RouterLink>
               </p>

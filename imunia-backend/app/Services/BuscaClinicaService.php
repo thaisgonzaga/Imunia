@@ -16,7 +16,8 @@ use Illuminate\Support\Collection;
  *
  * Duas portas, com alcances diferentes:
  *
- * - **Identificador exato** — CPF do tutor, código do animal, micro-chip. Quem
+ * - **Identificador exato** — e-mail ou CPF do tutor, código do animal,
+ *   micro-chip. Quem
  *   o tem na mão está com o animal (ou com o tutor) à sua frente, e o
  *   atendimento não espera por ninguém: a resposta traz o cadastro inteiro,
  *   seja de que clínica for. Abrir a ficha o põe na carteira do prestador.
@@ -45,11 +46,11 @@ class BuscaClinicaService
     {
         $animais = $this->encontrados($prestador, $termo);
 
-        // Pelo CPF a resposta é também o titular, com ou sem animal: é o que
-        // permite a V04 e V05 seguirem para o cadastro do animal de um tutor
-        // que ainda não tem nenhum.
-        $tutor = $termo->tipo === TermoDeBusca::CPF && ! $termo->vazio()
-            ? Tutor::query()->where('cpf', $termo->valor)->first()
+        // Pelo e-mail ou pelo CPF a resposta é também o titular, com ou sem
+        // animal: é o que permite a V04 e V05 seguirem para o cadastro do
+        // animal de um tutor que ainda não tem nenhum.
+        $tutor = $termo->identificaTutor() && ! $termo->vazio()
+            ? $this->titular($termo)
             : null;
 
         // RF52b — a gravação do log é condição da exibição: acontece antes de a
@@ -69,6 +70,13 @@ class BuscaClinicaService
             'animais' => $this->cartoes($animais),
             'tutor' => $tutor === null ? null : ['nome' => $tutor->nome],
         ];
+    }
+
+    private function titular(TermoDeBusca $termo): ?Tutor
+    {
+        return $termo->tipo === TermoDeBusca::EMAIL
+            ? Tutor::query()->doEmail($termo->valor)->first()
+            : Tutor::query()->where('cpf', $termo->valor)->first();
     }
 
     /**
@@ -103,6 +111,10 @@ class BuscaClinicaService
     private function restringirAoTermo(Builder $consulta, TermoDeBusca $termo): void
     {
         match ($termo->tipo) {
+            TermoDeBusca::EMAIL => $consulta->whereHas(
+                'tutor',
+                fn (Builder $tutor) => $tutor->doEmail($termo->valor),
+            ),
             TermoDeBusca::CPF => $consulta->whereHas(
                 'tutor',
                 fn (Builder $tutor) => $tutor->where('cpf', $termo->valor),
@@ -153,7 +165,7 @@ class BuscaClinicaService
                 'user_id' => $profissional->id,
                 'tutor_id' => $tutor->id,
                 'animal_id' => null,
-                'natureza' => RegistroDeAcesso::BUSCA_POR_CPF,
+                'natureza' => $termo->naturezaDoRegistro(),
                 'ocorrido_em' => $agora,
             ]);
 
@@ -172,9 +184,9 @@ class BuscaClinicaService
                 'prestador_id' => $prestador->id,
                 'user_id' => $profissional->id,
                 'tutor_id' => $tutorId,
-                // Pelo CPF o encontrado é o titular, como em V04; pelo código e
-                // pelo micro-chip, um animal determinado.
-                'animal_id' => $termo->tipo === TermoDeBusca::CPF ? null : $doTutor->first()->id,
+                // Pelo e-mail ou pelo CPF o encontrado é o titular, como em
+                // V04; pelo código e pelo micro-chip, um animal determinado.
+                'animal_id' => $termo->identificaTutor() ? null : $doTutor->first()->id,
                 'natureza' => $termo->naturezaDoRegistro(),
                 'ocorrido_em' => $agora,
             ])

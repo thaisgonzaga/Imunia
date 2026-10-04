@@ -183,8 +183,8 @@ function diaEMes(iso) {
           <p class="passo__ordem">Passo 1</p>
           <p class="passo__titulo">Cadastrar o tutor</p>
           <p class="passo__texto">
-            O CPF é a chave. Se o tutor já existe no Imunia, o cadastro dele aparece e
-            você segue direto para o animal.
+            Basta o nome e o e-mail, que é a chave do cadastro. Se o tutor já existe no
+            Imunia, o cadastro dele aparece e você segue direto para o animal.
           </p>
           <RouterLink to="/clinica/tutores/novo" class="botao botao--primario">
             Cadastrar tutor
@@ -227,7 +227,7 @@ function diaEMes(iso) {
         </div>
         <p class="sem-acompanhados__texto">
           Os animais entram no painel de {{ painel.prestador.nome }} quando você os cadastra
-          ou atende. Busque pelo CPF do tutor, pelo código ou pelo micro-chip — o atendimento
+          ou atende. Busque pelo e-mail do tutor, pelo código ou pelo micro-chip — o atendimento
           não depende do tutor.
         </p>
         <div class="sem-acompanhados__acoes">

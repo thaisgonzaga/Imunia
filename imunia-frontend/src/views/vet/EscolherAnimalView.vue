@@ -320,7 +320,7 @@ onMounted(async () => {
            curta não é falha, é a carteira da clínica. -->
       <p id="ambito-da-escolha" class="escolha__ambito">
         Pelo nome, aparecem os animais que {{ prestador }} acompanha; pelo código, micro-chip
-        ou CPF do tutor, qualquer animal do Imunia.
+        ou e-mail do tutor, qualquer animal do Imunia.
         <span class="escolha__teclas"><kbd>↑ ↓</kbd> percorre · <kbd>Enter</kbd> escolhe</span>
       </p>
 
@@ -377,13 +377,13 @@ onMounted(async () => {
           v-else-if="semResultado"
           :icone="PawPrint"
           titulo="Nenhum animal encontrado"
-          :descricao="`Nenhum animal corresponde a “${termoRespondido}”. Pelo nome, a busca percorre só os animais que ${prestador} acompanha; pelo código ou pelo CPF do tutor, alcança qualquer cadastro do Imunia.`"
+          :descricao="`Nenhum animal corresponde a “${termoRespondido}”. Pelo nome, a busca percorre só os animais que ${prestador} acompanha; pelo código ou pelo e-mail do tutor, alcança qualquer cadastro do Imunia.`"
         >
           <RouterLink to="/clinica/animais/novo" class="botao botao--primario">
             Cadastrar animal
           </RouterLink>
           <RouterLink to="/clinica/buscar" class="botao botao--secundario">
-            Buscar por CPF do tutor
+            Buscar por e-mail do tutor
           </RouterLink>
         </EmptyState>
 
@@ -456,7 +456,7 @@ onMounted(async () => {
             Cadastrar animal
           </RouterLink>
           <RouterLink to="/clinica/buscar" class="botao botao--secundario">
-            Buscar por CPF do tutor
+            Buscar por e-mail do tutor
           </RouterLink>
         </div>
       </div>

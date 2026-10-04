@@ -7,7 +7,7 @@ use App\Rules\CpfValido;
 
 /**
  * O termo digitado na busca do ambiente clínico (V03, RF51), classificado pelo
- * que ele é: CPF do tutor, código do animal, micro-chip ou nome.
+ * que ele é: e-mail ou CPF do tutor, código do animal, micro-chip ou nome.
  *
  * A tela tem um campo só, e a detecção é automática (§8.3 do briefing) — pedir
  * ao profissional que declare o tipo antes de digitar seria transformar em
@@ -18,6 +18,8 @@ use App\Rules\CpfValido;
  */
 final class TermoDeBusca
 {
+    public const EMAIL = 'email';
+
     public const CPF = 'cpf';
 
     public const CODIGO = 'codigo';
@@ -30,17 +32,24 @@ final class TermoDeBusca
     private const DIGITOS_DO_MICROCHIP = 15;
 
     private function __construct(
-        /** Um dos quatro tipos acima. */
+        /** Um dos cinco tipos acima. */
         public readonly string $tipo,
         /** Como foi digitado — é o que a tela repete no título do resultado. */
         public readonly string $original,
-        /** Como o banco guarda: CPF em dígitos, código com hifens, nome como veio. */
+        /** Como o banco guarda: e-mail em minúsculas, CPF em dígitos, código com hifens, nome como veio. */
         public readonly string $valor,
     ) {}
 
     public static function de(?string $termo): self
     {
         $limpo = trim(preg_replace('/\s+/', ' ', (string) $termo));
+
+        // A arroba basta para reconhecer a intenção: nenhum nome, código ou
+        // número a tem. Um endereço malformado segue como e-mail e
+        // simplesmente não encontra ninguém.
+        if (str_contains($limpo, '@')) {
+            return new self(self::EMAIL, $limpo, mb_strtolower(str_replace(' ', '', $limpo)));
+        }
 
         // Maiúsculas e sem pontuação: é assim que o código do animal se
         // compara, e é assim que "im-4b8t 77lx" vira o que está no banco.
@@ -84,7 +93,7 @@ final class TermoDeBusca
     }
 
     /**
-     * CPF, código e micro-chip identificam um titular ou um animal
+     * E-mail, CPF, código e micro-chip identificam um titular ou um animal
      * determinado, e por isso alcançam qualquer cadastro; nome, só a carteira
      * do prestador (ver `BuscaClinicaService`).
      */
@@ -120,12 +129,22 @@ final class TermoDeBusca
     }
 
     /**
+     * As duas chaves que identificam o titular, e não um animal: o que se
+     * encontra por elas é o tutor, com ou sem animal.
+     */
+    public function identificaTutor(): bool
+    {
+        return in_array($this->tipo, [self::EMAIL, self::CPF], true);
+    }
+
+    /**
      * RF52 — "natureza do dado acessado". É o que T14 devolve ao tutor: por
      * qual chave o procuraram.
      */
     public function naturezaDoRegistro(): string
     {
         return match ($this->tipo) {
+            self::EMAIL => RegistroDeAcesso::BUSCA_POR_EMAIL,
             self::CPF => RegistroDeAcesso::BUSCA_POR_CPF,
             self::CODIGO => RegistroDeAcesso::BUSCA_POR_CODIGO,
             self::MICROCHIP => RegistroDeAcesso::BUSCA_POR_MICROCHIP,

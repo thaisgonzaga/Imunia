@@ -338,6 +338,42 @@ class BuscaClinicaTest extends TestCase
         ]);
     }
 
+    public function test_busca_por_email_devolve_o_titular_sem_cpf(): void
+    {
+        // O tutor cadastrado no balcão tem nome e e-mail, e é pelo e-mail que
+        // V04 e V05 o reencontram.
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $conta = User::factory()->create(['email' => 'helena@example.com']);
+        $helena = Tutor::factory()->for($conta)->create(['nome' => 'Helena Ramos', 'cpf' => null]);
+        $theo = Animal::factory()->create(['tutor_id' => $helena->id, 'nome' => 'Théo']);
+
+        $this->buscar($marcelo, 'Helena@Example.com')
+            ->assertOk()
+            ->assertJsonPath('tipo', 'email')
+            ->assertJsonPath('estado', 'normal')
+            ->assertJsonPath('tutor.nome', 'Helena Ramos')
+            ->assertJsonPath('animais.0.codigo', $theo->codigo);
+
+        $this->assertDatabaseHas('registros_de_acesso', [
+            'prestador_id' => $clinica->id,
+            'tutor_id' => $helena->id,
+            'animal_id' => null,
+            'natureza' => RegistroDeAcesso::BUSCA_POR_EMAIL,
+        ]);
+    }
+
+    public function test_email_sem_tutor_nao_encontra_ninguem(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
+
+        // A conta existe, mas não é de tutor: o veterinário não aparece.
+        $this->buscar($marcelo, $marcelo->email)
+            ->assertOk()
+            ->assertJsonPath('estado', 'sem_resultado')
+            ->assertJsonPath('tutor', null);
+    }
+
     public function test_busca_por_codigo_nao_devolve_titular(): void
     {
         $marcelo = $this->marcelo($this->clinica());

@@ -9,7 +9,6 @@ import PasswordChecklist from '@/components/auth/PasswordChecklist.vue'
 import RoleShell from '@/components/base/RoleShell.vue'
 import { ApiError, apiGet, apiPost } from '@/lib/api.js'
 import { useReenvioDeConfirmacao } from '@/lib/confirmacaoDeEmail.js'
-import { formatarCpf } from '@/lib/masks.js'
 import { senhaForte } from '@/lib/senha.js'
 import { useSessaoStore } from '@/stores/sessao.js'
 
@@ -19,9 +18,8 @@ import { useSessaoStore } from '@/stores/sessao.js'
  * veterinário que vem trocar a senha não deve perder a barra lateral clínica
  * por ter clicado no próprio nome.
  *
- * O que a tela deliberadamente **não** oferece: correção de CPF, que identifica
- * o titular perante RF13 e viaja nos documentos exportados, e por isso não é
- * matéria de formulário; e as seções de preferências de notificação (T16) e de
+ * O que a tela deliberadamente **não** oferece: o CPF, que deixou de ser pedido
+ * ao tutor; e as seções de preferências de notificação (T16) e de
  * direitos do titular (RF54, RF55), ainda não construídas — anunciá-las em
  * botão que não leva a lugar algum seria repetir aqui o erro que trouxe você a
  * esta tela. O histórico de notificações (T17) já existe, e se chega a ele pelo
@@ -234,16 +232,6 @@ carregar()
               autocomplete="name"
               :error="erros.nome"
               hint="É o nome que aparece na carteira de vacinação dos seus animais."
-            />
-
-            <AppInput
-              v-if="conta.cpf"
-              id="conta-cpf"
-              :model-value="formatarCpf(conta.cpf)"
-              label="CPF"
-              mono
-              readonly
-              hint="O CPF identifica você nos documentos já emitidos e não pode ser alterado por aqui."
             />
 
             <AppInput

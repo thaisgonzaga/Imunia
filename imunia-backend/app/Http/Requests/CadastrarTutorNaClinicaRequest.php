@@ -2,17 +2,16 @@
 
 namespace App\Http\Requests;
 
-use App\Rules\CpfValido;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * V04 — cadastrar tutor no atendimento (RF12).
  *
+ * Nome e e-mail, e nada mais: o e-mail é a chave do cadastro (RN05, um
+ * endereço, uma conta) e o destino do convite; o CPF não é pedido no balcão.
  * Só a forma do que foi digitado é conferida aqui. A existência de cadastro —
- * CPF que já é de alguém, e-mail que já tem conta — é decidida no controlador,
- * porque não é defeito do que se digitou: é estado da plataforma, tem ordem de
- * precedência própria (o CPF existente conduz ao fluxo de RF13, e o e-mail nem
- * chega a importar nesse caso) e, no caso do CPF, gera registro de acesso.
+ * e-mail que já é de um tutor — é decidida no controlador, porque não é defeito
+ * do que se digitou: é estado da plataforma, e conduz ao fluxo de RF13.
  *
  * Sem senha, de propósito: quem a define é o titular, no aceite do convite de
  * ativação (RF14). Sem aceite de termos pelo mesmo motivo — o veterinário não
@@ -26,13 +25,13 @@ class CadastrarTutorNaClinicaRequest extends FormRequest
     }
 
     /**
-     * Normaliza o CPF para dígitos puros antes da validação, para que a regra
-     * de dígito verificador e a consulta de existência batam com o valor salvo.
+     * O e-mail é comparado como a conta o guarda: sem espaços nas pontas e em
+     * minúsculas.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'cpf' => preg_replace('/\D/', '', (string) $this->input('cpf')),
+            'email' => mb_strtolower(trim((string) $this->input('email'))),
         ]);
     }
 
@@ -40,7 +39,6 @@ class CadastrarTutorNaClinicaRequest extends FormRequest
     {
         return [
             'nome' => ['required', 'string', 'max:255'],
-            'cpf' => ['required', 'string', new CpfValido],
             'email' => ['required', 'string', 'email', 'max:255'],
         ];
     }
@@ -49,7 +47,6 @@ class CadastrarTutorNaClinicaRequest extends FormRequest
     {
         return [
             'nome.required' => 'Informe o nome completo do tutor.',
-            'cpf.required' => 'Informe o CPF.',
             'email.required' => 'Informe o e-mail: é para ele que vai o convite de ativação.',
             'email.email' => 'Falta a parte final do endereço, depois do ponto.',
         ];

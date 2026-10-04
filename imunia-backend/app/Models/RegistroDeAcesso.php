@@ -46,6 +46,9 @@ class RegistroDeAcesso extends Model
      */
     public const BUSCA_POR_CPF = 'busca_por_cpf';
 
+    /** O e-mail é a chave com que o veterinário cadastra o tutor (V04). */
+    public const BUSCA_POR_EMAIL = 'busca_por_email';
+
     public const BUSCA_POR_CODIGO = 'busca_por_codigo';
 
     public const BUSCA_POR_MICROCHIP = 'busca_por_microchip';

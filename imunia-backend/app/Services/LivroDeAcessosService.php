@@ -205,6 +205,7 @@ class LivroDeAcessosService
 
         return match ($registro->natureza) {
             RegistroDeAcesso::BUSCA_POR_CPF => 'Pesquisou o seu CPF e encontrou o seu cadastro',
+            RegistroDeAcesso::BUSCA_POR_EMAIL => 'Pesquisou o seu e-mail e encontrou o seu cadastro',
             RegistroDeAcesso::BUSCA_POR_NOME => 'Pesquisou pelo seu nome e viu que existe cadastro',
             RegistroDeAcesso::BUSCA_POR_CODIGO => $animal === null
                 ? 'Pesquisou pelo código de um animal seu'
@@ -243,6 +244,7 @@ class LivroDeAcessosService
     {
         return match ($registro->natureza) {
             RegistroDeAcesso::BUSCA_POR_CPF => 'busca pelo seu CPF',
+            RegistroDeAcesso::BUSCA_POR_EMAIL => 'busca pelo seu e-mail',
             RegistroDeAcesso::BUSCA_POR_NOME => 'busca pelo seu nome',
             RegistroDeAcesso::BUSCA_POR_CODIGO => 'busca pelo código',
             RegistroDeAcesso::BUSCA_POR_MICROCHIP => 'busca pelo micro-chip',

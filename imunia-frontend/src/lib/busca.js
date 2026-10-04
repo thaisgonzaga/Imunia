@@ -10,6 +10,7 @@ import { cpfValido, formatarCpf, somenteDigitos } from '@/lib/masks.js'
  * Quem decide o que a busca encontra continua sendo o servidor. O que se decide
  * aqui é o que a tela diz enquanto ela não respondeu.
  */
+export const EMAIL = 'email'
 export const CPF = 'cpf'
 export const CODIGO = 'codigo'
 export const MICROCHIP = 'microchip'
@@ -19,6 +20,7 @@ const DIGITOS_DO_MICROCHIP = 15
 
 /** Como o tipo é anunciado ao lado do campo, no rótulo do desenho. */
 const ROTULOS = {
+  [EMAIL]: 'e-mail',
   [CPF]: 'CPF',
   [CODIGO]: 'código do animal',
   [MICROCHIP]: 'micro-chip',
@@ -27,6 +29,11 @@ const ROTULOS = {
 
 export function classificarTermo(termo) {
   const limpo = (termo ?? '').trim().replace(/\s+/g, ' ')
+
+  // A arroba basta: nenhum nome, código ou número a tem.
+  if (limpo.includes('@')) {
+    return { tipo: EMAIL, valor: limpo.replace(/\s/g, '').toLowerCase(), rotulo: ROTULOS[EMAIL] }
+  }
   const compacto = limpo.replace(/[^0-9A-Za-z]/g, '').toUpperCase()
   const digitos = somenteDigitos(limpo)
 

@@ -38,14 +38,19 @@ class CadastroDeAnimalController extends Controller
     {
         [$profissional, $prestador] = $this->contextoClinico($request);
 
-        $tutor = Tutor::query()->where('cpf', $request->cpfDoTutor())->first();
+        $tutor = $request->tutor();
 
-        // O caminho desenhado verifica o CPF antes do formulário (a busca de
+        // O caminho desenhado verifica o tutor antes do formulário (a busca de
         // V03, como em V04); chegar aqui sem cadastro é a janela entre a
         // verificação e o envio. A frase é a do vazio de V03.
         if ($tutor === null) {
+            $campo = $request->campoDoTutor();
+
             throw ValidationException::withMessages([
-                'cpf' => 'Nenhum cadastro corresponde a este CPF. Cadastre o tutor primeiro — o animal vem em seguida.',
+                $campo => sprintf(
+                    'Nenhum tutor corresponde a este %s. Cadastre o tutor primeiro — o animal vem em seguida.',
+                    $campo === 'email' ? 'e-mail' : 'CPF',
+                ),
             ]);
         }
 

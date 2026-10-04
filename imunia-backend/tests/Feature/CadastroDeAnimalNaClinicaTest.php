@@ -186,6 +186,44 @@ class CadastroDeAnimalNaClinicaTest extends TestCase
         $this->assertSame(0, Animal::query()->count());
     }
 
+    public function test_o_tutor_cadastrado_sem_cpf_e_alcancado_pelo_email(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
+        $conta = User::factory()->create(['email' => 'helena@example.com']);
+        $helena = Tutor::factory()->for($conta)->create(['cpf' => null]);
+
+        $this->actingAs($marcelo)->postJson('/api/clinica/animais', [
+            'email' => 'Helena@example.com',
+            'nome' => 'Théo',
+            'especie' => 'cao',
+        ])->assertCreated();
+
+        $this->assertSame($helena->id, Animal::query()->sole()->tutor_id);
+    }
+
+    public function test_email_sem_cadastro_manda_cadastrar_o_tutor_primeiro(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
+
+        $this->actingAs($marcelo)->postJson('/api/clinica/animais', [
+            'email' => 'ninguem@example.com',
+            'nome' => 'Théo',
+            'especie' => 'cao',
+        ])->assertUnprocessable()->assertJsonValidationErrors('email');
+
+        $this->assertSame(0, Animal::query()->count());
+    }
+
+    public function test_sem_email_nem_cpf_nao_ha_tutor(): void
+    {
+        $marcelo = $this->marcelo($this->clinica());
+
+        $this->actingAs($marcelo)->postJson('/api/clinica/animais', [
+            'nome' => 'Théo',
+            'especie' => 'cao',
+        ])->assertUnprocessable()->assertJsonValidationErrors('email');
+    }
+
     public function test_cpf_com_digito_invalido_nem_consulta(): void
     {
         $marcelo = $this->marcelo($this->clinica());
