@@ -27,6 +27,11 @@ export const AREAS = [
     painel: '/prestador',
     recusa: 'Esta área é da administração da conta do prestador.',
     temSaidaPelaAdministracao: true,
+    // A área é de quem administra, mas a porta abre também a quem atende ali:
+    // A01–A04 mostram onde a pessoa trabalha e com quem, e só a escrita exige
+    // administração (`contextoDoPrestador` × `contextoAdministrativo` no
+    // servidor). O `papel` continua decidindo a moldura e a precedência.
+    tambemAbreA: ['veterinario'],
   },
   {
     nome: 'plataforma',
@@ -54,6 +59,14 @@ const PAPEIS_DE_PRESTADOR = ['veterinario', 'admin_prestador']
 
 export function areaPorNome(nome) {
   return AREAS.find((area) => area.nome === nome) ?? null
+}
+
+/**
+ * Se quem tem estes papéis passa pela porta da área — o papel que a encabeça
+ * ou um dos que ela também acolhe.
+ */
+export function abreA(area, papeis = []) {
+  return [area.papel, ...(area.tambemAbreA ?? [])].some((papel) => papeis.includes(papel))
 }
 
 /**

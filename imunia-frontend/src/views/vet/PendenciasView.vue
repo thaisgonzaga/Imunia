@@ -165,7 +165,6 @@ function iconeDaEspecie(especie) {
     titulo="Pendências"
     :prestador="consulta?.prestador"
     :vinculos="consulta?.vinculos ?? []"
-    :pendencias="consulta?.total_sem_filtros ?? 0"
     @trocar-prestador="trocarPrestador"
   >
     <!-- Carregando pela primeira vez: esqueleto na forma do conteúdo (§5.1). -->

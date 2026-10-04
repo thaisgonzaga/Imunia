@@ -106,28 +106,6 @@ class EquipeDoPrestador
     }
 
     /**
-     * Quem administra esta conta, pelo nome — a resposta à pergunta que a tela
-     * de quem só atende aqui faz: a quem pedir.
-     *
-     * Sai daqui, e não da lista da equipe, porque nem todo administrador é
-     * veterinário: a administradora sem CRMV não figura em `equipe()`, que é a
-     * relação dos vínculos clínicos, e montar a frase a partir da tabela
-     * deixaria de fora justamente quem cuida da conta.
-     *
-     * @return list<string>
-     */
-    public function administradores(Prestador $prestador): array
-    {
-        return $prestador->usuarios()
-            ->wherePivot('papel', 'admin_prestador')
-            ->wherePivotNull('encerrado_em')
-            ->pluck('users.name')
-            ->filter(fn (?string $nome) => filled($nome))
-            ->values()
-            ->all();
-    }
-
-    /**
      * RF09 — o papel administrativo passa a ser de mais um membro da equipe. É
      * linha nova no pivô, e não alteração da existente: quem administra e
      * atende tem dois vínculos com o mesmo prestador, um por papel, e é essa

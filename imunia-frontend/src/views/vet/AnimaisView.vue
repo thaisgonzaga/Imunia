@@ -11,7 +11,6 @@ import {
   X,
 } from '@lucide/vue'
 import VetShell from '@/components/vet/VetShell.vue'
-import AvisoOutroContexto from '@/components/vet/AvisoOutroContexto.vue'
 import StatusPill from '@/components/base/StatusPill.vue'
 import EmptyState from '@/components/base/EmptyState.vue'
 import { apiGet } from '@/lib/api.js'
@@ -192,12 +191,6 @@ function acompanhaDesde(vinculo) {
           </RouterLink>
         </div>
       </div>
-
-      <AvisoOutroContexto
-        :prestador="consulta.prestador"
-        :vinculos="consulta.vinculos ?? []"
-        @trocar="trocarPrestador"
-      />
     </div>
 
     <div v-else class="animais">

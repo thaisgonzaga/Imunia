@@ -11,9 +11,11 @@ import {
   Menu,
   PawPrint,
   Search,
+  SquarePlus,
   Stethoscope,
   Syringe,
   UserRoundCheck,
+  UserRoundPlus,
   X,
 } from '@lucide/vue'
 import { useSessaoStore } from '@/stores/sessao.js'
@@ -35,8 +37,6 @@ const props = defineProps({
   prestador: { type: Object, default: null },
   /** Vínculos de veterinário do profissional, para o alternador de RF09b. */
   vinculos: { type: Array, default: () => [] },
-  /** Animais com dose vencida, exibidos como selo ao lado de "Pendências". */
-  pendencias: { type: Number, default: 0 },
   /** Título do cabeçalho em celular, onde não há espaço para a barra lateral. */
   titulo: { type: String, default: 'Painel' },
 })
@@ -60,15 +60,37 @@ watch(
 )
 
 /**
+ * Cada tela da clínica monta a própria moldura e só conhece o prestador quando
+ * a resposta chega. Até lá, a moldura veste o contexto da tela anterior — sem
+ * isto, o bloco do prestador e os vínculos sumiam a cada clique na barra e
+ * voltavam meio segundo depois. A resposta, quando chega, substitui o lembrado.
+ */
+const prestadorDaMoldura = computed(() => props.prestador ?? contextoClinico.prestador)
+
+const vinculosDaMoldura = computed(() =>
+  (props.prestador ? props.vinculos : contextoClinico.vinculos),
+)
+
+/**
  * Os quatro destinos do briefing, todos construídos. "Registros" foi o último
  * a ganhar tela: é o livro de produção da clínica, e o único destino da barra
  * cujo âmbito é a autoria (RN40), não o acompanhamento do animal.
  */
 const SECOES = [
   { rotulo: 'Painel', destino: '/clinica/painel', icone: Stethoscope },
-  { rotulo: 'Pendências', destino: '/clinica/pendencias', icone: ClockAlert, selo: true },
+  { rotulo: 'Pendências', destino: '/clinica/pendencias', icone: ClockAlert },
   { rotulo: 'Animais', destino: '/clinica/animais', icone: PawPrint },
   { rotulo: 'Registros', destino: '/clinica/registros', icone: History },
+]
+
+/**
+ * Os cadastros, numa seção própria: cadastrar tutor e animal é a porta de
+ * entrada de quem chega pela primeira vez, e não deve depender de uma busca
+ * sem resultado para ser achado.
+ */
+const CADASTROS = [
+  { rotulo: 'Novo tutor', destino: '/clinica/tutores/novo', icone: UserRoundPlus },
+  { rotulo: 'Novo animal', destino: '/clinica/animais/novo', icone: SquarePlus },
 ]
 
 /**
@@ -87,7 +109,7 @@ const registrarAberto = ref(false)
 const contextoAberto = ref(false)
 
 const vinculoAtivo = computed(() =>
-  props.vinculos.find((vinculo) => vinculo.id === props.prestador?.id),
+  vinculosDaMoldura.value.find((vinculo) => vinculo.id === prestadorDaMoldura.value?.id),
 )
 
 const administraOAtivo = computed(() => Boolean(vinculoAtivo.value?.admin))
@@ -120,7 +142,7 @@ const secoesDoPrestador = computed(() => [
 ])
 
 /** §5.2 — a faixa de contexto existe para quem tem mais de um vínculo. */
-const temMaisDeUmVinculo = computed(() => props.vinculos.length > 1)
+const temMaisDeUmVinculo = computed(() => vinculosDaMoldura.value.length > 1)
 
 function fecharMenus() {
   registrarAberto.value = false
@@ -133,7 +155,7 @@ function trocarPara(id) {
 
   // Clicar no vínculo já ativo não é uma troca: recarregar a tela inteira por
   // um clique de conferência ("estou mesmo na clínica?") só pisca o conteúdo.
-  if (id === props.prestador?.id) return
+  if (id === prestadorDaMoldura.value?.id) return
 
   emit('trocar-prestador', id)
 }
@@ -193,12 +215,24 @@ onBeforeUnmount(() => {
         >
           <component :is="secao.icone" :size="20" :stroke-width="1.75" class="vet-shell__item-icone" />
           <span class="vet-shell__item-rotulo">{{ secao.rotulo }}</span>
-          <span v-if="secao.selo && pendencias > 0" class="vet-shell__selo">{{ pendencias }}</span>
+        </RouterLink>
+      </nav>
+
+      <nav class="vet-shell__nav vet-shell__grupo" aria-label="Cadastrar">
+        <p class="vet-shell__grupo-rotulo">Cadastrar</p>
+        <RouterLink
+          v-for="cadastro in CADASTROS"
+          :key="cadastro.destino"
+          :to="cadastro.destino"
+          class="vet-shell__item"
+        >
+          <component :is="cadastro.icone" :size="20" :stroke-width="1.75" class="vet-shell__item-icone" />
+          <span class="vet-shell__item-rotulo">{{ cadastro.rotulo }}</span>
         </RouterLink>
       </nav>
 
       <nav
-        v-if="prestador"
+        v-if="prestadorDaMoldura"
         class="vet-shell__nav vet-shell__ambiente"
         :aria-label="administraOAtivo ? 'Administração da conta' : 'O prestador'"
       >
@@ -217,15 +251,15 @@ onBeforeUnmount(() => {
            estabelecimento se está é parte de saber o que se está vendo. E cada
            um é a própria troca — o mesmo gesto da gaveta do celular, sem passar
            pelo alternador da faixa. -->
-      <div v-if="prestador" class="vet-shell__vinculos">
+      <div v-if="prestadorDaMoldura" class="vet-shell__vinculos">
         <p class="vet-shell__vinculos-rotulo">Seus vínculos</p>
         <button
-          v-for="vinculo in vinculos"
+          v-for="vinculo in vinculosDaMoldura"
           :key="vinculo.id"
           type="button"
           class="vet-shell__vinculo vet-shell__vinculo--botao"
-          :class="{ 'vet-shell__vinculo--ativo': vinculo.id === prestador.id }"
-          :aria-current="vinculo.id === prestador.id"
+          :class="{ 'vet-shell__vinculo--ativo': vinculo.id === prestadorDaMoldura.id }"
+          :aria-current="vinculo.id === prestadorDaMoldura.id"
           @click="trocarPara(vinculo.id)"
         >
           {{ vinculo.nome }}
@@ -298,11 +332,11 @@ onBeforeUnmount(() => {
       <!-- RF09b — nunca ocultável, e presente sempre que houver entre o que
            alternar. Com um vínculo só, a faixa não informaria nada que o
            cabeçalho e a barra lateral já não digam. -->
-      <div v-if="prestador && temMaisDeUmVinculo" class="vet-shell__contexto" data-menu>
+      <div v-if="prestadorDaMoldura && temMaisDeUmVinculo" class="vet-shell__contexto" data-menu>
         <Building2 :size="16" :stroke-width="1.75" class="vet-shell__contexto-icone" />
         <p class="vet-shell__contexto-texto">
           <span class="vet-shell__contexto-prefixo">Contexto ativo: </span>
-          <strong>{{ prestador.nome }}</strong>
+          <strong>{{ prestadorDaMoldura.nome }}</strong>
         </p>
 
         <button
@@ -318,12 +352,12 @@ onBeforeUnmount(() => {
 
         <div v-if="contextoAberto" class="vet-shell__menu vet-shell__menu--contexto" role="menu">
           <button
-            v-for="vinculo in vinculos"
+            v-for="vinculo in vinculosDaMoldura"
             :key="vinculo.id"
             type="button"
             class="vet-shell__menu-item"
             role="menuitem"
-            :aria-current="vinculo.id === prestador.id"
+            :aria-current="vinculo.id === prestadorDaMoldura.id"
             @click="trocarPara(vinculo.id)"
           >
             <Building2 :size="16" :stroke-width="1.75" />
@@ -359,12 +393,25 @@ onBeforeUnmount(() => {
         >
           <component :is="secao.icone" :size="20" :stroke-width="1.75" class="vet-shell__item-icone" />
           <span class="vet-shell__item-rotulo">{{ secao.rotulo }}</span>
-          <span v-if="secao.selo && pendencias > 0" class="vet-shell__selo">{{ pendencias }}</span>
+        </RouterLink>
+      </nav>
+
+      <nav class="vet-shell__nav vet-shell__grupo" aria-label="Cadastrar">
+        <p class="vet-shell__grupo-rotulo">Cadastrar</p>
+        <RouterLink
+          v-for="cadastro in CADASTROS"
+          :key="cadastro.destino"
+          :to="cadastro.destino"
+          class="vet-shell__item"
+          @click="menuAberto = false"
+        >
+          <component :is="cadastro.icone" :size="20" :stroke-width="1.75" class="vet-shell__item-icone" />
+          <span class="vet-shell__item-rotulo">{{ cadastro.rotulo }}</span>
         </RouterLink>
       </nav>
 
       <nav
-        v-if="prestador"
+        v-if="prestadorDaMoldura"
         class="vet-shell__nav vet-shell__ambiente"
         :aria-label="administraOAtivo ? 'Administração da conta' : 'O prestador'"
       >
@@ -380,14 +427,14 @@ onBeforeUnmount(() => {
         </RouterLink>
       </nav>
 
-      <div v-if="prestador" class="vet-shell__vinculos">
+      <div v-if="prestadorDaMoldura" class="vet-shell__vinculos">
         <p class="vet-shell__vinculos-rotulo">Seus vínculos</p>
         <button
-          v-for="vinculo in vinculos"
+          v-for="vinculo in vinculosDaMoldura"
           :key="vinculo.id"
           type="button"
           class="vet-shell__vinculo vet-shell__vinculo--botao"
-          :class="{ 'vet-shell__vinculo--ativo': vinculo.id === prestador.id }"
+          :class="{ 'vet-shell__vinculo--ativo': vinculo.id === prestadorDaMoldura.id }"
           @click="trocarPara(vinculo.id)"
         >
           {{ vinculo.nome }}
@@ -728,26 +775,28 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+/* Os cadastros são ação, não lugar: o filete os separa das seções que se
+   consultam, e o rótulo diz o que o grupo faz. */
+.vet-shell__grupo {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.vet-shell__grupo-rotulo {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-faint);
+}
+
 /* Ambiente é mudança de moldura, não seção da clínica: o filete separa os dois
    grupos para que a barra não some cinco destinos num bloco só. */
 .vet-shell__ambiente {
   margin-top: var(--space-4);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-hairline);
-}
-
-.vet-shell__selo {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: var(--radius-pill);
-  background: var(--status-late-wash);
-  color: var(--status-late);
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 .vet-shell__vinculos {
@@ -890,7 +939,7 @@ onBeforeUnmount(() => {
 
   .vet-shell__lateral .vet-shell__marca-completa,
   .vet-shell__lateral .vet-shell__item-rotulo,
-  .vet-shell__lateral .vet-shell__selo,
+  .vet-shell__lateral .vet-shell__grupo-rotulo,
   .vet-shell__lateral .vet-shell__vinculos {
     display: none;
   }
@@ -934,13 +983,9 @@ onBeforeUnmount(() => {
 
   .vet-shell__lateral .vet-shell__marca-completa,
   .vet-shell__lateral .vet-shell__item-rotulo,
-  .vet-shell__lateral .vet-shell__selo,
+  .vet-shell__lateral .vet-shell__grupo-rotulo,
   .vet-shell__lateral .vet-shell__vinculos {
     display: revert;
-  }
-
-  .vet-shell__lateral .vet-shell__selo {
-    display: inline-flex;
   }
 
   .vet-shell__marca-curta {

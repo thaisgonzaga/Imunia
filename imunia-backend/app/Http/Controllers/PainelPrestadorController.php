@@ -46,7 +46,6 @@ class PainelPrestadorController extends Controller
             'pendencias' => $administra ? $this->pendencias->listar($prestador, $membros) : [],
             'pode_administrar' => $administra,
             'concessao' => $this->equipe->concessao($prestador, $usuario, $membros, $administra),
-            'administrada_por' => $this->equipe->administradores($prestador),
             'vinculos' => $this->vinculosAdministradosDe($usuario),
             'contexto_clinico' => $this->contextoClinicoDivergente($usuario, $prestador),
             'atende_aqui' => $this->atendeNoPrestador($usuario, $prestador),

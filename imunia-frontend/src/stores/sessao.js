@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { apiDelete, apiGet } from '@/lib/api.js'
+import { useContextoClinicoStore } from '@/stores/contextoClinico.js'
 
 /**
  * Sessão corrente do SPA. O cookie httpOnly é a única prova de autenticação —
@@ -51,7 +52,12 @@ export const useSessaoStore = defineStore('sessao', () => {
     return usuario.value
   }
 
+  /**
+   * Toda troca de pessoa na aba esquece o contexto clínico lembrado: a moldura
+   * o desenharia antes da primeira resposta, e ele é de quem estava antes.
+   */
   function registrar(dados) {
+    useContextoClinicoStore().esquecer()
     usuario.value = dados
     consultada.value = true
   }
@@ -61,6 +67,7 @@ export const useSessaoStore = defineStore('sessao', () => {
    * `consultada`: perguntar de novo devolveria o mesmo 401.
    */
   function esquecer() {
+    useContextoClinicoStore().esquecer()
     usuario.value = null
     consultada.value = true
   }
@@ -69,6 +76,7 @@ export const useSessaoStore = defineStore('sessao', () => {
     try {
       await apiDelete('/api/sessao')
     } finally {
+      useContextoClinicoStore().esquecer()
       usuario.value = null
       consultada.value = true
     }

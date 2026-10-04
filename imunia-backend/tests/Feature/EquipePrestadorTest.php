@@ -101,22 +101,6 @@ class EquipePrestadorTest extends TestCase
         $resposta->assertJsonPath('concessao.pode_conceder', false);
     }
 
-    /**
-     * A quem pedir — inclusive quando quem administra não é veterinário e por
-     * isso não figura na tabela da equipe.
-     */
-    public function test_a_tela_diz_quem_administra_a_conta_mesmo_sem_crmv(): void
-    {
-        $clinica = $this->clinica();
-        $marcelo = $this->veterinario($clinica, 'Marcelo Andrade', '12345');
-        $this->administradora($clinica);
-
-        $this->actingAs($marcelo)
-            ->getJson('/api/prestador/equipe')
-            ->assertOk()
-            ->assertJsonPath('administrada_por', ['Ana Lúcia Ferraz']);
-    }
-
     public function test_a_lista_traz_as_situacoes_com_texto_pronto(): void
     {
         $clinica = $this->clinica();

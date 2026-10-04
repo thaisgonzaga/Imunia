@@ -40,7 +40,6 @@ class DadosPrestadorController extends Controller
             // atende aqui vê o cadastro como ele está hoje.
             'historico' => $administra ? $this->atualizacao->historico($prestador) : [],
             'pode_administrar' => $administra,
-            'administrada_por' => $this->equipe->administradores($prestador),
             // Alimenta o selo de convites pendentes da moldura. Vem de todas as
             // três telas porque o selo é da moldura, e um número que some ao
             // navegar de A01 para cá lê-se como convite resolvido.

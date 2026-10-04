@@ -45,13 +45,6 @@ const membros = computed(() => equipe.value?.membros ?? [])
 const concessao = computed(() => equipe.value?.concessao ?? { pode_conceder: false, restricao: null })
 const podeAdministrar = computed(() => equipe.value?.pode_administrar ?? false)
 
-const quemAdministra = computed(() => {
-  const nomes = equipe.value?.administrada_por ?? []
-
-  return nomes.length === 0
-    ? 'A administração desta conta é de quem a criou.'
-    : `A administração desta conta é de ${nomes.join(', ')}.`
-})
 const ufs = computed(() => (equipe.value?.opcoes?.ufs ?? []).map((uf) => ({ value: uf, label: uf })))
 
 /** O encerrado mais recente, para a frase que explica o que sobreviveu ao desligamento. */
@@ -259,11 +252,6 @@ carregar()
           Convidar veterinário
         </button>
       </div>
-
-      <p v-if="!carregando && !erro && !podeAdministrar" class="equipe__leitura">
-        <Lock :size="16" :stroke-width="1.75" />
-        <span>Você atende aqui. {{ quemAdministra }}</span>
-      </p>
 
       <p v-if="aviso" class="aviso aviso--sucesso" role="status">{{ aviso }}</p>
 
@@ -737,23 +725,6 @@ carregar()
 .ligacao-botao:disabled {
   opacity: .6;
   cursor: progress;
-}
-
-.equipe__leitura {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
-
-.equipe__leitura svg {
-  flex: none;
 }
 
 .equipe__autoria {

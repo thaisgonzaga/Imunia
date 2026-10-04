@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 /**
@@ -20,17 +20,34 @@ export const useContextoClinicoStore = defineStore('contextoClinico', () => {
   const prestador = ref(null)
   const vinculos = ref([])
 
-  /** Se o prestador ativo é uma conta que a pessoa também administra. */
-  const administraOAtivo = computed(() =>
-    Boolean(vinculos.value.find((vinculo) => vinculo.id === prestador.value?.id)?.admin),
-  )
+  /**
+   * A moldura desenhada na tela anterior — `'clinica'` ou `'administrativa'`,
+   * e nada antes da primeira. É o palpite das telas da conta: entre uma e
+   * outra muda o conteúdo, não o contexto, e quem estava numa casca segue nela.
+   */
+  const moldura = ref(null)
 
   function lembrar(novoPrestador, novosVinculos) {
     if (!novoPrestador) return
 
     prestador.value = novoPrestador
     vinculos.value = novosVinculos ?? []
+    moldura.value = 'clinica'
   }
 
-  return { prestador, vinculos, administraOAtivo, lembrar }
+  function lembrarMoldura(clinica) {
+    moldura.value = clinica ? 'clinica' : 'administrativa'
+  }
+
+  /**
+   * Fim da sessão: o que se lembrava é de outra pessoa para quem entrar em
+   * seguida na mesma aba — e a moldura o desenharia antes da primeira resposta.
+   */
+  function esquecer() {
+    prestador.value = null
+    vinculos.value = []
+    moldura.value = null
+  }
+
+  return { prestador, vinculos, moldura, lembrar, lembrarMoldura, esquecer }
 })

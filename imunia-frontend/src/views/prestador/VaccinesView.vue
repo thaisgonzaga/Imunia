@@ -302,11 +302,6 @@ carregar()
         </button>
       </div>
 
-      <p v-if="!carregando && !erro && !podeAdministrar" class="vacinas__leitura">
-        <Lock :size="16" :stroke-width="1.75" />
-        <span>Você atende aqui. Quem administra a conta é quem cadastra as vacinas da clínica.</span>
-      </p>
-
       <p v-if="aviso" class="aviso aviso--sucesso" role="status">{{ aviso }}</p>
 
       <div v-if="carregando" class="cartao" aria-busy="true" aria-live="polite">
@@ -667,16 +662,6 @@ carregar()
   line-height: 34px;
   font-weight: 600;
   color: var(--ink);
-}
-
-.vacinas__leitura {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-  color: var(--ink-muted);
-  font-size: 14px;
-  line-height: 20px;
 }
 
 /* Duas seções, e não uma tabela com coluna de origem: a separação é o

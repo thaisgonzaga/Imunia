@@ -25,7 +25,6 @@ const contextoClinico = ref(null)
 const atendeAqui = ref(false)
 const vinculosClinicos = ref([])
 const podeAdministrar = ref(false)
-const administradaPor = ref([])
 const carregando = ref(true)
 const erro = ref('')
 
@@ -79,10 +78,6 @@ const cadastroEmLeitura = computed(() => {
   ]
 })
 
-const quemAdministra = computed(() => (administradaPor.value.length === 0
-  ? 'A administração desta conta é de quem a criou.'
-  : `A administração desta conta é de ${administradaPor.value.join(', ')}.`))
-
 function formatarCep(valor) {
   const digitos = String(valor ?? '').replace(/\D/g, '').slice(0, 8)
 
@@ -110,7 +105,6 @@ async function carregar(prestadorId) {
     atendeAqui.value = resposta.atende_aqui
     vinculosClinicos.value = resposta.vinculos_clinicos
     podeAdministrar.value = resposta.pode_administrar
-    administradaPor.value = resposta.administrada_por ?? []
     preencher(resposta.prestador)
   } catch (excecao) {
     erro.value = excecao.message
@@ -189,18 +183,12 @@ carregar()
     <!--
       Leitura não é formulário desabilitado: campo cinza que não recebe foco
       convida a tentar mesmo assim e diz "quebrado" onde deveria dizer "não é
-      seu". Quem só atende aqui vê o cadastro como cadastro — texto —, e a
-      frase de enquadramento nomeia quem pode mudá-lo.
+      seu". Quem só atende aqui vê o cadastro como cadastro — texto.
     -->
     <div v-else-if="!podeAdministrar" class="coluna">
       <div class="cartao">
         <p class="sobrelinha">Onde você atende</p>
         <h1 class="titulo">{{ dados.nome }}</h1>
-
-        <p class="leitura__nota">
-          <Lock :size="16" :stroke-width="1.75" />
-          <span>Você atende aqui. {{ quemAdministra }}</span>
-        </p>
 
         <dl class="leitura">
           <div v-for="campo in cadastroEmLeitura" :key="campo.rotulo">
@@ -478,23 +466,6 @@ carregar()
   font-size: 15px;
   line-height: 20px;
   color: var(--ink);
-}
-
-.leitura__nota {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
-
-.leitura__nota svg {
-  flex: none;
 }
 
 @media (min-width: 768px) {

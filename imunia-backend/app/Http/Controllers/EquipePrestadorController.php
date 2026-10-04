@@ -203,9 +203,6 @@ class EquipePrestadorController extends Controller
 
         return [
             'pode_administrar' => $administra,
-            // A quem pedir, para quem só atende aqui. Vem sempre pelo mesmo
-            // motivo das contagens: a tela decide o que fazer com o dado.
-            'administrada_por' => $this->equipe->administradores($prestador),
             'prestador' => [
                 'id' => $prestador->id,
                 'nome' => $prestador->nome,

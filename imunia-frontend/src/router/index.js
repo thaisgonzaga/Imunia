@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { aoPerderSessao } from '@/lib/api.js'
-import { areaPorNome } from '@/lib/areas.js'
+import { abreA, areaPorNome } from '@/lib/areas.js'
 import { relatarFalha } from '@/lib/falha.js'
 import { VOLTAR } from '@/lib/retorno.js'
 import { useSessaoStore } from '@/stores/sessao.js'
@@ -483,7 +483,7 @@ router.beforeEach(async (para) => {
   if (!sessao.autenticado) return { name: 'login', query: { [VOLTAR]: para.fullPath } }
 
   const area = areaPorNome(para.meta.area)
-  if (area && !(sessao.usuario.papeis ?? []).includes(area.papel)) {
+  if (area && !abreA(area, sessao.usuario.papeis ?? [])) {
     return { name: 'forbidden', query: { area: area.nome }, replace: true }
   }
 

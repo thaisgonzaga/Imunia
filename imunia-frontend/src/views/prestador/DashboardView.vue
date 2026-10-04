@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Building2, ClockAlert, Lock, TriangleAlert, UserRoundCheck } from '@lucide/vue'
+import { Building2, ClockAlert, TriangleAlert, UserRoundCheck } from '@lucide/vue'
 import ContaShell from '@/components/prestador/ContaShell.vue'
 import { apiGet, apiPost } from '@/lib/api.js'
 import { formatarCnpj, formatarTelefone } from '@/lib/masks.js'
@@ -9,10 +9,8 @@ import { formatarCnpj, formatarTelefone } from '@/lib/masks.js'
 /**
  * A01 — painel administrativo do prestador (RF07, RF08, RF09).
  *
- * Não há indicador clínico algum nesta tela, e a ausência é o argumento: o
- * perfil administra a conta, não o dado (RN08). O bloco cinza ao pé da coluna
- * lateral existe para dizer isso em voz alta — sem ele, um painel sem números
- * de atendimento passaria por painel incompleto.
+ * Não há indicador clínico algum nesta tela: o perfil administra a conta, não
+ * o dado (RN08).
  */
 const router = useRouter()
 
@@ -31,19 +29,6 @@ const avisoDeReenvio = ref('')
 const prestador = computed(() => painel.value?.prestador ?? null)
 const podeAdministrar = computed(() => painel.value?.pode_administrar ?? false)
 
-/**
- * "A administração desta conta é de Dra. Camila Martins Oliveira." — a frase
- * termina no nome de quem procurar, e não numa regra abstrata. Sem nome algum
- * (conta cujo administrador ainda não aceitou o convite), diz o que é verdade
- * sem prometer um interlocutor que a tela não conhece.
- */
-const quemAdministra = computed(() => {
-  const nomes = painel.value?.administrada_por ?? []
-
-  if (nomes.length === 0) return 'A administração desta conta é de quem a criou.'
-
-  return `A administração desta conta é de ${nomes.join(', ')}.`
-})
 const cnpj = computed(() => formatarCnpj(prestador.value?.cnpj ?? ''))
 const telefone = computed(() => formatarTelefone(prestador.value?.telefone ?? ''))
 
@@ -137,18 +122,6 @@ carregar()
         </div>
 
         <!--
-          A quem pedir. Quem só atende aqui vê a conta e não a move, e a frase
-          evita a leitura de que a tela veio incompleta — o que não está à mão
-          está com alguém, e o nome dessa pessoa é a informação útil.
-        -->
-        <p v-if="!podeAdministrar" class="painel__leitura">
-          <Lock :size="16" :stroke-width="1.75" />
-          <span>
-            Você atende aqui. {{ quemAdministra }}
-          </span>
-        </p>
-
-        <!--
           RF07c — bloqueante, e por isso acima de tudo: sem responsável técnico a
           clínica não registra informação clínica alguma, o que é diferente em
           natureza das demais pendências, que só valem a pena resolver.
@@ -175,7 +148,7 @@ carregar()
 
         <p v-if="avisoDeReenvio" class="aviso aviso--sucesso" role="status">{{ avisoDeReenvio }}</p>
 
-        <div class="painel__grade">
+        <div class="painel__grade" :class="{ 'painel__grade--uma-coluna': !painel.pendencias.length }">
           <div class="painel__coluna">
             <section class="cartao">
               <div class="cartao__cabecalho">
@@ -243,8 +216,8 @@ carregar()
             </section>
           </div>
 
-          <div class="painel__coluna">
-            <h2 v-if="painel.pendencias.length" class="painel__rotulo-lateral">Pendências de configuração</h2>
+          <div v-if="painel.pendencias.length" class="painel__coluna">
+            <h2 class="painel__rotulo-lateral">Pendências de configuração</h2>
 
             <article
               v-for="pendencia in painel.pendencias"
@@ -265,18 +238,6 @@ carregar()
                 {{ reenviando === pendencia.acao.vinculo ? 'Reenviando…' : pendencia.acao.rotulo }}
               </button>
             </article>
-
-            <!--
-              §8.4 do briefing — a ausência de indicador clínico é intencional, e
-              precisa ser explicada na interface, não apenas produzida por ela.
-            -->
-            <aside class="limitacao">
-              <Lock :size="20" :stroke-width="1.75" />
-              <p>
-                Não há indicador de atendimentos, vacinas ou animais neste painel: essas informações
-                pertencem ao ambiente clínico, e o perfil administrativo não tem acesso a elas.
-              </p>
-            </aside>
           </div>
         </div>
       </template>
@@ -508,48 +469,6 @@ carregar()
   margin-top: var(--space-4);
 }
 
-/* Uma linha, e não um cartão: a informação é de enquadramento — diz de quem é
-   a conta que se está vendo — e não uma advertência a ser encarada. */
-.painel__leitura {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
-
-.painel__leitura svg {
-  flex: none;
-}
-
-.limitacao {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--surface-sunken);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-}
-
-.limitacao svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--ink-muted);
-}
-
-.limitacao p {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--ink);
-}
-
 .botao {
   display: inline-flex;
   align-items: center;
@@ -697,6 +616,10 @@ carregar()
     display: grid;
     grid-template-columns: 2fr 1fr;
     align-items: flex-start;
+  }
+
+  .painel__grade--uma-coluna {
+    grid-template-columns: 1fr;
   }
 }
 </style>

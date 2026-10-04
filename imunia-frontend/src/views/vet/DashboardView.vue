@@ -10,7 +10,6 @@ import {
   TriangleAlert,
 } from '@lucide/vue'
 import VetShell from '@/components/vet/VetShell.vue'
-import AvisoOutroContexto from '@/components/vet/AvisoOutroContexto.vue'
 import StatusPill from '@/components/base/StatusPill.vue'
 import { apiGet } from '@/lib/api.js'
 
@@ -128,7 +127,6 @@ function diaEMes(iso) {
   <VetShell
     :prestador="painel?.prestador"
     :vinculos="painel?.vinculos ?? []"
-    :pendencias="indicadores.doses_vencidas?.animais ?? 0"
     @trocar-prestador="trocarPrestador"
   >
     <!-- Carregando: esqueleto na forma exata do conteúdo que substitui — quatro
@@ -239,21 +237,9 @@ function diaEMes(iso) {
           </RouterLink>
         </div>
       </div>
-
-      <AvisoOutroContexto
-        :prestador="painel.prestador"
-        :vinculos="painel.vinculos ?? []"
-        @trocar="trocarPrestador"
-      />
     </div>
 
     <div v-else class="painel">
-      <AvisoOutroContexto
-        :prestador="painel.prestador"
-        :vinculos="painel.vinculos ?? []"
-        @trocar="trocarPrestador"
-      />
-
       <div class="painel__cabecalho">
         <div>
           <p class="painel__sobrelinha">Painel</p>

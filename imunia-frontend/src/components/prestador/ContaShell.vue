@@ -1,6 +1,5 @@
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, watchEffect } from 'vue'
 import AdminShell from '@/components/prestador/AdminShell.vue'
 import VetShell from '@/components/vet/VetShell.vue'
 import { useContextoClinicoStore } from '@/stores/contextoClinico.js'
@@ -37,7 +36,6 @@ const props = defineProps({
 
 const emit = defineEmits(['trocar-prestador'])
 
-const router = useRouter()
 const contexto = useContextoClinicoStore()
 const sessao = useSessaoStore()
 
@@ -48,14 +46,15 @@ const respondido = computed(() => props.prestador !== null)
  * Que moldura vestir enquanto o servidor não respondeu.
  *
  * A escolha não pode esperar a resposta: a casca é a primeira coisa que a tela
- * desenha, e trocá-la depois faz a barra lateral inteira piscar — foi o que
- * acontecia ao clicar em "Painel da conta" vindo da barra da clínica. O que se
- * sabe de imediato é o contexto que a moldura clínica anunciou na tela
- * anterior; na falta dele — primeira tela da sessão, ou recarga da página —
- * vale o papel, que é o palpite mais provável para quem tem ambiente clínico.
+ * desenha, e trocá-la depois faz a barra lateral inteira piscar e o cabeçalho
+ * trocar de texto. O que se sabe de imediato é a moldura da tela anterior: as
+ * telas da conta falam do estabelecimento em que a pessoa está, e quem chega
+ * da barra da clínica atende nele — administrando ou não. Na falta dela —
+ * primeira tela da sessão, ou recarga da página — vale o papel, que é o
+ * palpite mais provável para quem tem ambiente clínico.
  */
-const palpite = computed(() => (contexto.prestador
-  ? contexto.administraOAtivo
+const palpite = computed(() => (contexto.moldura
+  ? contexto.moldura === 'clinica'
   : (sessao.usuario?.papeis ?? []).includes('veterinario')))
 
 /**
@@ -68,44 +67,25 @@ const naMolduraClinica = computed(() => (respondido.value
   ? props.atendeAqui && props.contextoClinico === null
   : palpite.value))
 
-/**
- * A moldura não fica vazia esperando: enquanto a resposta não chega, ela veste
- * o contexto lembrado. Só o conteúdo mostra esqueleto — como nas telas do
- * ambiente clínico, onde a barra nunca some entre uma navegação e outra.
- */
-const prestadorDaMoldura = computed(() => props.prestador ?? contexto.prestador)
-
-const vinculosDaMoldura = computed(() =>
-  (props.vinculosClinicos.length > 0 ? props.vinculosClinicos : contexto.vinculos),
-)
-
-/**
- * O alternador da moldura clínica lista todos os vínculos de veterinário, e
- * nem todos são administrados: trocar para um deles não pode recarregar uma
- * tela que o servidor recusaria. Quem administra o destino segue na tela em
- * que está; quem só atende nele vai para o painel da clínica, que é o que
- * aquele contexto tem a oferecer.
- */
-function trocarPrestador(id) {
-  const destino = vinculosDaMoldura.value.find((vinculo) => vinculo.id === id)
-
-  if (destino && !destino.admin) {
-    router.push(`/clinica/painel?prestador=${id}`)
-
-    return
-  }
-
-  emit('trocar-prestador', id)
-}
+/** A decisão do servidor vira o palpite da próxima tela da conta. */
+watchEffect(() => {
+  if (respondido.value) contexto.lembrarMoldura(naMolduraClinica.value)
+})
 </script>
 
 <template>
+  <!-- O alternador recarrega a própria tela para qualquer vínculo, administrado
+       ou não: as leituras da conta respondem a quem atende no estabelecimento,
+       e só as ações dependem de administrá-lo. Mandar quem só atende para o
+       painel da clínica tirava a pessoa da tela em que estava.
+       Enquanto a resposta não chega, a própria moldura clínica veste o
+       contexto lembrado — só o conteúdo mostra esqueleto. -->
   <VetShell
     v-if="naMolduraClinica"
     :titulo="titulo"
-    :prestador="prestadorDaMoldura"
-    :vinculos="vinculosDaMoldura"
-    @trocar-prestador="trocarPrestador"
+    :prestador="prestador"
+    :vinculos="vinculosClinicos"
+    @trocar-prestador="emit('trocar-prestador', $event)"
   >
     <slot />
   </VetShell>
