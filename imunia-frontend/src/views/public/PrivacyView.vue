@@ -34,13 +34,13 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       </p>
       <p>
         <strong>O que mudou na versão 2.0.</strong> O cadastro do tutor e do animal passou a
-        ser feito pela clínica, que informa nome, CPF e e-mail do tutor; o tutor não se
+        ser feito pela clínica, que informa apenas nome e e-mail do tutor; o tutor não se
         cadastra sozinho e recebe um convite por e-mail para acompanhar o animal. O
         compartilhamento entre clínicas deixou de depender de autorização do tutor: o histórico
         do animal é único, e a clínica que o atende, localizando-o por identificador exato, o
         acessa por inteiro, com registro no livro de acessos. Deixaram de existir — e de ser
-        coletados — os dados de autorização, de solicitação de acesso e os códigos de
-        confirmação.
+        coletados — o CPF do tutor, os dados de autorização, de solicitação de acesso e os
+        códigos de confirmação.
       </p>
     </div>
 
@@ -73,7 +73,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td><strong>Controlador</strong></td>
           </tr>
           <tr>
-            <td>Cadastro do tutor (nome, CPF, e-mail) e do animal, feito pelo estabelecimento no atendimento</td>
+            <td>Cadastro do tutor (nome, e-mail) e do animal, feito pelo estabelecimento no atendimento</td>
             <td>O estabelecimento que criou</td>
             <td><strong>Operador</strong></td>
           </tr>
@@ -184,20 +184,18 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
 
     <h3>3.3 Dados do tutor</h3>
     <p>
-      <strong>Nome completo</strong>, <strong>CPF</strong> e <strong>e-mail</strong>, informados
-      pelo estabelecimento que cadastra o tutor no atendimento. Quando o tutor aceita o
-      convite e cria a senha, registram-se também a data e a versão dos termos aceitos.
+      <strong>Nome completo</strong> e <strong>e-mail</strong>, informados pelo
+      estabelecimento que cadastra o tutor no atendimento. Quando o tutor aceita o convite e
+      cria a senha, registram-se também a data e a versão dos termos aceitos.
     </p>
     <p>
-      O CPF não é coletado por conveniência: é exigência da regulamentação profissional. A
-      Resolução CFMV nº 1.321/2020, art. 3º, VII, determina que os documentos
-      médico-veterinários identifiquem o responsável pelo animal por nome completo, CPF e
-      endereço. No Imunia, o CPF cumpre ainda a função de permitir que um estabelecimento
-      localize um cadastro já existente sem criar duplicidade, e que a clínica que atende o
-      animal o encontre pelo identificador exato.
+      O e-mail é a chave do cadastro: um endereço corresponde a uma única conta. É por ele
+      que um estabelecimento localiza um cadastro já existente sem criar duplicidade, que a
+      clínica que atende o animal encontra o tutor pelo identificador exato e que o convite
+      de acesso é enviado.
     </p>
     <p>
-      <strong>O sistema não coleta do tutor:</strong> telefone, endereço residencial, CEP,
+      <strong>O sistema não coleta do tutor:</strong> CPF, telefone, endereço residencial, CEP,
       data de nascimento, RG, gênero, foto de perfil ou dados de pagamento. O único canal de
       contato é o e-mail.
     </p>
@@ -279,13 +277,13 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
           </tr>
           <tr>
             <td>Cadastrar o tutor e o animal no atendimento</td>
-            <td>Nome, CPF e e-mail do tutor; dados do animal</td>
-            <td>Art. 7º, II e V — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII) e execução de contrato com o estabelecimento</td>
+            <td>Nome e e-mail do tutor; dados do animal</td>
+            <td>Art. 7º, V — execução de contrato com o estabelecimento</td>
           </tr>
           <tr>
             <td>Identificar o tutor e evitar cadastro duplicado</td>
-            <td>CPF</td>
-            <td>Art. 7º, II — obrigação regulatória (Res. CFMV 1.321/2020, art. 3º, VII)</td>
+            <td>E-mail</td>
+            <td>Art. 7º, V — execução de contrato</td>
           </tr>
           <tr>
             <td>Manter a carteira de vacinação e o prontuário</td>
@@ -299,7 +297,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
           </tr>
           <tr>
             <td>Disponibilizar o histórico único do animal à clínica que o atende</td>
-            <td>Dados do animal, conteúdo clínico, nome e CPF do tutor</td>
+            <td>Dados do animal, conteúdo clínico, nome e e-mail do tutor</td>
             <td>Art. 7º, IX — legítimo interesse (continuidade do cuidado do animal), com a transparência do livro de acessos</td>
           </tr>
           <tr>
@@ -313,9 +311,14 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
             <td>Art. 7º, IX — legítimo interesse</td>
           </tr>
           <tr>
-            <td>Enviar confirmações, avisos e lembretes de dose ao tutor que ativou o acesso</td>
+            <td>Enviar confirmações e avisos da conta ao tutor que ativou o acesso</td>
             <td>E-mail</td>
             <td>Art. 7º, V</td>
+          </tr>
+          <tr>
+            <td>Lembrar o tutor da próxima dose, do atraso de dose e do retorno marcado, tenha ou não ativado o acesso</td>
+            <td>Nome e e-mail do tutor; nome do animal, vacina e data prevista; estabelecimento e finalidade do retorno</td>
+            <td>Art. 7º, V e IX — execução de contrato, para quem ativou o acesso; legítimo interesse, para quem ainda não ativou</td>
           </tr>
           <tr>
             <td>Guardar registros de acesso à aplicação</td>
@@ -367,7 +370,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       <strong>uma pessoa natural</strong>. A saúde registrada no Imunia é a do animal, e o
       animal não é titular de dados. O prontuário, contudo,
       <strong>é dado pessoal do tutor</strong>, porque é informação relacionada a uma pessoa
-      identificada: seu nome e seu CPF estão no cadastro a que o histórico se vincula.
+      identificada: seu nome e seu e-mail estão no cadastro a que o histórico se vincula.
     </p>
     <p>
       Há uma exceção que merece atenção. O art. 11, § 1º da LGPD estende o regime dos dados
@@ -396,8 +399,8 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     </p>
     <ul>
       <li>
-        A clínica alcança um cadastro <strong>apenas por identificador exato</strong> — CPF do
-        tutor, código ou QR do animal, ou microchip. A busca por nome só alcança os animais que
+        A clínica alcança um cadastro <strong>apenas por identificador exato</strong> — e-mail
+        do tutor, código ou QR do animal, ou microchip. A busca por nome só alcança os animais que
         aquela clínica já acompanha.
       </li>
       <li>
@@ -443,7 +446,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       A página pública de verificação, acessível a quem tiver o código impresso no documento,
       revela apenas se o documento é autêntico, a data de emissão, o
       <strong>nome e a espécie do animal</strong> e um resumo abreviado. Ela não revela o
-      tutor, o CPF, o conteúdo clínico nem o estabelecimento emissor.
+      tutor, o conteúdo clínico nem o estabelecimento emissor.
     </p>
 
     <h3>6.4 Terceiros</h3>
@@ -489,7 +492,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <p>O Imunia mantém um <strong>livro de acessos</strong> consultável pelo tutor, que registra de forma imutável:</p>
     <ul>
       <li>
-        buscas por CPF, por código do animal ou por microchip feitas por clínica que ainda não
+        buscas por e-mail do tutor, por código do animal ou por microchip feitas por clínica que ainda não
         acompanhava o animal;
       </li>
       <li>leitura de histórico produzido por outro estabelecimento;</li>
@@ -647,7 +650,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       <p>
         As fotografias de animais são armazenadas em área de arquivos servida publicamente.
         Quem conhecer o endereço de uma fotografia poderá acessá-la sem autenticação. Isso não
-        expõe prontuário, nome de tutor ou CPF, mas é uma diferença real em relação ao
+        expõe prontuário, nome ou e-mail de tutor, mas é uma diferença real em relação ao
         tratamento dado aos anexos clínicos, que exigem autenticação.
       </p>
     </div>

@@ -83,7 +83,7 @@ Você é responsável por manter a confidencialidade da sua senha e por tudo o q
 
 - **Não compartilhe sua conta.** No prontuário veterinário, quem assina o registro é quem responde por ele. Uma conta compartilhada torna a autoria indeterminável e compromete a validade do documento.
 - Comunique imediatamente qualquer uso não autorizado pelo canal **[E-MAIL DE CONTATO]**.
-- Como tutor, você só recebe avisos e lembretes por e-mail depois de ativar seu acesso pelo convite.
+- Como tutor, você recebe por e-mail os lembretes de vacina, de atraso e de retorno dos seus animais desde que a clínica cadastra você, mesmo antes de ativar o acesso. Se você trocar o e-mail da conta, os lembretes só voltam a sair depois que o endereço novo for confirmado.
 - Ao trocar sua senha, as demais sessões abertas são encerradas.
 
 O sistema **não oferece autenticação em duas etapas para o login**. Escolha uma senha forte e não a reutilize.
@@ -96,7 +96,7 @@ O sistema **não oferece autenticação em duas etapas para o login**. Escolha u
 
 Você não se cadastra sozinho. **O estabelecimento que atende seu animal cadastra você** — com nome, CPF e e-mail — e cadastra o animal. Quando o primeiro animal é cadastrado, você recebe um **convite por e-mail**, válido por 7 dias e renovável pela própria página, para criar sua senha. Aceitar o convite é opcional: **o atendimento não depende disso**.
 
-Depois de ativar o acesso, você pode consultar a carteira e o histórico dos seus animais, editar a identificação e a foto deles, lançar registro pregresso, exportar documentos e receber lembretes de dose. Você **não registra** atendimento, vacinação ou anexo clínico: isso é privativo do médico-veterinário.
+Depois de ativar o acesso, você pode consultar a carteira e o histórico dos seus animais, editar a identificação e a foto deles, lançar registro pregresso, exportar documentos e consultar os lembretes que recebeu. Você **não registra** atendimento, vacinação ou anexo clínico: isso é privativo do médico-veterinário.
 
 **O histórico do animal é único.** Qualquer estabelecimento que atenda seu animal e o localize por identificador exato — seu CPF, o código ou QR do animal, ou o microchip — vê o histórico inteiro, com a indicação do estabelecimento que produziu cada registro. Esse acesso não depende de autorização sua. Em contrapartida, ele **fica registrado**: você pode consultar, a qualquer tempo, o livro de acessos, com identificação do estabelecimento, do profissional, da data e da natureza do acesso, e com a indicação de se aquele estabelecimento acompanha o animal.
 

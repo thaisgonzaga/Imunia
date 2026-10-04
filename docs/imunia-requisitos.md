@@ -1,7 +1,7 @@
 ---
 title: "Imunia --- Documento de Requisitos"
 subtitle: "Etapa 3 do Trabalho de Conclusão de Curso: engenharia de requisitos"
-date: "Outubro de 2026 --- versão 1.4"
+date: "Outubro de 2026 --- versão 1.5"
 lang: pt-BR
 ---
 
@@ -97,6 +97,12 @@ A numeração não foi alterada, e nenhum requisito foi acrescentado ou removido
 4. A matriz de permissões (§3.2), a persona da tutora (§2.2), a rastreabilidade (§7), o escopo mínimo (§8) e as pendências (§10) foram atualizados em conformidade. As pendências 3 e 7 deixaram de existir com o novo modelo.
 
 O tutor e o animal continuam globais (RN10, RN19), e a imutabilidade, a autoria e a retificação do registro clínico não mudaram. Nenhum requisito foi renumerado.
+
+**Versão 1.5 (01/10/2026).** Calendário e alcance dos lembretes, fixados na implementação do motor de notificação (RF42, RF43):
+
+1. **RN44** passa a prever duas comunicações por dose — lembrete na véspera da data prevista e um único alerta no quinto dia de atraso —, no lugar de aviso prévio, aviso na data e alerta de atraso. Depois do alerta, a rechamada é da clínica, pelo painel de RF49. O retorno programado é lembrado na véspera. RF42 e RF43 deixam de falar em antecedência parametrizada.
+2. **RN42** passa a alcançar todo tutor cadastrado, tenha ou não ativado o acesso, no endereço que a clínica informou. A exceção é o endereço trocado pelo próprio tutor, que volta a receber depois de confirmado. RF05a, RF14 e a pendência 7 foram ajustados em conformidade.
+3. **RF42a** admite que a rotina diária seja disparada por chamada externa autenticada, para o servidor sem agendador do ambiente de testes.
 
 ---
 
@@ -292,7 +298,7 @@ O sistema deve permitir que o usuário autenticado altere sua senha, exigindo a 
 
 O sistema deve verificar a titularidade do endereço de correio eletrônico mediante ligação de confirmação enviada no ato do cadastro, e deve sinalizar de forma visível, em todas as telas pertinentes, os cadastros cujo endereço permaneça não verificado.
 
-*Critérios de aceitação:* a) endereços não verificados não recebem notificações de lembrete; b) o prestador visualiza, na ficha do tutor, indicação inequívoca da não verificação; c) o reenvio da confirmação está disponível ao tutor e ao prestador.
+*Critérios de aceitação:* a) o endereço trocado pelo próprio tutor não recebe lembretes até ser confirmado; o informado pela clínica no cadastro recebe-os desde o início (RN42); b) o prestador visualiza, na ficha do tutor, indicação inequívoca da não verificação; c) o reenvio da confirmação está disponível ao tutor e ao prestador.
 
 Este requisito parece acessório e não é: sem ele, todo o mecanismo de lembrete falha em silêncio, que é precisamente o modo de falha do arranjo em papel descrito no cenário. Um lembrete que não chega é indistinguível, do ponto de vista do tutor, de um lembrete que não foi enviado.
 
@@ -342,30 +348,30 @@ O sistema deve permitir o encerramento do vínculo entre profissional e prestado
 **RF12 — Cadastrar tutor**
 *Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1 · *Regras:* RN05, RN10, RN11, RN54
 
-O sistema deve permitir que o médico-veterinário, no atendimento, cadastre o tutor informando nome completo, CPF e endereço de correio eletrônico. É o primeiro passo do fluxo do profissional — cadastrar o tutor, cadastrar o animal, registrar o atendimento — e não exige nenhuma ação do titular. O cadastro admite duas formas, que produzem o mesmo registro global:
+O sistema deve permitir que o médico-veterinário, no atendimento, cadastre o tutor informando nome completo e endereço de correio eletrônico. O CPF não é pedido no balcão: o endereço é a chave do cadastro. É o primeiro passo do fluxo do profissional — cadastrar o tutor, cadastrar o animal, registrar o atendimento — e não exige nenhuma ação do titular. O cadastro admite duas formas, que produzem o mesmo registro global:
 
 - **Conta nova.** O endereço informado não pertence a conta alguma: cria-se a conta, ainda sem senha utilizável, e o registro do tutor sobre ela. A senha é definida pelo titular ao aceitar o convite de RF14.
 - **Acréscimo do papel a conta existente.** O endereço já pertence a conta sem o papel de tutor — tipicamente o médico-veterinário que é tutor dos próprios animais —: o papel de tutor é anexado a essa conta, sem criar segunda conta e sem convite, pois ela já tem senha.
 
 O tutor é entidade global: não possui `prestador_id` e não pertence ao estabelecimento que o cadastrou. Não há autocadastro: o papel de tutor nasce sempre do cadastro feito por uma clínica.
 
-*Critérios de aceitação:* a) o CPF é único em toda a plataforma e validado quanto aos dígitos verificadores; b) o CPF já existente conduz ao fluxo de RF13 e jamais cria segundo registro; c) o endereço de correio eletrônico é único na plataforma, e nenhuma das duas formas cria segunda conta para endereço já cadastrado; d) o endereço que já pertence a outro tutor é recusado, com orientação para conferi-lo com o titular; e) nenhuma mensagem é enviada ao tutor no ato do cadastro — o convite sai com o primeiro animal, na forma de RF14; f) o aceite dos termos não é registrado pelo veterinário em nome do titular, e fica para a ativação do acesso.
+*Critérios de aceitação:* a) nome e endereço de correio eletrônico são os únicos dados exigidos; o CPF é opcional e, quando existir no cadastro, é único em toda a plataforma e validado quanto aos dígitos verificadores; b) o endereço que já pertence a um tutor conduz ao fluxo de RF13 e jamais cria segundo registro; c) o endereço de correio eletrônico é único na plataforma, e nenhuma das duas formas cria segunda conta para endereço já cadastrado; d) o endereço é comparado sem distinção de maiúsculas e minúsculas; e) nenhuma mensagem é enviada ao tutor no ato do cadastro — o convite sai com o primeiro animal, na forma de RF14; f) o aceite dos termos não é registrado pelo veterinário em nome do titular, e fica para a ativação do acesso.
 
 O autocadastro do tutor, previsto desde a versão 1.1, foi retirado na versão 1.4. Ele abria um caminho de adoção pelo tutor, mas criava também um tutor sem clínica, com cadastros preliminares e lembretes calculados sobre informação não verificada (antiga pendência 7 de §10). No modelo atual, a adesão depende do estabelecimento, e a limitação de dependência de rede declarada na Etapa 2 volta a valer sem essa mitigação.
 
 **RF13 — Localizar tutor já existente na plataforma**
 *Ator:* veterinário · *Prioridade:* Essencial · *Origem:* §3.1, P4 · *Regras:* RN11, RN49, RN53
 
-Quando o CPF informado no cadastro de RF12 já constar da base, o sistema deve informar que o cadastro existe, apresentar o titular e conduzir o profissional diretamente ao cadastro do animal (RF16), sem criar segundo registro e sem interromper o atendimento.
+Quando o endereço de correio eletrônico informado no cadastro de RF12 já pertencer a um tutor, o sistema deve informar que o cadastro existe, apresentar o titular e conduzir o profissional diretamente ao cadastro do animal (RF16), sem criar segundo registro e sem interromper o atendimento.
 
-*Critérios de aceitação:* a) nenhum segundo registro de tutor é criado, e o endereço de correio eletrônico digitado não altera o cadastro existente; b) a tela identifica o titular encontrado e segue para o cadastro do animal; c) se a clínica não acompanha nenhum animal daquele tutor, o encontro é gravado no registro de acessos de RF52, visível ao titular.
+*Critérios de aceitação:* a) nenhum segundo registro de tutor é criado, e o nome digitado não altera o cadastro existente; b) a tela identifica o titular encontrado e segue para o cadastro do animal; c) se a clínica não acompanha nenhum animal daquele tutor, o encontro é gravado no registro de acessos de RF52, visível ao titular.
 
 Até a versão 1.3, este requisito ocultava todo dado do tutor encontrado até a autorização, por receio de converter o CPF em chave de consulta a dados de terceiros. O risco não desapareceu; mudou o modo de tratá-lo. O CPF, assim como o código e o micro-chip, é identificador exato, que o profissional obtém de quem está à sua frente (RN53), e todo encontro de clínica que ainda não acompanhava o titular fica registrado e visível a ele.
 
 **RF14 — Convidar o tutor a ativar o acesso**
 *Ator:* sistema, tutor · *Prioridade:* Essencial · *Origem:* §3.3 · *Regras:* RN04, RN10, RN42, RN54
 
-Quando a clínica cadastrar o **primeiro** animal de um tutor, o sistema deve enviar-lhe, por correio eletrônico, convite para criar a senha e acompanhar as informações do animal, deixando claro que o atendimento não depende do aceite. O tutor que aceita o convite define a senha, aceita os termos de uso e entra no ambiente de consulta já autenticado. O tutor que não o aceita permanece com cadastro e registro clínico válidos, produzidos pela clínica, mas não acessa a plataforma e não recebe lembretes.
+Quando a clínica cadastrar o **primeiro** animal de um tutor, o sistema deve enviar-lhe, por correio eletrônico, convite para criar a senha e acompanhar as informações do animal, deixando claro que o atendimento não depende do aceite. O tutor que aceita o convite define a senha, aceita os termos de uso e entra no ambiente de consulta já autenticado. O tutor que não o aceita permanece com cadastro e registro clínico válidos, produzidos pela clínica, e não acessa a plataforma; os lembretes de RF42 e RF43 chegam a ele mesmo assim (RN42).
 
 Logo após o cadastro do animal, a ficha mostra ao veterinário o endereço para o qual o convite foi enviado, com uma frase sugerida para o balcão: *"Nós utilizamos o Imunia para registrar e acompanhar as informações do seu pet. Caso queira acompanhar tudo o que for registrado, você receberá um e-mail para criar seu acesso e poderá consultar as informações por lá."*
 
@@ -583,16 +589,16 @@ Seção removida na versão 1.4 (01/10/2026). O acesso da clínica ao histórico
 **RF42 — Notificar vacinação prevista**
 *Ator:* sistema · *Prioridade:* Essencial · *Origem:* P2 · *Regras:* RN42, RN43, RN44
 
-O sistema deve identificar diariamente as vacinações previstas e enviar ao tutor, por correio eletrônico, lembrete em antecedência parametrizada, reiteração na data prevista e alerta de atraso quando decorrido o prazo sem registro da aplicação.
+O sistema deve identificar diariamente as vacinações previstas e enviar ao tutor, por correio eletrônico, lembrete na véspera da data prevista e, se a aplicação não for registrada, um único alerta quando a dose completar cinco dias de atraso (RN44).
 
-*Critérios de aceitação:* a) a rotina é executada por comando agendado e as mensagens são despachadas por fila; b) nenhum lembrete é enviado em duplicidade para a mesma dose e a mesma janela, conforme RN43; c) o registro da aplicação cancela os lembretes pendentes daquela dose; d) tutores com endereço não verificado ou com descadastro ativo não são notificados; e) falhas de envio são registradas e submetidas à política de nova tentativa.
+*Critérios de aceitação:* a) a rotina é executada por comando agendado, ou por chamada externa autenticada onde o servidor não tiver agendador, e as mensagens são despachadas por fila; b) nenhum lembrete é enviado em duplicidade para a mesma dose e a mesma janela, conforme RN43, ainda que a rotina rode mais de uma vez no dia; c) o registro da aplicação cancela os lembretes pendentes daquela dose; d) tutores fora do alcance de RN42 ou com descadastro ativo não são notificados; e) falhas de envio são registradas e submetidas à política de nova tentativa; f) o aviso que a rotina não emitiu no dia certo ainda sai no dia seguinte (o lembrete, no próprio dia da dose) ou nos dois dias seguintes (o alerta), e nunca depois — a primeira execução não alerta doses vencidas há mais tempo.
 
 **RF43 — Notificar retorno programado**
 *Ator:* sistema · *Prioridade:* Importante · *Origem:* P7 · *Regras:* RN42, RN43
 
-O sistema deve enviar ao tutor lembrete do retorno programado em RF34, na antecedência parametrizada.
+O sistema deve enviar ao tutor, na véspera, lembrete do retorno programado em RF34, com o estabelecimento e a finalidade.
 
-*Critérios de aceitação:* a) o registro de novo atendimento após a data prevista encerra o lembrete; b) aplicam-se as mesmas garantias de idempotência de RF42.
+*Critérios de aceitação:* a) o registro de novo atendimento após a data prevista encerra o lembrete; b) aplicam-se as mesmas garantias de idempotência de RF42, com o retorno do animal naquela data como evento: a retificação do atendimento que mantém a data não gera segundo lembrete, e a que a altera cala o lembrete da data antiga.
 
 **RF44 — Gerenciar preferências de notificação**
 *Ator:* tutor · *Prioridade:* Essencial · *Origem:* §3.5 · *Regras:* RN45
@@ -864,9 +870,9 @@ A troca do controle prévio pela transparência é a decisão desta versão que 
 
 | Id. | Regra |
 |---|---|
-| RN42 | Somente tutores que ativaram o acesso e têm endereço de correio eletrônico verificado recebem lembretes e avisos; ao tutor ainda não ativado vai apenas o convite de RF14 |
+| RN42 | Todo tutor cadastrado recebe os lembretes de RF42 e RF43, tenha ou não ativado o acesso, no endereço que a clínica informou; o tutor que trocou o endereço da própria conta só volta a recebê-los depois de confirmar o novo (RF05). Os demais avisos — novo animal cadastrado — vão apenas ao tutor ativado com endereço verificado |
 | RN43 | Cada notificação é emitida uma única vez por destinatário, evento e janela, garantida por registro persistente das notificações já emitidas |
-| RN44 | Para cada dose prevista emitem-se, no máximo, três comunicações: aviso prévio, aviso na data e alerta de atraso; o registro da aplicação encerra as pendentes |
+| RN44 | Para cada dose prevista emitem-se, no máximo, duas comunicações: o lembrete na véspera da data prevista e o alerta no quinto dia de atraso, este uma única vez; o registro da aplicação encerra as pendentes. O retorno programado gera um lembrete, na véspera |
 | RN45 | O descadastro é individual por tipo de notificação e não alcança as comunicações transacionais indispensáveis — confirmação de conta, redefinição de senha e convite de acesso |
 
 ## 6.7 Exportação, auditoria e conformidade
@@ -962,7 +968,7 @@ Registram-se as funcionalidades deliberadamente excluídas, com a respectiva jus
 
 5. **Efeito do histórico pregresso sobre o cálculo.** Definiu-se que o registro não verificado alimenta o cálculo do calendário, com propagação da marcação de origem às datas dele derivadas. A alternativa — ignorá-lo no cálculo — seria mais conservadora e menos útil. Confirmar com o profissional entrevistado.
 6. **Verificação normativa.** Permanecem as pendências da Etapa 2: confirmar, no texto oficial, as Resoluções CFMV nº 1.321/2020 e nº 1.653/2025, especialmente quanto ao prazo de guarda e ao rol de elementos obrigatórios do prontuário, que sustentam RN22, RN51 e RNF25.
-7. **Alcance do uso autônomo pelo tutor.** *Superada na versão 1.4.* Sem autocadastro, não existe tutor sem clínica: todo tutor e todo animal nascem de um cadastro profissional (RF12, RF16), e o tutor que não ativou o acesso não recebe lembretes (RN42). Os cadastros preliminares remanescentes de versões anteriores continuam sujeitos à pendência 5.
+7. **Alcance do uso autônomo pelo tutor.** *Superada na versão 1.4.* Sem autocadastro, não existe tutor sem clínica: todo tutor e todo animal nascem de um cadastro profissional (RF12, RF16), e o tutor que não ativou o acesso recebe os lembretes no endereço que a clínica informou (RN42, versão 1.5). Os cadastros preliminares remanescentes de versões anteriores continuam sujeitos à pendência 5.
 
 8. **Papel operacional restrito.** Excluída a recepção do rol de usuários (§2.4), a rechamada ativa passa a ser atribuição da equipe clínica. Se a entrevista com o profissional indicar que isso é inviável na rotina do estabelecimento, a alternativa é um quarto papel, limitado a nome do tutor, contato, animal e vacina vencida, sem acesso a prontuário, a diagnóstico ou a qualquer outro conteúdo clínico. Não implementar por ora; registrar em Trabalhos Futuros e levar a pergunta ao entrevistado, pois é exatamente o tipo de exigência operacional que a literatura não revela e a prática sim.
 

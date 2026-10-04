@@ -39,7 +39,8 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         dias de autorização, nem código de confirmação, solicitação de acesso ou diretório de
         estabelecimentos. O histórico do animal passou a ser único: qualquer clínica que o
         atenda, localizando-o por identificador exato, vê o histórico inteiro, e o acesso fica
-        registrado no livro de acessos que o tutor consulta.
+        registrado no livro de acessos que o tutor consulta. O CPF do tutor deixou de ser
+        pedido: o cadastro tem só nome e e-mail.
       </p>
     </div>
 
@@ -121,8 +122,10 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
       </li>
       <li>Comunique imediatamente qualquer uso não autorizado pelo canal de contato.</li>
       <li>
-        Como tutor, você só recebe avisos e lembretes por e-mail depois de ativar seu acesso
-        pelo convite.
+        Como tutor, você recebe por e-mail os lembretes de vacina, de atraso e de retorno dos
+        seus animais desde que a clínica cadastra você, mesmo antes de ativar o acesso. Se você
+        trocar o e-mail da conta, os lembretes só voltam a sair depois que o endereço novo for
+        confirmado.
       </li>
       <li>Ao trocar sua senha, as demais sessões abertas são encerradas.</li>
     </ul>
@@ -136,7 +139,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h3>6.1 Como seu acesso nasce, e o que você acompanha</h3>
     <p>
       Você não se cadastra sozinho. <strong>O estabelecimento que atende seu animal cadastra
-      você</strong> — com nome, CPF e e-mail — e cadastra o animal. Quando o primeiro animal é
+      você</strong> — com nome e e-mail — e cadastra o animal. Quando o primeiro animal é
       cadastrado, você recebe um <strong>convite por e-mail</strong>, válido por 7 dias e
       renovável pela própria página, para criar sua senha. Aceitar o convite é opcional:
       <strong>o atendimento não depende disso</strong>.
@@ -144,12 +147,12 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <p>
       Depois de ativar o acesso, você pode consultar a carteira e o histórico dos seus
       animais, editar a identificação e a foto deles, lançar registro pregresso, exportar
-      documentos e receber lembretes de dose. Você <strong>não registra</strong> atendimento,
+      documentos e consultar os lembretes que recebeu. Você <strong>não registra</strong> atendimento,
       vacinação ou anexo clínico: isso é privativo do médico-veterinário.
     </p>
     <p>
       <strong>O histórico do animal é único.</strong> Qualquer estabelecimento que atenda seu
-      animal e o localize por identificador exato — seu CPF, o código ou QR do animal, ou o
+      animal e o localize por identificador exato — seu e-mail, o código ou QR do animal, ou o
       microchip — vê o histórico inteiro, com a indicação do estabelecimento que produziu cada
       registro. Esse acesso não depende de autorização sua. Em contrapartida, ele
       <strong>fica registrado</strong>: você pode consultar, a qualquer tempo, o livro de
@@ -231,7 +234,7 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
     <h3>7.3 Histórico único, acesso registrado</h3>
     <p>
       O estabelecimento alcança qualquer cadastro da plataforma
-      <strong>por identificador exato</strong> — CPF do tutor, código ou QR do animal, ou
+      <strong>por identificador exato</strong> — e-mail do tutor, código ou QR do animal, ou
       microchip — e vê o histórico inteiro do animal, com a indicação do estabelecimento autor
       de cada registro. A busca por nome alcança apenas os animais que o estabelecimento já
       acompanha.
@@ -275,9 +278,9 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
 
     <h3>7.6 Cadastro do tutor e do animal</h3>
     <p>
-      O estabelecimento cadastra o tutor (nome, CPF e e-mail) e o animal no atendimento, e
-      responde pela veracidade do que informa. Se o CPF já estiver cadastrado, o sistema não
-      cria um segundo cadastro: o animal é vinculado ao tutor existente.
+      O estabelecimento cadastra o tutor (nome e e-mail) e o animal no atendimento, e
+      responde pela veracidade do que informa. Se o e-mail já for de um tutor cadastrado, o
+      sistema não cria um segundo cadastro: o animal é vinculado ao tutor existente.
     </p>
     <p>
       Ao cadastrar o primeiro animal de um tutor, o sistema envia ao e-mail informado o
@@ -318,8 +321,8 @@ import LegalDocument from '@/components/public/LegalDocument.vue'
         Um documento exportado contém o nome do tutor e os dados do animal, e
         <strong>circula fora do controle da plataforma</strong> depois de baixado. Quem o
         receber verá seu conteúdo. Quem tiver o código de verificação poderá confirmar a
-        autenticidade do documento e ver o nome e a espécie do animal — nunca o tutor, o CPF,
-        o conteúdo clínico ou o estabelecimento emissor. A guarda e a distribuição do arquivo
+        autenticidade do documento e ver o nome e a espécie do animal — nunca o tutor, o
+        conteúdo clínico ou o estabelecimento emissor. A guarda e a distribuição do arquivo
         são responsabilidade de quem o emitiu.
       </p>
     </div>

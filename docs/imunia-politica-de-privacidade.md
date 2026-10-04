@@ -136,7 +136,8 @@ A LGPD exige que todo tratamento tenha uma finalidade específica e uma hipótes
 | Disponibilizar o histórico único do animal à clínica que o atende | Dados do animal, conteúdo clínico, nome e CPF do tutor | Art. 7º, IX — legítimo interesse (continuidade do cuidado do animal), com a transparência do livro de acessos |
 | Registrar quem acessou dados de quem, e mostrá-lo ao tutor | Registros de acesso | Art. 7º, II e IX — dever de segurança e prestação de contas |
 | Convidar o tutor cadastrado pela clínica a acompanhar o animal | Nome e e-mail do tutor, nome do animal e do estabelecimento | Art. 7º, IX — legítimo interesse |
-| Enviar confirmações, avisos e lembretes de dose ao tutor que ativou o acesso | E-mail | Art. 7º, V — execução de contrato |
+| Enviar confirmações e avisos da conta ao tutor que ativou o acesso | E-mail | Art. 7º, V — execução de contrato |
+| Lembrar o tutor da próxima dose, do atraso de dose e do retorno marcado, tenha ou não ativado o acesso | Nome e e-mail do tutor; nome do animal, vacina e data prevista; estabelecimento e finalidade do retorno | Art. 7º, V e IX — execução de contrato, para quem ativou o acesso; legítimo interesse (continuidade do cuidado do animal), para quem ainda não ativou |
 | Guardar registros de acesso à aplicação | IP, user-agent, data e hora | Art. 7º, II — obrigação legal (Marco Civil da Internet, art. 15) |
 | Preservar registros para defesa em eventual processo | Conforme o caso | Art. 7º, VI e art. 16, I |
 | Proteger o sistema contra fraude e uso indevido | Dados de sessão e tentativas de acesso | Art. 7º, IX — legítimo interesse |

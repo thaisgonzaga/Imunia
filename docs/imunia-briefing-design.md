@@ -750,7 +750,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Objetivo.** Permitir descadastro granular por tipo, preservando as comunicações transacionais.
 
-**Componentes.** Lista de tipos com interruptor: lembrete de dose prevista, aviso na data prevista, alerta de atraso, lembrete de retorno, aviso de novo animal cadastrado. Bloco separado, sem interruptores, para as comunicações que não podem ser desativadas.
+**Componentes.** Lista de tipos com interruptor: lembrete de dose prevista (véspera), alerta de atraso (quinto dia, uma vez), lembrete de retorno (véspera), aviso de novo animal cadastrado. Bloco separado, sem interruptores, para as comunicações que não podem ser desativadas.
 
 **Layout.** Duas seções nitidamente separadas por fio e por cabeçalho: "Você escolhe receber" e "Sempre enviadas". A segunda seção lista convite de acesso, confirmação de conta e redefinição de senha, com ícone `lock` e a explicação — "essas mensagens fazem a sua conta funcionar e não podem ser desativadas" (RF44b).
 
@@ -772,7 +772,7 @@ Projetado a partir de 360 px. Corpo de texto em `--text-body` (16 px), nunca men
 
 **Navegação.** Item → detalhe em folha inferior.
 
-**Interações.** Somente leitura. Na visão do veterinário, a tela abrange apenas notificações de animais acompanhados pela clínica (RF45a). Tutor que ainda não ativou o acesso não recebe lembretes por e-mail; a tela diz isso em vez de mostrar uma lista vazia sem explicação.
+**Interações.** Somente leitura. Na visão do veterinário, a tela abrange apenas notificações de animais acompanhados pela clínica (RF45a). Tutor que trocou o e-mail e ainda não confirmou o novo endereço não recebe lembretes; a tela diz isso em vez de mostrar uma lista vazia sem explicação. O lembrete de retorno mostra a finalidade no lugar da vacina.
 
 **Estados.** Carregando; vazio; erro; falha de envio com explicação em linguagem simples.
 
@@ -864,17 +864,17 @@ Projetado a partir de 1440 px. Densidade alta, corpo em `--text-body-sm` (14 px)
 
 ### V04 · Cadastrar tutor — `/clinica/tutores/novo`
 
-**Objetivo.** Primeiro passo do balcão: cadastrar o tutor com nome, CPF e e-mail, ou reaproveitar o cadastro existente, sem criar duplicata e sem exigir nada do tutor.
+**Objetivo.** Primeiro passo do balcão: cadastrar o tutor só com nome e e-mail, ou reaproveitar o cadastro existente, sem criar duplicata e sem exigir nada do tutor. O CPF não é pedido.
 
-**Componentes.** Campo de CPF em primeiro lugar, isolado, com botão "Verificar"; campos de nome e e-mail revelados após a verificação; bloco de situação do e-mail.
+**Componentes.** Campos de nome e e-mail num formulário só; bloco que anuncia o convite; cartão do tutor existente com os animais dele.
 
-**Layout.** Fluxo de duas etapas em uma tela: o CPF é a chave. Enquanto não verificado, o restante do formulário permanece oculto — não desabilitado, oculto —, porque um formulário visível sugere preencher antes de saber se o tutor já existe.
+**Layout.** Coluna única: o e-mail é a chave. Enviado o formulário, o servidor decide se o cadastro é novo ou se o e-mail já é de um tutor.
 
-**Navegação.** CPF novo → formulário → sucesso → V05 com o tutor selecionado. CPF existente → V05 com o tutor selecionado.
+**Navegação.** E-mail novo → sucesso → V05 com o tutor selecionado. E-mail de tutor existente → cartão do tutor e dos animais dele → V05 com o tutor selecionado. A seção "Cadastrar" da barra lateral (Novo tutor · Novo animal) leva a V04 e a V05 de qualquer tela.
 
-**Interações.** CPF existente não cria segundo cadastro: a tela mostra o titular ("Helena Ramos já tem cadastro no Imunia") e segue para o cadastro do animal; se a clínica não acompanhava nenhum animal dele, informa que o encontro fica registrado no histórico de acessos do tutor. E-mail que já pertence a uma conta sem papel de tutor (o veterinário que também tem animais, por exemplo) → a tela informa que o papel de tutor será acrescentado àquela conta (RN05). E-mail de outro tutor → recusado, com mensagem que não revela de quem é. **Nenhum e-mail sai nesta tela**: a tela diz que o convite seguirá quando o primeiro animal for cadastrado (RF14).
+**Interações.** E-mail de tutor existente não cria segundo cadastro: a tela mostra o titular e os animais dele e segue para o cadastro do animal; se a clínica não acompanhava nenhum animal dele, o encontro fica registrado no histórico de acessos do tutor. E-mail que já pertence a uma conta sem papel de tutor (o veterinário que também tem animais, por exemplo) → o papel de tutor é acrescentado àquela conta (RN05). **Nenhum e-mail sai nesta tela**: a tela diz que o convite seguirá quando o primeiro animal for cadastrado (RF14).
 
-**Estados.** Inicial; verificando CPF; CPF novo; CPF existente (titular exibido); e-mail de conta existente sem papel de tutor; e-mail de outro tutor; validação; carregando; sucesso; **tutor não ativado** — sinalizado nas telas do prestador com o e-mail de destino do convite (RF14b).
+**Estados.** Inicial; validação; enviando; tutor existente (titular e animais exibidos); sucesso; **tutor não ativado** — sinalizado nas telas do prestador com o e-mail de destino do convite (RF14b).
 
 **Responsividade.** Coluna única; barra de ação fixa no rodapé em celular.
 
@@ -1095,7 +1095,7 @@ Duas telas. Não fazem parte da experiência dos usuários finais, mas são indi
 Cinco percursos que atravessam as telas. Use-os para validar a coerência do conjunto e como roteiro da demonstração à banca — eles reproduzem, na ordem, o cenário do estudo de caso.
 
 **F1 — A clínica chega primeiro; Helena, por convite.**
-V04 (Dr. Marcelo cadastra Helena: nome, CPF, e-mail) → V05 (cadastra Théo) → V06 (aviso pós-cadastro: convite enviado, frase de balcão dita a Helena) → [Helena, no celular] e-mail do convite → P07 (cria a senha, aceita os termos, entra) → T01 → T04 (vê o código único) → T09 (lança o histórico pregresso que tem em mãos) → T05.
+V04 (Dr. Marcelo cadastra Helena: nome e e-mail) → V05 (cadastra Théo) → V06 (aviso pós-cadastro: convite enviado, frase de balcão dita a Helena) → [Helena, no celular] e-mail do convite → P07 (cria a senha, aceita os termos, entra) → T01 → T04 (vê o código único) → T09 (lança o histórico pregresso que tem em mãos) → T05.
 *O que este fluxo prova:* o tutor acompanha sem pré-requisito algum, e o atendimento nunca esperou por ele. *(Até 01/10/2026 este fluxo partia do autocadastro do tutor.)*
 
 **F2 — O balcão: cadastrar tutor → cadastrar pet → atender → registrar → finalizar.**

@@ -132,6 +132,8 @@ A justificativa a ser redigida no TCC deve evitar a formulação "senha por exig
 
 Os três concorrentes analisados enviam lembretes por WhatsApp. A ausência desse canal deve ser assumida no texto como delimitação de escopo, com encaminhamento para Trabalhos Futuros.
 
+*Nota de 01/10/2026 (§9.34):* a verificação do e-mail deixou de ser condição para todo lembrete. O endereço que a clínica informa no cadastro recebe os lembretes desde o início; a verificação continua exigida do endereço que o próprio tutor troca.
+
 ## 3.6 Cálculo do calendário vacinal
 
 **Decisão.** A lógica de intervalos, doses e reforços deriva das diretrizes da WSAVA e das recomendações de fabricantes.
@@ -173,7 +175,7 @@ Os três concorrentes analisados enviam lembretes por WhatsApp. A ausência dess
 
 **Regra.** O convite sai quando a clínica cadastra o **primeiro** animal do tutor, com validade de sete dias, e pode ser reenviado pela própria página quando vence. Novo animal de tutor ainda não ativado reemite o convite pendente (novo token, prazo renovado); tutor já ativo recebe apenas o aviso de novo animal cadastrado, se o e-mail estiver verificado. O aceite define a senha, registra a aceitação dos termos e abre a sessão. Logo após o cadastro, a ficha mostra ao veterinário para qual e-mail o convite foi e a frase de balcão sugerida. Não existe autocadastro público de tutor, e o tutor não cadastra animal.
 
-**Motivo.** O convite junto do primeiro animal dá ao e-mail um conteúdo concreto ("Théo foi cadastrado no Imunia…") e deixa claro que o atendimento não depende do aceite. Tutor não ativado não recebe lembretes por e-mail.
+**Motivo.** O convite junto do primeiro animal dá ao e-mail um conteúdo concreto ("Théo foi cadastrado no Imunia…") e deixa claro que o atendimento não depende do aceite. Tutor não ativado não recebe lembretes por e-mail. *Revisto em §9.34:* recebe, no endereço que a clínica informou.
 
 **O que o tutor faz.** Consulta animais, carteira e histórico; edita a identificação e a foto do animal; lança histórico pregresso (não verificado); exporta PDF; consulta o livro de acessos, as notificações e os dados da própria conta.
 
@@ -619,6 +621,8 @@ Encontrado em uso (01/09/2026): "Registros" na barra lateral do veterinário ca�
 
 *Superada em parte em 01/10/2026 (§9.33):* a contagem de `vinculosDe()` e o `AvisoOutroContexto` passaram a falar de animais acompanhados em cada contexto (carteira), e não de animais sob autorização vigente; o estado `sem_autorizacoes` virou o vazio da carteira. A memória de contexto e a administração na barra da clínica não mudaram.
 
+*Superada em parte, de novo, em 01/10/2026:* o `AvisoOutroContexto` saiu do painel de V01 e do vazio da relação de animais, a pedido da Thais. A faixa de contexto já anuncia o prestador ativo e oferece a troca; o aviso repetia a mesma informação logo abaixo dela. Com isso, a contagem `animais` de `vinculosDe()` ficou sem leitor no frontend.
+
 Encontrado em uso (02/09/2026): um animal recém-autorizado à clínica ficou invisível para o veterinário que também atende como autônomo. Não era regra de acesso — era o contexto: o padrão caía sempre no primeiro vínculo, e os destinos da barra lateral, que nunca carregaram `?prestador=`, devolviam o profissional ao consultório a cada navegação, desfazendo em silêncio a troca que ele tinha acabado de fazer.
 
 **O contexto ativo passou a ser lembrado no servidor, não na URL nem no navegador.** `users.ultimo_prestador_id` guarda a última escolha; os dois resolvedores (`ResolvePrestadorAtivo`, `ResolvePrestadorAdministrado`) a preferem quando o pedido não traz `?prestador=` e a gravam quando traz. É memória, não decisão de acesso: quem a lê confere o vínculo vigente antes de honrá-la, e o id de vínculo encerrado é ignorado sem recusa — o comentário de `rotaInicial()` já anunciava essa persistência como pendência. A escrita é direta na tabela, sem eventos nem `updated_at`: lembrar onde alguém estava não é alteração do cadastro. A memória é **uma só para os dois ambientes**, de propósito: quem clica em "Equipe" estando na clínica administra a clínica, e voltar ao ambiente clínico o devolve ao mesmo lugar.
@@ -655,7 +659,7 @@ Encontrado em uso (03/09/2026): estando no contexto de uma clínica, a seção d
 
 **Leitura não é formulário desabilitado.** A02 em leitura é uma lista de definição, e não os mesmos campos em cinza: campo que não recebe foco convida a tentar e diz "quebrado" onde deveria dizer "não é seu". A lista sai do mesmo lugar que o formulário conhece, para que um campo novo não apareça em um e falte no outro.
 
-**A frase termina num nome.** `administrada_por` vem da relação de usuários com papel administrativo vigente, e não da tabela da equipe: a administradora sem CRMV não figura em `equipe()`, que é a relação dos vínculos clínicos, e montá-la dali deixaria de fora justamente quem cuida da conta. "A administração desta conta é de Dra. Camila Martins Oliveira" diz a quem pedir; a ausência de ação sem essa frase leria como tela incompleta.
+**Sem frase de enquadramento.** As quatro telas abriam, para quem só atende, com "Você atende aqui. A administração desta conta é de…", alimentada pelo campo `administrada_por`. Retirada a pedido (04/10/2026): a frase saiu de A01, A02, A03 e da tela de vacinas, e o campo saiu da API junto, porque só existia para montá-la. No mesmo dia saiu também o bloco ao pé da coluna lateral de A01 ("Não há indicador de atendimentos, vacinas ou animais neste painel…"), que o briefing (§8.4) pedia como explicação da ausência de indicador clínico; a coluna lateral agora só aparece quando há pendências.
 
 **Uma verificação encontrou um botão que o servidor recusaria.** Ao abrir a tela para quem não administra, `concessao()` passou a responder "pode conceder" ao responsável técnico **sem** papel administrativo — a escrita continuava barrada, mas a interface prometia. Conceder é ato administrativo, e a condição virou administrar **e** ser responsável técnico.
 
@@ -701,7 +705,7 @@ Pedido a fatia (04/09/2026): semear o catálogo com as vacinas essenciais e não
 
 ## 9.26 T17 — o sino do cabeçalho do tutor ganha destino
 
-*Nota de 01/10/2026 (§9.33):* o âmbito previsto para a versão clínica de T17 — "autorização vigente do prestador ativo" — seria hoje a carteira da clínica. A versão do tutor não mudou, exceto que tutor não ativado não recebe lembretes por e-mail.
+*Nota de 01/10/2026 (§9.33):* o âmbito previsto para a versão clínica de T17 — "autorização vigente do prestador ativo" — seria hoje a carteira da clínica. A versão do tutor não mudou, exceto que tutor não ativado não recebe lembretes por e-mail — o que §9.34, no mesmo dia, desfez.
 
 Encontrado em uso (17/09/2026): o sino caía em E02. §9.12 já o registrava como pendente da fatia de T17; é esta.
 
@@ -822,6 +826,26 @@ Decidido em 01/10/2026, a pedido da Thais, e já implementado no código. É a m
 **Por que transparência, e não consentimento.** As duas coisas não são equivalentes, e o texto do TCC não deve sugerir que sejam. O tutor perde o poder de impedir previamente que uma clínica veja o histórico; ganha a garantia de saber quem viu. A troca foi aceita porque o acesso continua restrito a profissionais autenticados de prestadores identificados, porque alcançar um animal fora da carteira exige identificador exato — que, na prática, vem do tutor ou do próprio animal —, e porque cada alcance a dado de terceiros deixa linha que o tutor lê. A fundamentação pela LGPD precisa ser refeita sobre outra base legal que não o consentimento; ela ainda não está escrita e não deve ser improvisada no texto.
 
 **Onde a tese mudou.** §2.3 (diferencial), §3.1 (posse dos dados), §3.2 (inteira), §3.4 (consequência sobre o acesso), §4 (inteira), §6 (limitações) e §7.1 (itens 2 e 3). O diferencial deixa de ser "o tutor controla quem acessa" e passa a ser "histórico único e contínuo do animal entre clínicas, registrado pelo profissional sem atrito, com transparência para o tutor".
+
+## 9.34 O motor de lembretes: véspera, quinto dia de atraso e véspera do retorno
+
+Decidido e implementado em 01/10/2026, a pedido da Thais. É a fatia de RF42 e RF43, que desde V02 existia só pela metade: a tabela `notificacoes` e as duas telas que a leem (V02, T17) estavam prontas, e nada a escrevia.
+
+**Três mensagens, e não as três de RN44.** A Thais fixou o calendário: lembrete na véspera da dose, um único alerta quando a dose completa cinco dias de atraso, e lembrete na véspera do retorno marcado no atendimento. O aviso na data prevista saiu, e o alerta não se repete: depois dele, a rechamada é da clínica, pelo painel de pendências, e o e-mail diz ao tutor que é o único. A antecedência deixou de ser "parametrizada": nenhuma tela a parametrizava, e a véspera é a regra. O tipo `aviso_na_data` continua no ENUM e em `Notificacao::descreverTipo()`, porque o cenário de demonstração o grava e o histórico de quem o recebeu não pode perder o nome.
+
+**Todo tutor cadastrado recebe, tenha ou não ativado o acesso (RN42 reescrita).** Diante da pergunta, a escolha foi alcançar quem ignorou o convite, que é justamente quem mais depende do lembrete. O e-mail do tutor não ativado não tem botão para a carteira, que ele não conseguiria abrir: tem uma linha apontando para o convite. A exceção é o tutor que já usa a conta e trocou o endereço (RF06a): esse só volta a receber depois de confirmar, porque a troca é dele e um erro de digitação desviaria os lembretes em silêncio. O endereço digitado pela clínica não tem essa proteção — o convite que saiu para ele é a única confirmação. A ficha do animal deixou de dizer à clínica que o tutor não ativado "não recebe lembretes".
+
+**A data prevista não está gravada, e a rotina não a grava.** O motor percorre os animais com vacinação e pede ao calendário (`montarCarteiraCom`) as próximas doses — a mesma conta da carteira e de V02. Uma segunda implementação da data prevista em SQL seria a forma mais cara de errar duas vezes, e a escolha tem o efeito que RF42c pede de graça: registrada a aplicação, a dose seguinte é outra, com outra data, e o aviso da anterior nunca sai.
+
+**Folga para o dia sem rotina, e não reenvio.** O disparo do plano gratuito vem de fora, e o GitHub às vezes atrasa ou pula uma execução agendada. Sem folga, o dia perdido seria um aviso perdido para sempre. O lembrete de véspera ainda sai no próprio dia da dose (dizendo "hoje"); o alerta, até o sétimo dia de atraso. Cada aviso continua saindo uma vez só. A folga curta é também o que impede a primeira execução em produção de mandar alerta a todas as doses vencidas há meses — que nunca seriam "o quinto dia" de ninguém.
+
+**RN43 para o retorno, que a chave única de 17/08 não alcança.** A migração de V02 já avisava: com imunobiológico nulo, o índice único não protege. O evento do retorno é o animal e a data, e não o atendimento que a marcou — a retificação cria outro atendimento, e uma chave por `atendimento_id` mandaria o mesmo lembrete duas vezes. A garantia ficou no motor: consulta antes de gravar, e uma trava de cache (`Cache::lock`) impede duas execuções simultâneas de lerem "ainda não enviado" ao mesmo tempo. `atendimento_id` entrou na tabela só para T17 mostrar a finalidade do retorno no lugar da vacina.
+
+**Fila, e falha escrita na linha.** As mensagens implementam `ShouldQueue` (RF42a, RNF05), com três tentativas. Esgotadas, `failed()` marca a linha como não entregue, que é o que V02 lê para dizer que o telefonema é a única via. A linha não entregue é reaproveitada pela rotina do dia seguinte enquanto o aviso estiver na janela. No Render a fila é síncrona: o envio acontece dentro da rotina, e a exceção é capturada por mensagem, para que uma recusa não interrompa as demais (RNF18). "Entregue" exige o *webhook* do Brevo e ficou de fora: tudo o que sai fica como "sem confirmação".
+
+**O disparo do plano gratuito.** Sem cron no Render, a rotina tem duas portas: o comando `imunia:lembretes`, agendado às 8h de Brasília para qualquer servidor com cron, e `POST /api/rotinas/lembretes`, chamada pelo GitHub Actions com o segredo `LEMBRETES_TOKEN`. Sem o segredo configurado, ou com o segredo errado, a rota responde 404. O relógio da aplicação continua em UTC: às 8h de Brasília a data é a mesma nos dois fusos, e é a data que decide o "amanhã".
+
+**Recortes declarados.** O descadastro por tipo (RF44, T16) não foi construído, e o e-mail ainda não traz a ligação de descadastro de RF44c. A confirmação de entrega pelo provedor também não. O texto padrão do Laravel nos e-mails ("Regards", a nota sobre o botão) continua em inglês, como nos e-mails anteriores. Termos e política de privacidade foram ajustados sem mudar a versão: o tutor não ativado nunca aceitou versão nenhuma, e para quem aceitou nada mudou. A base legal do lembrete ao tutor não ativado (legítimo interesse) entra com a mesma ressalva da pendência sobre o histórico entre clínicas: falta o teste de balanceamento.
 
 ---
 
