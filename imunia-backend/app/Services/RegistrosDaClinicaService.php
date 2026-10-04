@@ -107,7 +107,11 @@ class RegistrosDaClinicaService
             ->with(['animal.tutor', 'imunobiologico', 'retificacao'])
             ->get();
 
+        // `toBase()` antes de tudo: sem atendimentos, o `map` da coleção
+        // Eloquent devolve outra coleção Eloquent vazia, cujo `merge` chama
+        // `getKey()` em cada linha de vacinação — que é array, não modelo.
         return $atendimentos
+            ->toBase()
             ->map(fn (Atendimento $registro) => $this->linhaDoAtendimento($registro, $prestador))
             ->merge($vacinacoes->map(
                 fn (Vacinacao $registro) => $this->linhaDaVacinacao($registro, $prestador),

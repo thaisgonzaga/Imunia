@@ -376,6 +376,26 @@ class RegistrosDaClinicaTest extends TestCase
             ->assertForbidden();
     }
 
+    /**
+     * O prestador que só vacinou — sem atendimento algum — também tem livro.
+     * Era o caso que derrubava a consulta: as linhas de vacinação se juntavam
+     * a uma coleção Eloquent vazia, que tratava cada uma como modelo.
+     */
+    public function test_o_livro_so_de_vacinas_abre(): void
+    {
+        $clinica = $this->clinica();
+        $marcelo = $this->marcelo($clinica);
+        $antirrabica = $this->antirrabica();
+
+        $this->aplicar($this->animal('Pipoca'), $clinica, $antirrabica, now()->subDay()->toDateTimeString());
+
+        $this->actingAs($marcelo)
+            ->getJson('/api/clinica/registros')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('itens.0.tipo', 'vacinacao');
+    }
+
     public function test_o_livro_e_paginado_em_vinte_e_cinco_linhas(): void
     {
         $clinica = $this->clinica();
