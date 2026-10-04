@@ -323,10 +323,9 @@ onUnmounted(() => {
                 <CirclePlus :size="20" :stroke-width="1.75" />
                 Lançar histórico pregresso
               </RouterLink>
-              <RouterLink :to="`/animais/${animal.codigo}/transferir`" class="ligacao">
-                <UserRound :size="20" :stroke-width="1.75" />
-                Transferir titularidade
-              </RouterLink>
+              <!-- "Transferir titularidade" (T19, RF21) fica de fora enquanto o
+                   requisito estiver remetido a Trabalhos Futuros: não há rota
+                   nem backend, e o link levava a "página não encontrada". -->
             </section>
           </div>
         </div>
