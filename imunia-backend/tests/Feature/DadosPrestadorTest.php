@@ -127,6 +127,27 @@ class DadosPrestadorTest extends TestCase
             ->assertJsonCount(0, 'avisos');
     }
 
+    public function test_clinica_nao_pode_ficar_sem_cnpj(): void
+    {
+        $clinica = $this->clinica();
+
+        $this->actingAs($this->administradora($clinica))
+            ->postJson('/api/prestador/dados', $this->formulario($clinica, ['cnpj' => '']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('cnpj');
+    }
+
+    public function test_profissional_autonomo_salva_os_dados_sem_cnpj(): void
+    {
+        $autonomo = $this->clinica(['tipo' => 'autonomo', 'nome' => 'Dra. Larissa Prado', 'cnpj' => null]);
+
+        $this->actingAs($this->administradora($autonomo))
+            ->postJson('/api/prestador/dados', $this->formulario($autonomo, ['cnpj' => '']))
+            ->assertOk()
+            ->assertJsonPath('prestador.cnpj', null)
+            ->assertJsonCount(0, 'historico');
+    }
+
     public function test_cnpj_de_outro_prestador_e_rejeitado(): void
     {
         $clinica = $this->clinica(['cnpj' => '11222333000181']);

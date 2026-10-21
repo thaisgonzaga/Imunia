@@ -29,7 +29,7 @@ const avisoDeReenvio = ref('')
 const prestador = computed(() => painel.value?.prestador ?? null)
 const podeAdministrar = computed(() => painel.value?.pode_administrar ?? false)
 
-const cnpj = computed(() => formatarCnpj(prestador.value?.cnpj ?? ''))
+const cnpj = computed(() => (prestador.value?.cnpj ? formatarCnpj(prestador.value.cnpj) : '—'))
 const telefone = computed(() => formatarTelefone(prestador.value?.telefone ?? ''))
 
 async function carregar(prestadorId) {

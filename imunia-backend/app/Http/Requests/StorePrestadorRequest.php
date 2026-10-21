@@ -30,12 +30,16 @@ class StorePrestadorRequest extends FormRequest
 
     /**
      * Normaliza o CNPJ para dígitos puros antes da validação, para que a regra
-     * de dígito verificador e a unicidade batam com o valor salvo.
+     * de dígito verificador e a unicidade batam com o valor salvo. Vazio vira
+     * nulo, e não texto vazio: o índice único admite vários nulos, mas não
+     * duas strings vazias.
      */
     protected function prepareForValidation(): void
     {
+        $digitos = preg_replace('/\D/', '', (string) $this->input('cnpj'));
+
         $this->merge([
-            'cnpj' => preg_replace('/\D/', '', (string) $this->input('cnpj')),
+            'cnpj' => $digitos === '' ? null : $digitos,
         ]);
     }
 
@@ -44,7 +48,10 @@ class StorePrestadorRequest extends FormRequest
         return [
             'tipo' => ['required', 'in:clinica,hospital,autonomo'],
             'nome' => ['required', 'string', 'max:255'],
-            'cnpj' => ['required', 'string', new CnpjValido, 'unique:prestadores,cnpj'],
+            // O CNPJ identifica clínica e hospital. O profissional autônomo se
+            // cadastra sem ele: o campo nem aparece na tela, e o que vier é
+            // descartado — o autônomo é identificado pelo CRMV do passo 2.
+            'cnpj' => ['exclude_if:tipo,autonomo', 'required', 'string', new CnpjValido, 'unique:prestadores,cnpj'],
             'telefone' => ['required', 'string', 'max:20'],
             'endereco' => ['required', 'string', 'max:255'],
             'municipio' => ['required', 'string', 'max:120'],

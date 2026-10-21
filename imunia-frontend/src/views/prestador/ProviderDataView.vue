@@ -68,7 +68,7 @@ const cadastroEmLeitura = computed(() => {
   return [
     { rotulo: 'Tipo de estabelecimento', valor: tipo },
     { rotulo: 'Razão social ou nome', valor: prestador.nome },
-    { rotulo: 'CNPJ', valor: formatarCnpj(prestador.cnpj), mono: true },
+    { rotulo: 'CNPJ', valor: prestador.cnpj ? formatarCnpj(prestador.cnpj) : '—', mono: true },
     { rotulo: 'Endereço', valor: prestador.endereco },
     { rotulo: 'Município e UF', valor: `${prestador.municipio}, ${prestador.uf}` },
     { rotulo: 'CEP', valor: formatarCep(prestador.cep) || '—', mono: true },
@@ -223,7 +223,7 @@ carregar()
             <AppInput
               id="cnpj"
               v-model="form.cnpj"
-              label="CNPJ"
+              :label="form.tipo === 'autonomo' ? 'CNPJ (opcional)' : 'CNPJ'"
               mono
               :error="erros.cnpj"
               @update:model-value="form.cnpj = formatarCnpj($event)"

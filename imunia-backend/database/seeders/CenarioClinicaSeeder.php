@@ -287,18 +287,21 @@ class CenarioClinicaSeeder extends Seeder
      */
     private function profissionalAutonoma(): void
     {
+        // O autônomo se cadastra sem CNPJ, e por isso o que o identifica aqui
+        // é o CRMV de quem atende.
         $larissa = Prestador::firstOrCreate(
-            ['cnpj' => '26937175000113'],
             [
                 'tipo' => 'autonomo',
+                'responsavel_tecnico_crmv' => '24196',
+                'responsavel_tecnico_crmv_uf' => 'MG',
+            ],
+            [
                 'nome' => 'Dra. Larissa Prado',
                 'telefone' => '(31) 99712-0184',
                 'endereco' => 'Rua Padre Serafim, 45',
                 'municipio' => 'Viçosa',
                 'uf' => 'MG',
                 'responsavel_tecnico_nome' => 'Larissa Prado',
-                'responsavel_tecnico_crmv' => '24196',
-                'responsavel_tecnico_crmv_uf' => 'MG',
             ],
         );
 

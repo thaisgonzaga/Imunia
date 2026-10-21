@@ -10,10 +10,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * valor já chega aqui normalizado (somente dígitos) pelo prepareForValidation()
  * do FormRequest chamador.
  *
- * É a regra do prestador, e vale para os três tipos de RF07a — inclusive o
- * profissional autônomo, que também se inscreve como pessoa jurídica: o
- * médico-veterinário não pode ser microempreendedor individual, e a atividade
- * fica sob CNPJ. Por isso o cadastro não pede CPF de estabelecimento algum.
+ * É a regra do prestador para clínica e hospital. O profissional autônomo se
+ * cadastra sem CNPJ; quando informa um (em A02), ele passa por esta mesma
+ * regra. O cadastro não pede CPF de estabelecimento algum.
  */
 class CnpjValido implements ValidationRule
 {

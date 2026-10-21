@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->enum('tipo', ['clinica', 'hospital', 'autonomo']);
             $table->string('nome');
-            // RF07 — o prestador se inscreve sempre como pessoa jurídica, os
-            // três tipos inclusive: o médico-veterinário não pode ser
-            // microempreendedor individual, e o autônomo exerce a atividade sob
-            // CNPJ. Por isso a coluna tem tamanho fixo, como o CPF do tutor.
+            // RF07 — clínica e hospital se inscrevem como pessoa jurídica, e
+            // por isso a coluna tem tamanho fixo, como o CPF do tutor. O
+            // profissional autônomo deixou de informar CNPJ: a coluna passou a
+            // aceitar nulo em 2026_10_21_120000_tornar_cnpj_do_prestador_opcional.
             $table->char('cnpj', 14)->unique();
             $table->string('telefone');
             $table->string('endereco');

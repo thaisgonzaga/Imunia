@@ -5,9 +5,8 @@ function somenteDigitos(valor) {
 /**
  * O CNPJ do prestador (RF07): `00.000.000/0000-00`.
  *
- * A máscara é uma só porque o documento é um só — os três tipos de RF07a se
- * inscrevem como pessoa jurídica, o autônomo inclusive, já que o
- * médico-veterinário não pode ser microempreendedor individual.
+ * Exigido de clínica e hospital. O profissional autônomo se cadastra sem CNPJ
+ * e só o informa, se quiser, nos dados do prestador (A02).
  */
 export function formatarCnpj(valor) {
   const digitos = somenteDigitos(valor).slice(0, 14)

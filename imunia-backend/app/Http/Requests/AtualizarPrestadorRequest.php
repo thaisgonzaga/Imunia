@@ -41,12 +41,13 @@ class AtualizarPrestadorRequest extends FormRequest
     /**
      * CNPJ e CEP chegam mascarados da tela e são guardados em dígitos puros,
      * para que a regra de dígito verificador e a unicidade batam com o valor
-     * salvo — mesma normalização de `StorePrestadorRequest`.
+     * salvo — mesma normalização de `StorePrestadorRequest`. Vazio vira nulo,
+     * porque o índice único admite vários nulos, mas não duas strings vazias.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'cnpj' => preg_replace('/\D/', '', (string) $this->input('cnpj')),
+            'cnpj' => $this->apenasDigitosOuNulo($this->input('cnpj')),
             'cep' => $this->apenasDigitosOuNulo($this->input('cep')),
         ]);
     }
@@ -58,8 +59,11 @@ class AtualizarPrestadorRequest extends FormRequest
         return [
             'tipo' => ['required', 'in:clinica,hospital,autonomo'],
             'nome' => ['required', 'string', 'max:255'],
+            // Obrigatório para clínica e hospital; opcional para o profissional
+            // autônomo, que se cadastra sem CNPJ (P04).
             'cnpj' => [
-                'required',
+                'nullable',
+                'required_unless:tipo,autonomo',
                 'string',
                 new CnpjValido,
                 Rule::unique('prestadores', 'cnpj')->ignore($this->prestador()->id),

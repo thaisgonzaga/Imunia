@@ -49,41 +49,69 @@ class PrestadorRegistrationTest extends TestCase
         $this->assertEquals(['admin_prestador', 'veterinario'], $papeis->all());
     }
 
-    /**
-     * O autônomo também se inscreve sob CNPJ: o médico-veterinário não pode ser
-     * microempreendedor individual, então não há a figura do prestador pessoa
-     * física — o que muda entre os três tipos de RF07a são os rótulos da tela,
-     * não o documento pedido.
-     */
-    public function test_cadastra_profissional_autonomo(): void
+    /** O profissional autônomo se cadastra sem CNPJ: quem o identifica é o CRMV. */
+    public function test_cadastra_profissional_autonomo_sem_cnpj(): void
     {
-        $response = $this->postJson('/api/prestadores', $this->payload([
+        $payload = $this->payload([
             'tipo' => 'autonomo',
             'nome' => 'Larissa Prado',
-            'cnpj' => '26937175000113',
             'responsavel_tecnico_nome' => 'Larissa Prado',
             'responsavel_tecnico_crmv' => '20981',
             'email' => 'larissa@example.com',
-        ]));
+        ]);
+        unset($payload['cnpj']);
+
+        $response = $this->postJson('/api/prestadores', $payload);
 
         $response->assertCreated();
         $response->assertJsonPath('prestador.tipo', 'autonomo');
+        $this->assertDatabaseHas('prestadores', ['nome' => 'Larissa Prado', 'cnpj' => null]);
     }
 
-    /**
-     * Um CPF de dígito verificador impecável continua sendo recusado, e é esse
-     * o ponto: o cadastro não rejeita o número, rejeita a pessoa física — nem
-     * mesmo para o autônomo, que é onde a tentação de informá-lo existe.
-     */
-    public function test_cpf_e_rejeitado_mesmo_para_o_profissional_autonomo(): void
+    /** O índice único do CNPJ admite vários nulos: um autônomo não barra o próximo. */
+    public function test_dois_autonomos_sem_cnpj_podem_se_cadastrar(): void
     {
-        $response = $this->postJson('/api/prestadores', $this->payload([
+        $this->postJson('/api/prestadores', $this->payload([
+            'tipo' => 'autonomo',
+            'cnpj' => '',
+            'email' => 'larissa@example.com',
+        ]))->assertCreated();
+
+        $this->postJson('/api/prestadores', $this->payload([
+            'tipo' => 'autonomo',
+            'cnpj' => '',
+            'email' => 'joao@example.com',
+        ]))->assertCreated();
+
+        $this->assertSame(2, Prestador::whereNull('cnpj')->count());
+    }
+
+    /** O campo não aparece para o autônomo; se vier mesmo assim, é descartado. */
+    public function test_cnpj_enviado_pelo_autonomo_e_descartado(): void
+    {
+        $this->postJson('/api/prestadores', $this->payload([
             'tipo' => 'autonomo',
             'nome' => 'Larissa Prado',
             'cnpj' => '52998224725',
-            'responsavel_tecnico_nome' => 'Larissa Prado',
-            'responsavel_tecnico_crmv' => '20981',
             'email' => 'larissa@example.com',
+        ]))->assertCreated();
+
+        $this->assertDatabaseHas('prestadores', ['nome' => 'Larissa Prado', 'cnpj' => null]);
+    }
+
+    public function test_clinica_continua_obrigada_a_informar_cnpj(): void
+    {
+        $response = $this->postJson('/api/prestadores', $this->payload(['cnpj' => '']));
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('cnpj');
+    }
+
+    /** Para clínica e hospital, o CPF no lugar do CNPJ continua sendo recusado. */
+    public function test_cpf_no_lugar_do_cnpj_e_rejeitado_para_clinica(): void
+    {
+        $response = $this->postJson('/api/prestadores', $this->payload([
+            'cnpj' => '52998224725',
         ]));
 
         $response->assertStatus(422);

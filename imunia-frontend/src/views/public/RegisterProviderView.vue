@@ -88,7 +88,8 @@ const CAMPOS_PASSO_3 = ['email', 'password', 'password_confirmation']
 function validarPasso1() {
   const novosErros = {}
   if (!form.nome.trim()) novosErros.nome = 'Informe a razão social ou o nome.'
-  if (!cnpjValido(form.cnpj)) novosErros.cnpj = 'Informe um CNPJ válido.'
+  // O profissional autônomo se cadastra sem CNPJ; clínica e hospital, não.
+  if (!ehAutonomo.value && !cnpjValido(form.cnpj)) novosErros.cnpj = 'Informe um CNPJ válido.'
   if (!form.telefone.trim()) novosErros.telefone = 'Informe um telefone de contato.'
   if (!form.endereco.trim()) novosErros.endereco = 'Informe o endereço.'
   if (!form.municipio.trim()) novosErros.municipio = 'Informe o município.'
@@ -179,7 +180,8 @@ async function enviar() {
     const resposta = await apiPost('/api/prestadores', {
       tipo: form.tipo,
       nome: form.nome,
-      cnpj: form.cnpj,
+      // O autônomo não informa CNPJ: o campo nem aparece para ele.
+      cnpj: ehAutonomo.value ? null : form.cnpj,
       telefone: form.telefone,
       endereco: form.endereco,
       municipio: form.municipio,
@@ -315,6 +317,7 @@ function corrigirCnpj() {
                 />
               </div>
               <AppInput
+                v-if="!ehAutonomo"
                 id="cnpj" label="CNPJ" mono inputmode="numeric"
                 :model-value="form.cnpj" @update:model-value="onCnpjInput"
                 @blur="validarCampo(validarPasso1, 'cnpj')"
@@ -322,6 +325,7 @@ function corrigirCnpj() {
               />
               <AppInput
                 id="telefone" label="Telefone público" mono inputmode="numeric"
+                :class="{ 'fields-grid__full': ehAutonomo }"
                 :model-value="form.telefone" @update:model-value="onTelefoneInput"
                 @blur="validarCampo(validarPasso1, 'telefone')"
                 :error="errors.telefone"
@@ -351,7 +355,9 @@ function corrigirCnpj() {
               <Building2 :size="20" />
               <p class="auth-notice__text">
                 Nome, tipo e município aparecem para o tutor junto de cada registro e de cada
-                consulta da clínica. Endereço completo e CNPJ não são publicados.
+                consulta da clínica.
+                <template v-if="ehAutonomo">Endereço completo não é publicado.</template>
+                <template v-else>Endereço completo e CNPJ não são publicados.</template>
               </p>
             </div>
 
@@ -454,7 +460,7 @@ function corrigirCnpj() {
                   <div class="review-box__label">Município</div>
                   <div class="review-box__value">{{ form.municipio }}, {{ form.uf }}</div>
                 </div>
-                <div>
+                <div v-if="!ehAutonomo">
                   <div class="review-box__label">CNPJ</div>
                   <div class="review-box__value review-box__value--mono">{{ form.cnpj }}</div>
                 </div>
